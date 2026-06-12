@@ -31,6 +31,26 @@ Repo này tổng hợp combo Windows 11 dành cho developer theo hướng **keyb
 - Alias, shell profile và prompt là lớp thao tác hằng ngày, nên được version-control như dotfiles.
 - Config nên lưu trong Git để dễ backup/migrate.
 
+
+## Cài không cần clone repo
+
+Sau khi push repo lên GitHub, bạn có thể chạy trực tiếp từ GitHub Raw.
+
+Windows:
+
+```powershell
+$repo="https://raw.githubusercontent.com/<YOUR_USERNAME>/windows11-dev-poweruser/main"; irm "$repo/scripts/bootstrap-windows.ps1" | iex
+```
+
+AlmaLinux WSL:
+
+```bash
+repo="https://raw.githubusercontent.com/<YOUR_USERNAME>/windows11-dev-poweruser/main"
+curl -fsSL "$repo/scripts/bootstrap-almalinux.sh" | bash -s -- --repo "$repo"
+```
+
+Xem thêm: `docs/no-clone-install.md`.
+
 ## Cài nhanh
 
 Mở PowerShell với quyền user bình thường:
