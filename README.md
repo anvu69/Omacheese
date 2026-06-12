@@ -39,13 +39,13 @@ Sau khi push repo lên GitHub, bạn có thể chạy trực tiếp từ GitHub 
 Windows:
 
 ```powershell
-$repo="https://raw.githubusercontent.com/<YOUR_USERNAME>/windows11-dev-poweruser/main"; irm "$repo/scripts/bootstrap-windows.ps1" | iex
+$repo="https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main"; irm "$repo/scripts/bootstrap-windows.ps1" | iex
 ```
 
 AlmaLinux WSL:
 
 ```bash
-repo="https://raw.githubusercontent.com/<YOUR_USERNAME>/windows11-dev-poweruser/main"
+repo="https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main"
 curl -fsSL "$repo/scripts/bootstrap-almalinux.sh" | bash -s -- --repo "$repo"
 ```
 
@@ -98,7 +98,7 @@ Tạo repo trống trên GitHub, ví dụ `windows11-dev-poweruser`, rồi chạ
 
 ```bash
 git branch -M main
-git remote add origin git@github.com:<YOUR_USERNAME>/windows11-dev-poweruser.git
+git remote add origin git@github.com:anvu69/windows11-dev-poweruser.git
 git add .
 git commit -m "Initial Windows 11 power-user developer setup"
 git push -u origin main
@@ -107,7 +107,7 @@ git push -u origin main
 Nếu dùng HTTPS:
 
 ```bash
-git remote add origin https://github.com/<YOUR_USERNAME>/windows11-dev-poweruser.git
+git remote add origin https://github.com/anvu69/windows11-dev-poweruser.git
 ```
 
 
