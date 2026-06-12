@@ -1,22 +1,63 @@
 <#
 Bootstrap Windows-side setup without cloning the full repo.
-Usage:
-  irm https://raw.githubusercontent.com/<USER>/windows11-dev-poweruser/main/scripts/bootstrap-windows.ps1 | iex
+
+Recommended one-liner:
+  $repo="https://raw.githubusercontent.com/<USER>/windows11-dev-poweruser/main"; irm "$repo/scripts/bootstrap-windows.ps1" | iex
+
+Alternative one-liner using env var:
+  $env:DEV_REPO_RAW="https://raw.githubusercontent.com/<USER>/windows11-dev-poweruser/main"; irm "$env:DEV_REPO_RAW/scripts/bootstrap-windows.ps1" | iex
 
 Safer usage:
-  $url = "https://raw.githubusercontent.com/<USER>/windows11-dev-poweruser/main/scripts/bootstrap-windows.ps1"
-  irm $url -OutFile "$env:TEMP\bootstrap-windows.ps1"
+  $repo = "https://raw.githubusercontent.com/<USER>/windows11-dev-poweruser/main"
+  irm "$repo/scripts/bootstrap-windows.ps1" -OutFile "$env:TEMP\bootstrap-windows.ps1"
   notepad "$env:TEMP\bootstrap-windows.ps1"
-  powershell -ExecutionPolicy Bypass -File "$env:TEMP\bootstrap-windows.ps1" -RepoRawBase "https://raw.githubusercontent.com/<USER>/windows11-dev-poweruser/main"
+  powershell -ExecutionPolicy Bypass -File "$env:TEMP\bootstrap-windows.ps1" -RepoRawBase $repo
 #>
 
 param(
-  [string]$RepoRawBase = "https://raw.githubusercontent.com/<YOUR_USERNAME>/windows11-dev-poweruser/main",
+  [string]$RepoRawBase = "",
   [switch]$SkipInstall,
   [switch]$SkipConfigs
 )
 
 $ErrorActionPreference = "Stop"
+
+function Resolve-RepoRawBase {
+  param([string]$InputValue)
+
+  if ($InputValue -and $InputValue -notlike "*<YOUR_USERNAME>*") {
+    return $InputValue.TrimEnd("/")
+  }
+
+  # Supports: $repo="https://raw.githubusercontent.com/.../main"; irm "$repo/scripts/bootstrap-windows.ps1" | iex
+  $repoVar = Get-Variable -Name repo -ErrorAction SilentlyContinue
+  if ($repoVar -and $repoVar.Value -and $repoVar.Value -notlike "*<YOUR_USERNAME>*") {
+    return ([string]$repoVar.Value).TrimEnd("/")
+  }
+
+  # Supports: $env:DEV_REPO_RAW="https://raw.githubusercontent.com/.../main"; irm "$env:DEV_REPO_RAW/scripts/bootstrap-windows.ps1" | iex
+  if ($env:DEV_REPO_RAW -and $env:DEV_REPO_RAW -notlike "*<YOUR_USERNAME>*") {
+    return $env:DEV_REPO_RAW.TrimEnd("/")
+  }
+
+  # More explicit env var name for this repo.
+  if ($env:WINDOWS11_DEV_POWERUSER_REPO_RAW -and $env:WINDOWS11_DEV_POWERUSER_REPO_RAW -notlike "*<YOUR_USERNAME>*") {
+    return $env:WINDOWS11_DEV_POWERUSER_REPO_RAW.TrimEnd("/")
+  }
+
+  throw @"
+RepoRawBase is missing.
+
+Use one of these:
+
+  `$repo="https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main"; irm "`$repo/scripts/bootstrap-windows.ps1" | iex
+
+or:
+
+  irm "https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/scripts/bootstrap-windows.ps1" -OutFile "`$env:TEMP\bootstrap-windows.ps1"
+  powershell -ExecutionPolicy Bypass -File "`$env:TEMP\bootstrap-windows.ps1" -RepoRawBase "https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main"
+"@
+}
 
 function Ensure-Dir([string]$Path) {
   if (!(Test-Path $Path)) {
@@ -31,9 +72,8 @@ function Fetch([string]$RemotePath, [string]$LocalPath) {
   Invoke-WebRequest -UseBasicParsing -Uri $uri -OutFile $LocalPath
 }
 
-if ($RepoRawBase -like "*<YOUR_USERNAME>*") {
-  throw "Set -RepoRawBase to your GitHub raw URL, e.g. https://raw.githubusercontent.com/inkman/windows11-dev-poweruser/main"
-}
+$RepoRawBase = Resolve-RepoRawBase -InputValue $RepoRawBase
+Write-Host "Using repo raw base: $RepoRawBase" -ForegroundColor DarkGray
 
 $WorkDir = Join-Path $env:TEMP "windows11-dev-poweruser-bootstrap"
 if (Test-Path $WorkDir) { Remove-Item $WorkDir -Recurse -Force }

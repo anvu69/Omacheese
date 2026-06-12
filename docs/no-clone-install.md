@@ -38,6 +38,25 @@ Nếu muốn chỉ copy config, không cài app:
 $repo="https://raw.githubusercontent.com/<YOUR_USERNAME>/windows11-dev-poweruser/main"; irm "$repo/scripts/bootstrap-windows.ps1" -OutFile "$env:TEMP\bootstrap-windows.ps1"; powershell -ExecutionPolicy Bypass -File "$env:TEMP\bootstrap-windows.ps1" -RepoRawBase $repo -SkipInstall
 ```
 
+
+### Nếu gặp lỗi `Set -RepoRawBase...` hoặc `RepoRawBase is missing`
+
+Nguyên nhân thường là bạn chạy one-liner cũ nhưng chưa set biến `$repo`, hoặc script cũ trong GitHub chưa được update. Dùng một trong hai cách này:
+
+```powershell
+$repo="https://raw.githubusercontent.com/<YOUR_USERNAME>/windows11-dev-poweruser/main"
+irm "$repo/scripts/bootstrap-windows.ps1" | iex
+```
+
+Hoặc cách rõ ràng hơn:
+
+```powershell
+$env:DEV_REPO_RAW="https://raw.githubusercontent.com/<YOUR_USERNAME>/windows11-dev-poweruser/main"
+irm "$env:DEV_REPO_RAW/scripts/bootstrap-windows.ps1" | iex
+```
+
+Nếu vẫn lỗi, tải file về chạy với tham số `-RepoRawBase` như mục safer mode bên dưới.
+
 ## 3. Windows safer mode
 
 ```powershell
