@@ -1,23 +1,47 @@
 {
   "$schema": "https://raw.githubusercontent.com/LGUG2Z/komorebi/master/schema.json",
-  "app_specific_configuration_path": "$Env:USERPROFILE/applications.json",
+  "app_specific_configuration_path": "$Env:KOMOREBI_CONFIG_HOME/applications.json",
   "default_workspace_padding": 8,
   "default_container_padding": 6,
   "border": true,
   "border_width": 2,
   "float_rules": [
-    { "kind": "Exe", "id": "Bitwarden.exe" },
-    { "kind": "Exe", "id": "electerm.exe" },
-    { "kind": "Exe", "id": "DBeaver.exe" }
+    {
+      "kind": "Exe",
+      "id": "Bitwarden.exe"
+    },
+    {
+      "kind": "Exe",
+      "id": "electerm.exe"
+    },
+    {
+      "kind": "Exe",
+      "id": "DBeaver.exe"
+    }
   ],
   "monitors": [
     {
       "workspaces": [
-        { "name": "term", "layout": "BSP" },
-        { "name": "web", "layout": "BSP" },
-        { "name": "ssh", "layout": "BSP" },
-        { "name": "db", "layout": "BSP" },
-        { "name": "misc", "layout": "BSP" }
+        {
+          "name": "term",
+          "layout": "BSP"
+        },
+        {
+          "name": "web",
+          "layout": "BSP"
+        },
+        {
+          "name": "ssh",
+          "layout": "BSP"
+        },
+        {
+          "name": "db",
+          "layout": "BSP"
+        },
+        {
+          "name": "misc",
+          "layout": "BSP"
+        }
       ]
     }
   ]

@@ -1,8 +1,12 @@
-# Minimal YASB placeholder config.
-# Keep your real YASB config here after customizing.
-
 watch_stylesheet: true
 watch_config: true
+debug: false
+
+komorebi:
+  start_command: "komorebic start --whkd"
+  stop_command: "komorebic stop --whkd"
+  reload_command: "komorebic stop --whkd && komorebic start --whkd"
+
 bars:
   primary-bar:
     enabled: true
@@ -21,10 +25,55 @@ bars:
       height: 32
     padding:
       top: 0
-      left: 0
+      left: 6
       bottom: 0
-      right: 0
+      right: 6
     widgets:
-      left: ["komorebi_workspaces"]
-      center: ["clock"]
-      right: ["cpu", "memory", "battery"]
+      left:
+        - "komorebi_workspaces"
+      center:
+        - "clock"
+      right:
+        - "cpu"
+        - "memory"
+        - "battery"
+
+widgets:
+  komorebi_workspaces:
+    type: "komorebi.workspaces.WorkspaceWidget"
+    options:
+      label_offline: "Komorebi Offline"
+      label_workspace_btn: "{index}"
+      label_workspace_active_btn: "[{index}]"
+      label_workspace_populated_btn: "{index}"
+      label_default_name: "{index}"
+      label_zero_index: false
+      hide_empty_workspaces: false
+      hide_if_offline: false
+
+  clock:
+    type: "yasb.clock.ClockWidget"
+    options:
+      label: "{%H:%M}"
+      label_alt: "{%A, %d %B %Y %H:%M}"
+      timezones: []
+
+  cpu:
+    type: "yasb.cpu.CpuWidget"
+    options:
+      label: "CPU {info[percent][total]}%"
+      update_interval: 1000
+
+  memory:
+    type: "yasb.memory.MemoryWidget"
+    options:
+      label: "RAM {virtual_mem_percent}%"
+      update_interval: 5000
+
+  battery:
+    type: "yasb.battery.BatteryWidget"
+    options:
+      label: "{icon} {percent}%"
+      label_alt: "{icon} {percent}% | {time_remaining}"
+      charging_options:
+        icon_format: "{charging_icon}"
