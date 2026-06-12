@@ -1,0 +1,68 @@
+{
+  "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
+  "version": 3,
+  "final_space": true,
+  "blocks": [
+    {
+      "type": "prompt",
+      "alignment": "left",
+      "segments": [
+        {
+          "type": "os",
+          "style": "plain",
+          "foreground": "#9cdcfe",
+          "template": "{{.Icon}} "
+        },
+        {
+          "type": "path",
+          "style": "plain",
+          "foreground": "#c586c0",
+          "properties": {
+            "style": "folder"
+          },
+          "template": "{{ .Path }} "
+        },
+        {
+          "type": "git",
+          "style": "plain",
+          "foreground": "#d7ba7d",
+          "properties": {
+            "branch_icon": " ",
+            "fetch_status": true,
+            "fetch_upstream_icon": true
+          },
+          "template": "{{ .HEAD }}{{ if .Working.Changed }} ±{{ end }}{{ if .Staging.Changed }} +{{ end }} "
+        },
+        {
+          "type": "executiontime",
+          "style": "plain",
+          "foreground": "#6a9955",
+          "properties": {
+            "threshold": 500,
+            "style": "austin"
+          },
+          "template": "{{ .FormattedMs }} "
+        },
+        {
+          "type": "exit",
+          "style": "plain",
+          "foreground": "#f44747",
+          "template": "{{ if gt .Code 0 }}✘ {{ .Code }} {{ end }}"
+        }
+      ]
+    },
+    {
+      "type": "prompt",
+      "alignment": "left",
+      "newline": true,
+      "segments": [
+        {
+          "type": "text",
+          "style": "plain",
+          "foreground": "#ffffff",
+          "template": "❯"
+        }
+      ]
+    }
+  ]
+}

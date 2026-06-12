@@ -7,13 +7,14 @@ Repo này tổng hợp combo Windows 11 dành cho developer theo hướng **keyb
 | Nhóm | Lựa chọn |
 |---|---|
 | Terminal | Alacritty |
+| Windows shell | PowerShell 7 + Oh My Posh + PSReadLine Vi mode |
 | Window manager | komorebi + whkd + yasb |
 | Terminal session | tmux |
 | Editor | LazyVim / Neovim |
-| CLI productivity | fzf, ripgrep, fd, eza, bat, zoxide |
+| CLI productivity | fzf, ripgrep, fd, eza, bat, zoxide, aliases/functions |
 | File search | Everything |
 | Browser | Brave + Vimium C |
-| Linux dev env | WSL2 + AlmaLinux + Zsh |
+| Linux dev env | WSL2 + AlmaLinux + Zsh + Oh My Zsh |
 | Automation | Ansible |
 | Database management | DBeaver Community |
 | SSH client manager | electerm |
@@ -27,6 +28,7 @@ Repo này tổng hợp combo Windows 11 dành cho developer theo hướng **keyb
 - SSH manual dùng **electerm + Bitwarden SSH Agent**.
 - SSH daily/advanced dùng **Alacritty → WSL2 → tmux → ssh**.
 - Jump server dùng **ProxyJump**, hạn chế `ForwardAgent yes`.
+- Alias, shell profile và prompt là lớp thao tác hằng ngày, nên được version-control như dotfiles.
 - Config nên lưu trong Git để dễ backup/migrate.
 
 ## Cài nhanh
@@ -56,10 +58,13 @@ bash ./scripts/install-almalinux.sh
 │   ├── tmux/
 │   ├── zsh/
 │   ├── ssh/
+│   ├── powershell/
+│   ├── oh-my-posh/
 │   └── lazyvim/
 ├── docs/
 │   ├── ssh-bitwarden-electerm.md
 │   ├── jump-server.md
+│   ├── aliases-and-shell.md
 │   └── workflow.md
 └── scripts/
     ├── install-windows.ps1
@@ -83,4 +88,20 @@ Nếu dùng HTTPS:
 
 ```bash
 git remote add origin https://github.com/<YOUR_USERNAME>/windows11-dev-poweruser.git
+```
+
+
+## Shell layer
+
+Repo có sẵn config cho:
+
+```text
+PowerShell 7 + Oh My Posh + PSReadLine Vi mode
+Zsh + Oh My Zsh + aliases/functions
+```
+
+Xem chi tiết tại:
+
+```text
+docs/aliases-and-shell.md
 ```
