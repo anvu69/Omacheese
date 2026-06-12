@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-REPO_RAW_BASE="https://raw.githubusercontent.com/<YOUR_USERNAME>/windows11-dev-poweruser/main"
+REPO_RAW_BASE="https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main"
 SKIP_INSTALL=0
 SKIP_CONFIGS=0
 
@@ -31,7 +31,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$REPO_RAW_BASE" == *"<YOUR_USERNAME>"* ]]; then
-  echo "Set --repo to your GitHub raw URL, e.g. https://raw.githubusercontent.com/inkman/windows11-dev-poweruser/main" >&2
+  echo "Set --repo to your GitHub raw URL, e.g. https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main" >&2
   exit 1
 fi
 
