@@ -1,0 +1,31 @@
+# OpenSSH config example
+# Prefer ProxyJump over ForwardAgent for jump-server workflows.
+
+Host jump-main
+  HostName jump.example.com
+  User jumpuser
+  Port 22
+  ForwardAgent no
+  IdentitiesOnly no
+  ServerAliveInterval 30
+  ServerAliveCountMax 3
+
+Host prod-web-01
+  HostName 10.10.10.11
+  User almalinux
+  Port 22
+  ProxyJump jump-main
+  ForwardAgent no
+  IdentitiesOnly no
+  ServerAliveInterval 30
+  ServerAliveCountMax 3
+
+Host prod-db-01
+  HostName 10.10.20.15
+  User almalinux
+  Port 22
+  ProxyJump jump-main
+  ForwardAgent no
+  IdentitiesOnly no
+  ServerAliveInterval 30
+  ServerAliveCountMax 3

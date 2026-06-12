@@ -1,0 +1,30 @@
+# Minimal YASB placeholder config.
+# Keep your real YASB config here after customizing.
+
+watch_stylesheet: true
+watch_config: true
+bars:
+  primary-bar:
+    enabled: true
+    screens: ["*"]
+    class_name: "yasb-bar"
+    alignment:
+      position: "top"
+      center: false
+    blur_effect:
+      enabled: false
+    window_flags:
+      always_on_top: true
+      windows_app_bar: true
+    dimensions:
+      width: "100%"
+      height: 32
+    padding:
+      top: 0
+      left: 0
+      bottom: 0
+      right: 0
+    widgets:
+      left: ["komorebi_workspaces"]
+      center: ["clock"]
+      right: ["cpu", "memory", "battery"]
