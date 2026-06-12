@@ -90,7 +90,11 @@ if (!$SkipConfigs) {
     "configs/alacritty/alacritty.toml",
     "configs/ssh/config.example",
     "configs/oh-my-posh/poweruser.omp.json",
-    "configs/powershell/Microsoft.PowerShell_profile.ps1"
+    "configs/powershell/Microsoft.PowerShell_profile.ps1",
+    "configs/komorebi/komorebi.json",
+    "configs/whkd/whkdrc",
+    "configs/yasb/config.yaml",
+    "scripts/start-desktop.ps1"
   )
 
   foreach ($file in $files) {
@@ -100,10 +104,18 @@ if (!$SkipConfigs) {
   Ensure-Dir "$env:APPDATA\alacritty"
   Ensure-Dir "$env:USERPROFILE\.ssh"
   Ensure-Dir "$env:USERPROFILE\.config\oh-my-posh"
+  Ensure-Dir "$env:USERPROFILE\.config\komorebi"
+  Ensure-Dir "$env:USERPROFILE\.config\whkd"
+  Ensure-Dir "$env:USERPROFILE\.config\yasb"
+  Ensure-Dir "$env:USERPROFILE\.config\windows11-dev-poweruser"
 
   Copy-Item (Join-Path $WorkDir "configs/alacritty/alacritty.toml") "$env:APPDATA\alacritty\alacritty.toml" -Force
   Copy-Item (Join-Path $WorkDir "configs/ssh/config.example") "$env:USERPROFILE\.ssh\config.example" -Force
   Copy-Item (Join-Path $WorkDir "configs/oh-my-posh/poweruser.omp.json") "$env:USERPROFILE\.config\oh-my-posh\poweruser.omp.json" -Force
+  Copy-Item (Join-Path $WorkDir "configs/komorebi/komorebi.json") "$env:USERPROFILE\.config\komorebi\komorebi.json" -Force
+  Copy-Item (Join-Path $WorkDir "configs/whkd/whkdrc") "$env:USERPROFILE\.config\whkd\whkdrc" -Force
+  Copy-Item (Join-Path $WorkDir "configs/yasb/config.yaml") "$env:USERPROFILE\.config\yasb\config.yaml" -Force
+  Copy-Item (Join-Path $WorkDir "scripts/start-desktop.ps1") "$env:USERPROFILE\.config\windows11-dev-poweruser\start-desktop.ps1" -Force
 
   $ProfileDir = Split-Path -Parent $PROFILE
   Ensure-Dir $ProfileDir
