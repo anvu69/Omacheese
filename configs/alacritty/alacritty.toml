@@ -1,8 +1,9 @@
-# Alacritty config for Windows 11 + WSL2 AlmaLinux
+# Safe default Alacritty config.
+# Start PowerShell 7 first. Switch to WSL after confirming your distro name.
 
 [terminal.shell]
-program = "wsl.exe"
-args = ["-d", "AlmaLinux"]
+program = "pwsh.exe"
+args = ["-NoLogo"]
 
 [font]
 size = 11.5
@@ -12,7 +13,7 @@ family = "JetBrainsMono Nerd Font"
 style = "Regular"
 
 [window]
-decorations = "none"
+decorations = "Full"
 dynamic_padding = false
 startup_mode = "Windowed"
 

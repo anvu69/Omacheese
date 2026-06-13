@@ -2,37 +2,44 @@
 set -euo pipefail
 
 sudo dnf update -y
-sudo dnf install -y epel-release
-sudo dnf config-manager --set-enabled crb || true
 
 sudo dnf install -y \
-  git curl wget unzip zip ca-certificates util-linux-user \
-  zsh tmux \
-  fzf ripgrep fd-find eza bat zoxide \
-  gcc gcc-c++ make cmake ninja-build gettext \
-  python3 python3-pip python3-virtualenv pipx \
-  nodejs npm \
-  golang \
-  ansible-core \
-  postgresql mysql sqlite redis
+  git \
+  curl \
+  wget \
+  unzip \
+  tar \
+  zsh \
+  util-linux-user \
+  fzf \
+  ripgrep \
+  fd-find \
+  eza \
+  bat \
+  zoxide \
+  tmux \
+  neovim \
+  python3 \
+  python3-pip \
+  pipx \
+  ansible
 
-pipx ensurepath || true
-pipx install pgcli || true
-pipx install mycli || true
-pipx install litecli || true
-
-# LazyVim dependencies
-npm install -g neovim prettier eslint_d typescript typescript-language-server || true
-
-# Oh My Zsh. Safe to rerun; it skips when already installed.
+# Oh My Zsh
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
-  RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" || true
+  RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 fi
 
-# Use zsh as default shell
+# Make zsh the default shell
 if command -v zsh >/dev/null 2>&1; then
-  chsh -s "$(command -v zsh)" "$USER" || true
+  if [ "$SHELL" != "$(command -v zsh)" ]; then
+    chsh -s "$(command -v zsh)" || true
+  fi
 fi
 
-echo "Done. Copy configs/zsh/zshrc to ~/.zshrc and configs/zsh/aliases.zsh to ~/.config/zsh/aliases.zsh."
-echo "Install Neovim stable manually or via bob/mise if distro package is old."
+# zoxide init hint
+grep -q "zoxide init zsh" "$HOME/.zshrc" 2>/dev/null || {
+  echo 'eval "$(zoxide init zsh)"' >> "$HOME/.zshrc"
+}
+
+echo "AlmaLinux dev packages installed."
+echo "If shell did not change immediately, run: wsl --shutdown from Windows, then reopen Alacritty."
