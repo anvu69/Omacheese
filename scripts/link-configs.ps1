@@ -1,6 +1,3 @@
-# Link/copy Windows-side config files.
-# Run from repo root in PowerShell.
-
 $ErrorActionPreference = "Stop"
 
 $Repo = Split-Path -Parent $PSScriptRoot
@@ -29,14 +26,24 @@ function Copy-Config {
   Write-Host "Copied: $Destination" -ForegroundColor Green
 }
 
-# App config directories
 Ensure-Dir "$env:APPDATA\alacritty"
-Ensure-Dir "$env:USERPROFILE\.config"
 Ensure-Dir "$env:USERPROFILE\.ssh"
+Ensure-Dir "$env:USERPROFILE\.config"
 Ensure-Dir "$env:USERPROFILE\.config\komorebi"
-Ensure-Dir "$env:USERPROFILE\.config\whkd"
 Ensure-Dir "$env:USERPROFILE\.config\yasb"
 Ensure-Dir "$env:USERPROFILE\.config\oh-my-posh"
+Ensure-Dir "$env:USERPROFILE\.config\windows11-dev-poweruser"
+
+# Environment variables
+$KomorebiConfigHome = "$env:USERPROFILE\.config\komorebi"
+
+[Environment]::SetEnvironmentVariable(
+  "KOMOREBI_CONFIG_HOME",
+  $KomorebiConfigHome,
+  [EnvironmentVariableTarget]::User
+)
+
+$env:KOMOREBI_CONFIG_HOME = $KomorebiConfigHome
 
 # Alacritty
 Copy-Config `
@@ -48,7 +55,7 @@ Copy-Config `
   "$Repo\configs\komorebi\komorebi.json" `
   "$env:USERPROFILE\.config\komorebi\komorebi.json"
 
-# whkd
+# whkd default path
 Copy-Config `
   "$Repo\configs\whkd\whkdrc" `
   "$env:USERPROFILE\.config\whkdrc"
@@ -58,7 +65,7 @@ Copy-Config `
   "$Repo\configs\yasb\config.yaml" `
   "$env:USERPROFILE\.config\yasb\config.yaml"
 
-# SSH
+# SSH example only
 Copy-Config `
   "$Repo\configs\ssh\config.example" `
   "$env:USERPROFILE\.ssh\config.example"
@@ -68,23 +75,21 @@ Copy-Config `
   "$Repo\configs\oh-my-posh\poweruser.omp.json" `
   "$env:USERPROFILE\.config\oh-my-posh\poweruser.omp.json"
 
-# PowerShell profile
-$ProfileDir = Split-Path -Parent $PROFILE
-Ensure-Dir $ProfileDir
+# PowerShell 7 profile only
+$PwshProfile = "$env:USERPROFILE\Documents\PowerShell\Microsoft.PowerShell_profile.ps1"
 
 Copy-Config `
   "$Repo\configs\powershell\Microsoft.PowerShell_profile.ps1" `
-  $PROFILE
+  $PwshProfile
 
 # Optional helper script
-if (Test-Path "$Repo\scripts\start-desktop.ps1") {
-  Ensure-Dir "$env:USERPROFILE\.config\windows11-dev-poweruser"
-  Copy-Config `
-    "$Repo\scripts\start-desktop.ps1" `
-    "$env:USERPROFILE\.config\windows11-dev-poweruser\start-desktop.ps1"
-}
+Copy-Config `
+  "$Repo\scripts\start-desktop.ps1" `
+  "$env:USERPROFILE\.config\windows11-dev-poweruser\start-desktop.ps1"
 
 Write-Host ""
 Write-Host "Windows configs copied." -ForegroundColor Green
+Write-Host "PowerShell profile installed only for PowerShell 7." -ForegroundColor Yellow
+Write-Host "whkd config path: $env:USERPROFILE\.config\whkdrc" -ForegroundColor Yellow
+Write-Host "KOMOREBI_CONFIG_HOME=$env:KOMOREBI_CONFIG_HOME" -ForegroundColor Yellow
 Write-Host "Review ~/.ssh/config.example before renaming it to config." -ForegroundColor Yellow
-Write-Host "Restart PowerShell/Alacritty/YASB/komorebi after install." -ForegroundColor Yellow

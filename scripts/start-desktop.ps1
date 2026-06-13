@@ -11,13 +11,32 @@ function Has-Command {
 
 function Stop-If-Running {
   param([string]$ProcessName)
-
   Get-Process $ProcessName -ErrorAction SilentlyContinue | Stop-Process -Force
+}
+
+function Ensure-Dir {
+  param([string]$Path)
+
+  if (!(Test-Path $Path)) {
+    New-Item -ItemType Directory -Force -Path $Path | Out-Null
+  }
 }
 
 $KomorebiConfigHome = Join-Path $env:USERPROFILE ".config\komorebi"
 $KomorebiConfig = Join-Path $KomorebiConfigHome "komorebi.json"
 $YasbConfig = Join-Path $env:USERPROFILE ".config\yasb\config.yaml"
+$WhkdRc = Join-Path $env:USERPROFILE ".config\whkdrc"
+
+Ensure-Dir $KomorebiConfigHome
+Ensure-Dir "$env:USERPROFILE\.config"
+
+[Environment]::SetEnvironmentVariable(
+  "KOMOREBI_CONFIG_HOME",
+  $KomorebiConfigHome,
+  [EnvironmentVariableTarget]::User
+)
+
+$env:KOMOREBI_CONFIG_HOME = $KomorebiConfigHome
 
 if (!(Has-Command "komorebic.exe")) {
   Write-Host "komorebic.exe not found. Install komorebi first." -ForegroundColor Red
@@ -29,10 +48,10 @@ if (!(Test-Path $KomorebiConfig)) {
   exit 1
 }
 
-# Prefer KOMOREBI_CONFIG_HOME over passing --config.
-# This avoids Windows quoting issues around Start-Process and --config paths.
-[Environment]::SetEnvironmentVariable("KOMOREBI_CONFIG_HOME", $KomorebiConfigHome, "User")
-$env:KOMOREBI_CONFIG_HOME = $KomorebiConfigHome
+if (!(Test-Path $WhkdRc)) {
+  Write-Host "Missing whkd config: $WhkdRc" -ForegroundColor Yellow
+  Write-Host "Hotkeys will not work until whkdrc exists." -ForegroundColor Yellow
+}
 
 if ($Restart) {
   Write-Host "Stopping komorebi/whkd/yasb..." -ForegroundColor Yellow
@@ -49,19 +68,22 @@ if ($Restart) {
 }
 
 Write-Host "KOMOREBI_CONFIG_HOME=$env:KOMOREBI_CONFIG_HOME" -ForegroundColor DarkGray
-Write-Host "Starting komorebi..." -ForegroundColor Cyan
+Write-Host "Starting komorebi with whkd..." -ForegroundColor Cyan
 
-# Do not pass --config here. komorebi will use KOMOREBI_CONFIG_HOME.
 komorebic start --whkd
 
 Start-Sleep -Seconds 2
 
 Write-Host ""
 Write-Host "komorebi state:" -ForegroundColor Cyan
+
 try {
   komorebic state
 } catch {
-  Write-Host "komorebi state failed. Try running: komorebic start --whkd" -ForegroundColor Red
+  Write-Host "komorebi state failed." -ForegroundColor Red
+  Write-Host "Try manually:" -ForegroundColor Yellow
+  Write-Host '$env:KOMOREBI_CONFIG_HOME="$env:USERPROFILE\.config\komorebi"'
+  Write-Host "komorebic start --whkd"
 }
 
 if (Has-Command "yasb.exe") {
