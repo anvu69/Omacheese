@@ -113,7 +113,10 @@ if (!$SkipConfigs) {
   Copy-Item (Join-Path $WorkDir "configs/ssh/config.example") "$env:USERPROFILE\.ssh\config.example" -Force
   Copy-Item (Join-Path $WorkDir "configs/oh-my-posh/poweruser.omp.json") "$env:USERPROFILE\.config\oh-my-posh\poweruser.omp.json" -Force
   Copy-Item (Join-Path $WorkDir "configs/komorebi/komorebi.json") "$env:USERPROFILE\.config\komorebi\komorebi.json" -Force
-  Copy-Item (Join-Path $WorkDir "configs/whkd/whkdrc") "$env:USERPROFILE\.config\whkd\whkdrc" -Force
+  Copy-Item `
+  (Join-Path $WorkDir "configs/whkd/whkdrc") `
+  "$env:USERPROFILE\.config\whkdrc" `
+  -Force
   Copy-Item (Join-Path $WorkDir "configs/yasb/config.yaml") "$env:USERPROFILE\.config\yasb\config.yaml" -Force
   Copy-Item (Join-Path $WorkDir "scripts/start-desktop.ps1") "$env:USERPROFILE\.config\windows11-dev-poweruser\start-desktop.ps1" -Force
 

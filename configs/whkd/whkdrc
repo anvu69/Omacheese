@@ -1,16 +1,7 @@
-# -------------------------------------------------------------------
-# whkd keybindings for komorebi + power-user Windows workflow
-# Modifier convention:
-#   alt              = focus / switch
-#   alt + shift      = move window
-#   alt + ctrl       = resize / stack / advanced
-#   alt + ctrl+shift = system / restart
-# -------------------------------------------------------------------
-
 # Apps
 alt + enter : alacritty
-alt + b     : brave
-alt + e     : explorer
+alt + b : brave
+alt + e : explorer
 alt + shift + e : everything
 
 # Close / minimize
@@ -35,15 +26,7 @@ alt + ctrl + l : komorebic resize-axis horizontal increase
 alt + ctrl + j : komorebic resize-axis vertical increase
 alt + ctrl + k : komorebic resize-axis vertical decrease
 
-# Cycle focus
-alt + tab : komorebic cycle-focus next
-alt + shift + tab : komorebic cycle-focus previous
-
-# Cycle workspaces on current monitor
-alt + [ : komorebic cycle-workspace previous
-alt + ] : komorebic cycle-workspace next
-
-# Focus workspaces
+# Workspaces
 alt + 1 : komorebic focus-workspace 0
 alt + 2 : komorebic focus-workspace 1
 alt + 3 : komorebic focus-workspace 2
@@ -65,16 +48,9 @@ alt + shift + 7 : komorebic move-to-workspace 6
 alt + shift + 8 : komorebic move-to-workspace 7
 alt + shift + 9 : komorebic move-to-workspace 8
 
-# Send window to workspace and follow it
-alt + ctrl + 1 : komorebic move-to-workspace 0 && komorebic focus-workspace 0
-alt + ctrl + 2 : komorebic move-to-workspace 1 && komorebic focus-workspace 1
-alt + ctrl + 3 : komorebic move-to-workspace 2 && komorebic focus-workspace 2
-alt + ctrl + 4 : komorebic move-to-workspace 3 && komorebic focus-workspace 3
-alt + ctrl + 5 : komorebic move-to-workspace 4 && komorebic focus-workspace 4
-alt + ctrl + 6 : komorebic move-to-workspace 5 && komorebic focus-workspace 5
-alt + ctrl + 7 : komorebic move-to-workspace 6 && komorebic focus-workspace 6
-alt + ctrl + 8 : komorebic move-to-workspace 7 && komorebic focus-workspace 7
-alt + ctrl + 9 : komorebic move-to-workspace 8 && komorebic focus-workspace 8
+# Cycle workspaces
+alt + left : komorebic cycle-workspace previous
+alt + right : komorebic cycle-workspace next
 
 # Monitors
 alt + , : komorebic focus-monitor previous
@@ -82,25 +58,9 @@ alt + . : komorebic focus-monitor next
 alt + shift + , : komorebic move-to-monitor previous
 alt + shift + . : komorebic move-to-monitor next
 
-# Layouts
+# Layout / state
 alt + space : komorebic toggle-float
 alt + f : komorebic toggle-monocle
 alt + shift + f : komorebic toggle-maximize
 alt + r : komorebic retile
-alt + x : komorebic flip-layout horizontal
-alt + y : komorebic flip-layout vertical
-
-# Stack
-alt + s : komorebic stack-all
-alt + shift + s : komorebic unstack-all
-alt + ctrl + h : komorebic stack left
-alt + ctrl + j : komorebic stack down
-alt + ctrl + k : komorebic stack up
-alt + ctrl + l : komorebic stack right
-
-# Pause / resume komorebi
 alt + p : komorebic toggle-pause
-
-# Reload / restart desktop stack
-alt + shift + r : komorebic reload-configuration
-alt + ctrl + shift + r : powershell -ExecutionPolicy Bypass -File "%USERPROFILE%\.config\windows11-dev-poweruser\start-desktop.ps1" -Restart

@@ -51,7 +51,7 @@ Copy-Config `
 # whkd
 Copy-Config `
   "$Repo\configs\whkd\whkdrc" `
-  "$env:USERPROFILE\.config\whkd\whkdrc"
+  "$env:USERPROFILE\.config\whkdrc"
 
 # yasb
 Copy-Config `
