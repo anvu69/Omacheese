@@ -52,6 +52,16 @@ win + shift + oem_2          : start "" bitwarden
 win + shift + t              : start "" alacritty -e btop
 
 # ----------------------------------------------------------------------------
+# Coding agents
+# ----------------------------------------------------------------------------
+# SUPER+A launches whichever agent is set as default; SUPER+SHIFT+CTRL+A (the
+# chord Omarchy uses) opens the picker. Neither passes a skip-permissions flag
+# by default - add -Yolo in the picker menu when you want that.
+win + a                      : start "" alacritty --class omarchy-agent,omarchy-agent -e pwsh -NoProfile -ExecutionPolicy Bypass -File "%USERPROFILE%\.config\omarchy\bin\omarchy-agent.ps1"
+win + shift + control + a    : start "" alacritty --class omarchy-agent,omarchy-agent -e pwsh -NoProfile -ExecutionPolicy Bypass -File "%USERPROFILE%\.config\omarchy\bin\omarchy-agent.ps1" -Pick
+win + alt + a                : start "" alacritty --class omarchy-agent,omarchy-agent -e pwsh -NoProfile -ExecutionPolicy Bypass -File "%USERPROFILE%\.config\omarchy\bin\omarchy-agent.ps1" -Wsl
+
+# ----------------------------------------------------------------------------
 # Menus and discovery
 # ----------------------------------------------------------------------------
 # SUPER+/ prints every binding below into a searchable fzf window. This is the

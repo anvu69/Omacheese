@@ -5,6 +5,9 @@ id_*
 !*.example
 .env
 .env.*
+# ...but example files carry no secrets and must be committed.
+!.env.example
+!*/.env.example
 
 # OS/editor
 .DS_Store
@@ -16,3 +19,7 @@ Thumbs.db
 *.log
 .tmp/
 temp/
+
+# AI stack secrets
+configs/ai/.env
+configs/ai/workspace/

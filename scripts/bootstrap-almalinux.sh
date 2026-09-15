@@ -55,7 +55,10 @@ if [ "$SKIP_CONFIGS" -eq 0 ]; then
     "configs/wsl/wsl.conf" \
     "configs/wsl/ssh-agent-bridge.sh" \
     "configs/git/gitconfig" \
-    "configs/oh-my-posh/poweruser.omp.json"
+    "configs/oh-my-posh/poweruser.omp.json" \
+    "configs/ai/docker-compose.vllm.yml" \
+    "configs/ai/docker-compose.finetune.yml" \
+    "configs/ai/.env.example"
   do
     download "$f" "$WORKDIR/$f"
   done
@@ -65,7 +68,7 @@ if [ "$SKIP_CONFIGS" -eq 0 ]; then
     return 0
   }
 
-  mkdir -p "$HOME/.config/zsh" "$HOME/.config/wsl" "$HOME/.config/oh-my-posh"
+  mkdir -p "$HOME/.config/zsh" "$HOME/.config/wsl" "$HOME/.config/oh-my-posh" "$HOME/.config/ai"
 
   backup "$HOME/.zshrc";     cp "$WORKDIR/configs/zsh/zshrc"        "$HOME/.zshrc"
   backup "$HOME/.tmux.conf"; cp "$WORKDIR/configs/tmux/tmux.conf"   "$HOME/.tmux.conf"
@@ -76,6 +79,12 @@ if [ "$SKIP_CONFIGS" -eq 0 ]; then
   cp "$WORKDIR/configs/wsl/wsl.conf"                 "$HOME/.config/wsl/wsl.conf"
   cp "$WORKDIR/configs/oh-my-posh/poweruser.omp.json" "$HOME/.config/oh-my-posh/poweruser.omp.json"
   chmod +x "$HOME/.config/wsl/ssh-agent-bridge.sh"
+
+  # AI stack. .env is never overwritten - it holds the HF token.
+  cp "$WORKDIR/configs/ai/docker-compose.vllm.yml"     "$HOME/.config/ai/"
+  cp "$WORKDIR/configs/ai/docker-compose.finetune.yml" "$HOME/.config/ai/"
+  cp "$WORKDIR/configs/ai/.env.example"                "$HOME/.config/ai/"
+  [ -f "$HOME/.config/ai/.env" ] || cp "$WORKDIR/configs/ai/.env.example" "$HOME/.config/ai/.env"
 
   cat <<'EOF'
 

@@ -25,6 +25,7 @@ $Menus = [ordered]@{
 
     root = [ordered]@{
         "Apps            launch an application"      = { Show-Menu "apps" }
+        "Agents          coding agents"              = { Show-Menu "agents" }
         "Windows         layout and tiling"          = { Show-Menu "windows" }
         "Workspaces      jump to a workspace"        = { Show-Menu "workspaces" }
         "Capture         screenshot and recording"   = { Show-Menu "capture" }
@@ -47,6 +48,27 @@ $Menus = [ordered]@{
         "Bitwarden"               = { Start-Process "bitwarden" }
         "btop"                    = { Start-Process $term -ArgumentList '-e','btop' }
         "lazygit"                 = { Start-Process $term -ArgumentList '-e','lazygit' }
+    }
+
+    agents = [ordered]@{
+        "Launch default agent"       = { & (Join-Path $bin "omarchy-agent.ps1") }
+        "Launch default agent (WSL)" = { & (Join-Path $bin "omarchy-agent.ps1") -Wsl }
+        "Launch with a prompt"       = {
+            $p = Read-Host "Prompt"
+            if ($p) { & (Join-Path $bin "omarchy-agent.ps1") -Prompt $p }
+        }
+        "Launch unattended (-Yolo)"  = {
+            Write-Host "This skips every permission prompt. The agent can run any" -ForegroundColor Yellow
+            Write-Host "command, including against your SSH agent and work trees." -ForegroundColor Yellow
+            if ((Read-Host "Type yes to continue") -eq "yes") {
+                & (Join-Path $bin "omarchy-agent.ps1") -Yolo
+            }
+        }
+        "Pick / change default"      = { & (Join-Path $bin "omarchy-agent.ps1") -Pick }
+        "List agents"                = {
+            & (Join-Path $bin "omarchy-default-agent.ps1") -List
+            Read-Host "`nEnter to close"
+        }
     }
 
     windows = [ordered]@{

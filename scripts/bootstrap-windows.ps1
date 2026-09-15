@@ -13,7 +13,7 @@
 [CmdletBinding()]
 param(
     [string]$RepoRawBase = "",
-    [ValidateSet("core", "wm", "cli", "desktop")]
+    [ValidateSet("core", "wm", "cli", "ai", "desktop")]
     [string[]]$Groups,
     [switch]$SkipInstall,
     [switch]$SkipConfigs,
@@ -71,6 +71,8 @@ $files = @(
     "scripts/omarchy/omarchy-stack-toggle.ps1"
     "scripts/omarchy/omarchy-toggle-bar.ps1"
     "scripts/omarchy/omarchy-restart-desktop.ps1"
+    "scripts/omarchy/omarchy-agent.ps1"
+    "scripts/omarchy/omarchy-default-agent.ps1"
     "configs/winget/packages.json"
     "configs/alacritty/alacritty.toml"
     "configs/alacritty/alacritty.wsl.toml"

@@ -1,0 +1,58 @@
+# Fine-tuning workbench.
+#
+#   docker compose -f docker-compose.finetune.yml run --rm train
+#
+# vLLM does NOT train models - it is an inference server. To actually fine-tune
+# you need a training stack; this one uses Axolotl, which wraps PEFT/TRL/
+# bitsandbytes and takes a YAML config.
+#
+# On 16 GB the realistic target is QLoRA (4-bit base + LoRA adapters):
+#   QLoRA 7-8B, seq 2048, batch 1 + grad accum   fits, ~12-14 GB
+#   QLoRA 13-14B, seq 1024                       tight but possible
+#   Full fine-tune of anything above 1-2B        does not fit, use a rented GPU
+#
+# The usual loop is: train here -> merge the adapter -> serve the result with
+# docker-compose.vllm.yml pointed at the merged directory.
+
+# Same project name as docker-compose.vllm.yml so the weights cache is shared.
+name: ai
+
+services:
+  train:
+    image: axolotlai/axolotl:main-latest
+    container_name: axolotl
+    working_dir: /workspace
+
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+      HUGGING_FACE_HUB_TOKEN: ${HF_TOKEN:-}
+      HF_HOME: /root/.cache/huggingface
+      WANDB_API_KEY: ${WANDB_API_KEY:-}
+      # Ada cards benefit from this and it costs nothing.
+      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+      # Your configs, datasets and output adapters.
+      - ${WORKSPACE:-./workspace}:/workspace
+
+    ipc: host
+    shm_size: "8gb"
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    # Override at run time, e.g.
+    #   docker compose -f docker-compose.finetune.yml run --rm train \
+    #     axolotl train qlora-qwen3-8b.yml
+    command: ["bash"]
+    stdin_open: true
+    tty: true
+
+volumes:
+  hf-cache:

@@ -217,6 +217,68 @@ if (Get-Command npiperelay.exe -ErrorAction SilentlyContinue) {
     Warn "npiperelay not found - WSL will have no SSH keys. winget install --id albertony.npiperelay -e"
 }
 
+Section "coding agents"
+$agentState = Join-Path $cfg "omarchy\defaults\agent"
+$knownAgents = @{ claude = "claude"; codex = "codex"; gemini = "gemini"; opencode = "opencode"
+                  copilot = "copilot"; cursor = "cursor-agent"; crush = "crush" }
+$installedAgents = @()
+foreach ($k in $knownAgents.Keys) {
+    if (Get-Command $knownAgents[$k] -ErrorAction SilentlyContinue) { $installedAgents += $k }
+}
+if ($installedAgents.Count) { Ok "agents installed: $($installedAgents -join ', ')" }
+else { Warn "no coding agent installed (./scripts/install-windows.ps1 -Groups ai)" }
+
+if (Test-Path -LiteralPath $agentState) {
+    Ok "default agent: $((Get-Content -LiteralPath $agentState -Raw).Trim())"
+} else {
+    Warn "no default agent set (SUPER+SHIFT+CTRL+A, or omarchy-default-agent.ps1 claude)"
+}
+
+Section "windows tuning"
+# The settings that actually conflict with a tiling WM, plus the ones the
+# debloat profile is responsible for. This is what answers "is the taskbar
+# tuned yet" without clicking through Settings.
+$adv = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+$tuning = @(
+    @{ N = "window snapping off";  P = $adv; K = "WindowArrangementActive"; V = 0 }
+    @{ N = "snap assist off";      P = $adv; K = "SnapAssist";              V = 0 }
+    @{ N = "task view hidden";     P = $adv; K = "ShowTaskViewButton";      V = 0 }
+    @{ N = "widgets hidden";       P = $adv; K = "TaskbarDa";               V = 0 }
+    @{ N = "file extensions shown";P = $adv; K = "HideFileExt";             V = 0 }
+    @{ N = "hidden files shown";   P = $adv; K = "Hidden";                  V = 1 }
+    @{ N = "search box hidden";    P = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search"; K = "SearchboxTaskbarMode"; V = 0 }
+)
+foreach ($t in $tuning) {
+    $actual = (Get-ItemProperty -Path $t.P -Name $t.K -ErrorAction SilentlyContinue).($t.K)
+    if ($actual -eq $t.V) { Ok $t.N }
+    else { Warn "$($t.N) - not set (./scripts/debloat-windows.ps1)" }
+}
+
+$mouse = Get-ItemProperty "HKCU:\Control Panel\Mouse" -ErrorAction SilentlyContinue
+if ($mouse -and $mouse.MouseSpeed -eq "0") { Ok "mouse acceleration off" }
+else { Warn "mouse acceleration on (./scripts/debloat-windows.ps1)" }
+
+Section "wsl / docker"
+$distro = "AlmaLinux-9"
+if (Get-Command wsl -ErrorAction SilentlyContinue) {
+    $wslConf = Join-Path $env:USERPROFILE ".wslconfig"
+    if (Test-Path -LiteralPath $wslConf) { Ok ".wslconfig present" } else { Warn ".wslconfig missing" }
+
+    $probe = & wsl.exe -d $distro -- bash -lc 'printf "%s|%s|%s|%s" "$(ps -p 1 -o comm=)" "$(command -v docker || echo -)" "$(command -v nvidia-ctk || echo -)" "$([ -e /dev/dxg ] && echo dxg || echo -)"' 2>$null
+    $probe = ($probe -replace "`0", "").Trim()
+    if ($probe) {
+        $parts = $probe -split '\|'
+        if ($parts[0] -eq "systemd") { Ok "$distro runs systemd" } else { Warn "$distro PID 1 is '$($parts[0])' - set [boot] systemd=true in /etc/wsl.conf" }
+        if ($parts[1] -like "/mnt/*")     { Warn "docker in $distro is the Windows binary via PATH leak; appendWindowsPath=false will remove it (./scripts/install-docker-wsl.sh)" }
+        elseif ($parts[1] -ne "-")        { Ok "docker installed in $distro" }
+        else                              { Warn "no docker in $distro (bash ./scripts/install-docker-wsl.sh)" }
+        if ($parts[2] -ne "-") { Ok "nvidia-container-toolkit installed" } else { Warn "nvidia-container-toolkit missing - GPU containers will not work" }
+        if ($parts[3] -eq "dxg") { Ok "/dev/dxg present (GPU passthrough)" } else { Warn "/dev/dxg missing - no GPU in WSL" }
+    } else {
+        Warn "could not probe $distro (not installed, or a different name)"
+    }
+}
+
 Section "processes"
 foreach ($p in @("komorebi","whkd","yasb")) {
     if (Get-Process $p -ErrorAction SilentlyContinue) { Ok "$p running" }

@@ -5,10 +5,15 @@ manager, terminal-heavy, Vim/Neovim, WSL2, remote-first** — với navigation v
 quản lý workspace port từ [Omarchy](https://omarchy.org).
 
 ```powershell
-./scripts/install-windows.ps1     # cài package
+./scripts/install-windows.ps1     # cài package (gồm Claude Code, Codex)
 ./scripts/link-configs.ps1        # cài config + autostart
+./scripts/debloat-windows.ps1     # gỡ bloat + tối ưu taskbar cho tiling
 ./scripts/doctor.ps1              # kiểm tra mọi thứ đã đúng
 ./scripts/start-desktop.ps1       # chạy komorebi + whkd + yasb
+```
+
+```bash
+bash ./scripts/install-docker-wsl.sh   # trong WSL: Docker + GPU cho vLLM
 ```
 
 Rồi bấm **`SUPER + /`** để xem toàn bộ keybinding.
@@ -30,6 +35,9 @@ Rồi bấm **`SUPER + /`** để xem toàn bộ keybinding.
 | Database | DBeaver Community |
 | SSH GUI | electerm |
 | SSH key / vault | Bitwarden Desktop SSH Agent (+ cầu nối vào WSL) |
+| Coding agents | Claude Code, Codex, Gemini, OpenCode — manager kiểu Omarchy |
+| Local LLM | Docker + NVIDIA Container Toolkit + vLLM (WSL, GPU) |
+| Debloat | Win11Debloat, profile pin + version-control |
 | Theme | Tokyo Night (Omarchy palette), dùng chung mọi tool |
 
 ## Triết lý
@@ -64,6 +72,8 @@ Vài phím đáng nhớ trước:
 | `SUPER + 1…0` | Workspace 1–10 |
 | `SUPER + G` | Nhóm cửa sổ (komorebi stack) |
 | `SUPER + S` | Scratchpad |
+| `SUPER + A` | Mở coding agent mặc định |
+| `SUPER + SHIFT + CTRL + A` | Chọn agent |
 
 Chi tiết + những chỗ **cố tình lệch** khỏi Omarchy (và lý do):
 [`docs/keybindings.md`](docs/keybindings.md).
@@ -104,9 +114,13 @@ Xem thêm [`docs/no-clone-install.md`](docs/no-clone-install.md).
 │   ├── tmux/            tmux.conf
 │   ├── zsh/             zshrc, aliases.zsh
 │   ├── winget/          packages.json  (nguồn app duy nhất)
+│   ├── windows/         debloat.json   (profile Win11Debloat)
+│   ├── ai/              compose vLLM + fine-tune
 │   └── lazyvim/
 ├── docs/
 │   ├── keybindings.md            keymap Omarchy + chỗ lệch
+│   ├── ai-stack.md               agents, Docker/GPU, vLLM
+│   ├── windows-tuning.md         debloat + taskbar
 │   ├── aliases-and-shell.md
 │   ├── ssh-bitwarden-electerm.md agent → WSL
 │   ├── jump-server.md
@@ -118,10 +132,12 @@ Xem thêm [`docs/no-clone-install.md`](docs/no-clone-install.md).
 │   ├── start-desktop.ps1
 │   ├── doctor.ps1                ✅ verify
 │   ├── bootstrap-windows.ps1     đường no-clone
+│   ├── debloat-windows.ps1       Win11Debloat wrapper
+│   ├── install-docker-wsl.sh     Docker + NVIDIA toolkit
 │   ├── install-almalinux.sh
 │   ├── bootstrap-almalinux.sh
 │   ├── lib/common.ps1            helper dùng chung
-│   └── omarchy/                  menu, cheatsheet, scratchpad, stack toggle
+│   └── omarchy/                  menu, cheatsheet, scratchpad, stack, agents
 └── .github/workflows/validate.yml
 ```
 
