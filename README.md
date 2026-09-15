@@ -4,19 +4,50 @@ Combo Windows 11 cho developer theo hướng **keyboard-first, tiling window
 manager, terminal-heavy, Vim/Neovim, WSL2, remote-first** — với navigation và
 quản lý workspace port từ [Omarchy](https://omarchy.org).
 
+## Cài
+
 ```powershell
-./scripts/install-windows.ps1     # cài package (gồm Claude Code, Codex)
-./scripts/link-configs.ps1        # cài config + autostart
-./scripts/debloat-windows.ps1     # gỡ bloat + tối ưu taskbar cho tiling
-./scripts/doctor.ps1              # kiểm tra mọi thứ đã đúng
-./scripts/start-desktop.ps1       # chạy komorebi + whkd + yasb
+./scripts/setup.ps1
 ```
 
-```bash
-bash ./scripts/install-docker-wsl.sh   # trong WSL: Docker + GPU cho vLLM
+Một lệnh. TUI sẽ dò phần cứng, chỉ hiện module máy bạn **chạy được**, rồi
+theo dõi tiến trình từng bước.
+
+```text
++- Modules ---------------------------------------------------------+
+| Microsoft Windows 11 Pro  build 26200   32 GB RAM   24 threads     |
+| GPU  NVIDIA GeForce RTX 4080 SUPER  16 GB VRAM  CUDA 8.9           |
++-------------------------------------------------------------------+
+| > [x] core         PowerShell 7, Alacritty, git, Nerd Font         |
+|   [x] wm           komorebi + whkd + yasb (Omarchy keymap)         |
+|   [ ] debloat      Win11Debloat + tweaks cho tiling                |
+|   [-] localllm     Local LLM: vLLM (GPU)                           |
+|         cần chọn 'wsl' nữa, hoặc chạy lại sau khi reboot           |
++-------------------------------------------------------------------+
+| 7 selected   space toggle  a all  n none  enter start  q quit      |
++-------------------------------------------------------------------+
 ```
 
-Rồi bấm **`SUPER + /`** để xem toàn bộ keybinding.
+Không tương tác được thì dùng preset:
+
+```powershell
+./scripts/setup.ps1 -Preset desktop -Yes
+./scripts/setup.ps1 -Preset everything -DryRun    # xem kế hoạch, không đổi gì
+./scripts/setup.ps1 -Modules core,cli,configs
+```
+
+| Preset | Gồm |
+|---|---|
+| `minimal` | terminal, shell, CLI, dotfiles |
+| `desktop` | + tiling WM (Omarchy keymap), debloat |
+| `full` | + coding agents, WSL2 AlmaLinux |
+| `everything` | + local LLM **nếu phần cứng cho phép** |
+| `custom` | tự chọn |
+
+Xong rồi bấm **`SUPER + /`** để xem toàn bộ keybinding.
+
+> TUI chạy trên **Windows PowerShell 5.1** với zero dependency — vì đó là tất
+> cả những gì một máy Windows vừa cài xong có. CI kiểm tra điều này.
 
 ## Stack chính
 
@@ -35,8 +66,9 @@ Rồi bấm **`SUPER + /`** để xem toàn bộ keybinding.
 | Database | DBeaver Community |
 | SSH GUI | electerm |
 | SSH key / vault | Bitwarden Desktop SSH Agent (+ cầu nối vào WSL) |
+| Installer | TUI zero-dependency, dò phần cứng, theo dõi tiến trình |
 | Coding agents | Claude Code, Codex, Gemini, OpenCode — manager kiểu Omarchy |
-| Local LLM | Docker + NVIDIA Container Toolkit + vLLM (WSL, GPU) |
+| Local LLM | Ollama (mọi máy) hoặc vLLM + GPU (khi đủ VRAM) |
 | Debloat | Win11Debloat, profile pin + version-control |
 | Theme | Tokyo Night (Omarchy palette), dùng chung mọi tool |
 
@@ -118,6 +150,7 @@ Xem thêm [`docs/no-clone-install.md`](docs/no-clone-install.md).
 │   ├── ai/              compose vLLM + fine-tune
 │   └── lazyvim/
 ├── docs/
+│   ├── setup-tui.md              TUI installer + gating
 │   ├── keybindings.md            keymap Omarchy + chỗ lệch
 │   ├── ai-stack.md               agents, Docker/GPU, vLLM
 │   ├── windows-tuning.md         debloat + taskbar
@@ -127,15 +160,21 @@ Xem thêm [`docs/no-clone-install.md`](docs/no-clone-install.md).
 │   ├── workflow.md
 │   └── no-clone-install.md
 ├── scripts/
+│   ├── setup.ps1                 ⭐ TUI installer
 │   ├── install-windows.ps1       package (đọc packages.json)
 │   ├── link-configs.ps1          symlink + backup + autostart
 │   ├── start-desktop.ps1
 │   ├── doctor.ps1                ✅ verify
 │   ├── bootstrap-windows.ps1     đường no-clone
 │   ├── debloat-windows.ps1       Win11Debloat wrapper
+│   ├── install-wsl.ps1           WSL2 + AlmaLinux
+│   ├── install-localllm.ps1      Ollama hoặc vLLM theo phần cứng
 │   ├── install-docker-wsl.sh     Docker + NVIDIA toolkit
 │   ├── install-almalinux.sh
 │   ├── bootstrap-almalinux.sh
+│   ├── lib/tui.ps1               TUI (PS 5.1, zero dep)
+│   ├── lib/detect.ps1            dò phần cứng
+│   ├── lib/modules.ps1           module + gating
 │   ├── lib/common.ps1            helper dùng chung
 │   └── omarchy/                  menu, cheatsheet, scratchpad, stack, agents
 └── .github/workflows/validate.yml

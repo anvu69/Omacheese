@@ -10,7 +10,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet("core", "wm", "cli", "ai", "desktop")]
+    [ValidateSet("core", "wm", "cli", "agents", "desktop")]
     [string[]]$Groups,
     [switch]$SkipModules,
     [switch]$Force

@@ -13,11 +13,11 @@
 [CmdletBinding()]
 param(
     [string]$RepoRawBase = "",
-    [ValidateSet("core", "wm", "cli", "ai", "desktop")]
-    [string[]]$Groups,
-    [switch]$SkipInstall,
-    [switch]$SkipConfigs,
-    [switch]$NoAutostart
+    [ValidateSet("minimal", "desktop", "full", "everything", "custom")]
+    [string]$Preset,
+    [string[]]$Modules,
+    [switch]$Yes,
+    [switch]$DryRun
 )
 
 $ErrorActionPreference = "Stop"
@@ -61,6 +61,13 @@ function Get-RepoFile {
 # Everything install-windows.ps1 and link-configs.ps1 touch.
 $files = @(
     "scripts/lib/common.ps1"
+    "scripts/lib/tui.ps1"
+    "scripts/lib/detect.ps1"
+    "scripts/lib/modules.ps1"
+    "scripts/setup.ps1"
+    "scripts/install-wsl.ps1"
+    "scripts/install-localllm.ps1"
+    "scripts/debloat-windows.ps1"
     "scripts/install-windows.ps1"
     "scripts/link-configs.ps1"
     "scripts/start-desktop.ps1"
@@ -87,27 +94,22 @@ $files = @(
     "configs/wsl/.wslconfig"
     "configs/wsl/wsl.conf"
     "configs/wsl/ssh-agent-bridge.sh"
+    "configs/windows/debloat.json"
+    "configs/ai/docker-compose.vllm.yml"
+    "configs/ai/docker-compose.finetune.yml"
+    "configs/ai/.env.example"
 )
 
 Write-Host "`nDownloading repo files" -ForegroundColor Cyan
 foreach ($f in $files) { Get-RepoFile $f }
 
-if (-not $SkipInstall) {
-    Write-Host "`nInstalling packages" -ForegroundColor Cyan
-    & (Join-Path $WorkDir "scripts/install-windows.ps1") -Groups $Groups
-}
+# Hand over to the interactive setup, which detects the machine and offers
+# only the modules it can actually run. Everything below is one code path with
+# the cloned-repo experience.
+$setupArgs = @{}
+if ($Preset)      { $setupArgs["Preset"]  = $Preset }
+if ($Modules)     { $setupArgs["Modules"] = $Modules }
+if ($Yes)         { $setupArgs["Yes"]     = $true }
+if ($DryRun)      { $setupArgs["DryRun"]  = $true }
 
-if (-not $SkipConfigs) {
-    Write-Host "`nInstalling configs" -ForegroundColor Cyan
-    # Always copy here. Symlinking would point at $WorkDir under %TEMP%, which
-    # the next bootstrap run deletes - the configs would quietly vanish.
-    # Clone the repo and use link-configs.ps1 if you want live-editable links.
-    & (Join-Path $WorkDir "scripts/link-configs.ps1") -Copy -NoAutostart:$NoAutostart
-}
-
-Write-Host ""
-Write-Host "Bootstrap complete." -ForegroundColor Green
-Write-Host "Configs were COPIED. Clone the repo and run link-configs.ps1 if you" -ForegroundColor DarkGray
-Write-Host "want edits in the repo to take effect without reinstalling." -ForegroundColor DarkGray
-Write-Host ""
-Write-Host "Verify with: & `"$WorkDir/scripts/doctor.ps1`"" -ForegroundColor Cyan
+& (Join-Path $WorkDir "scripts/setup.ps1") @setupArgs

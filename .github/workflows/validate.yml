@@ -104,6 +104,26 @@ jobs:
             Write-Host "PSScriptAnalyzer: clean"
           }
 
+      - name: Parse under Windows PowerShell 5.1
+        shell: pwsh
+        run: |
+          # A clean Windows 11 install only has 5.1 until winget brings pwsh 7,
+          # so everything the bootstrap touches has to parse there. PS7-only
+          # syntax (?., ??, ternary) is a parse error on 5.1, which kills the
+          # script before it prints anything.
+          $ps51 = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
+          $must = Get-ChildItem scripts -Recurse -Filter *.ps1
+          $bad = 0
+          foreach ($f in $must) {
+            $out = & $ps51 -NoProfile -Command "
+              `$e = `$null
+              [System.Management.Automation.Language.Parser]::ParseFile('$($f.FullName)', [ref]`$null, [ref]`$e) | Out-Null
+              if (`$e) { `$e[0].Message }" 2>&1
+            if ($out) { Write-Host "FAIL $($f.Name): $out"; $bad++ }
+            else { Write-Host "ok   $($f.Name)" }
+          }
+          if ($bad) { exit 1 }
+
       - name: Parse every script
         shell: pwsh
         run: |

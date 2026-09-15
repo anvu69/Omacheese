@@ -141,6 +141,40 @@ if (Test-Path -LiteralPath $manifestPath) {
     } catch { Bad "packages.json is not valid JSON: $($_.Exception.Message)" }
 } else { Bad "missing $manifestPath" }
 
+Section "powershell 5.1 compatibility"
+# A clean Windows 11 install has Windows PowerShell 5.1 and nothing else until
+# winget installs pwsh 7. Anything the bootstrap path touches must therefore
+# parse under 5.1 - PS7-only syntax (?., ??, ternaries) is a parse error there,
+# so the script dies before printing anything.
+$ps51 = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+if (Test-Path -LiteralPath $ps51) {
+    $mustParse = @(
+        "scripts\setup.ps1", "scripts\install-windows.ps1", "scripts\link-configs.ps1",
+        "scripts\install-wsl.ps1", "scripts\install-localllm.ps1", "scripts\debloat-windows.ps1",
+        "scripts\bootstrap-windows.ps1", "scripts\doctor.ps1",
+        "scripts\lib\tui.ps1", "scripts\lib\detect.ps1", "scripts\lib\modules.ps1",
+        "scripts\lib\common.ps1"
+    )
+    $bad51 = @()
+    foreach ($rel in $mustParse) {
+        $full = Join-Path $RepoRoot $rel
+        if (-not (Test-Path -LiteralPath $full)) { continue }
+        $out = & $ps51 -NoProfile -Command "
+            `$e = `$null
+            [System.Management.Automation.Language.Parser]::ParseFile('$full', [ref]`$null, [ref]`$e) | Out-Null
+            if (`$e) { `$e[0].Message }" 2>&1
+        if ($out) { $bad51 += "$rel : $out" }
+    }
+    if ($bad51.Count) {
+        Bad "$($bad51.Count) script(s) do not parse under PowerShell 5.1:"
+        $bad51 | ForEach-Object { Write-Host "          $_" -ForegroundColor Red }
+    } else {
+        Ok "all bootstrap scripts parse under PowerShell 5.1"
+    }
+} else {
+    Warn "Windows PowerShell 5.1 not found - skipped the clean-machine parse check"
+}
+
 Section "whkd"
 $whkdrcPath = if ($Repo) { Join-Path $RepoRoot "configs\whkd\whkdrc" } else { Join-Path $cfg "whkdrc" }
 Test-Whkdrc $whkdrcPath
@@ -226,7 +260,7 @@ foreach ($k in $knownAgents.Keys) {
     if (Get-Command $knownAgents[$k] -ErrorAction SilentlyContinue) { $installedAgents += $k }
 }
 if ($installedAgents.Count) { Ok "agents installed: $($installedAgents -join ', ')" }
-else { Warn "no coding agent installed (./scripts/install-windows.ps1 -Groups ai)" }
+else { Warn "no coding agent installed (./scripts/install-windows.ps1 -Groups agents)" }
 
 if (Test-Path -LiteralPath $agentState) {
     Ok "default agent: $((Get-Content -LiteralPath $agentState -Raw).Trim())"

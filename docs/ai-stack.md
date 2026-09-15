@@ -13,7 +13,7 @@ Port từ `omarchy-agent` / `omarchy-default-agent` của Omarchy: chọn một 
 mặc định, rồi một phím mở nó.
 
 ```powershell
-./scripts/install-windows.ps1 -Groups ai      # Claude Code, Codex, fnm, uv
+./scripts/install-windows.ps1 -Groups agents      # Claude Code, Codex, fnm, uv
 omarchy-default-agent.ps1 -List               # xem có gì
 omarchy-default-agent.ps1 claude              # đặt mặc định
 ```
@@ -41,7 +41,36 @@ hai. Menu có mục `-Yolo` riêng và hỏi xác nhận.
 
 ---
 
-## Phần 2 — Docker + GPU trong WSL
+## Phần 2 — Local LLM: chọn tier trước
+
+> **Đừng mặc định vLLM.** Nó cần NVIDIA ≥ 8 GB VRAM + WSL + Docker. Phần lớn
+> máy không đạt. `scripts/install-localllm.ps1` tự chọn tier:
+>
+> | Máy | Tier | Cài |
+> |---|---|---|
+> | NVIDIA ≥ 8 GB VRAM | `vllm` | Docker + NVIDIA toolkit + vLLM (Phần 3) |
+> | NVIDIA 4–8 GB, iGPU/AMD, hoặc RAM ≥ 16 GB | `ollama` | Ollama, không cần WSL/Docker/CUDA |
+> | còn lại | `none` | dùng API hosted |
+>
+> ```powershell
+> ./scripts/install-localllm.ps1              # tự dò
+> ./scripts/install-localllm.ps1 -WhatIfOnly  # xem sẽ làm gì
+> ```
+>
+> Chi tiết gating: [`docs/setup-tui.md`](setup-tui.md).
+
+### Tier ollama
+
+```powershell
+./scripts/install-localllm.ps1 -Tier ollama
+ollama pull qwen3:8b     # script gợi ý size vừa với máy
+```
+
+Endpoint OpenAI-compatible: `http://localhost:11434/v1`.
+
+---
+
+## Phần 2b — Docker + GPU trong WSL (chỉ tier vllm)
 
 ```bash
 bash ./scripts/install-docker-wsl.sh
@@ -67,13 +96,13 @@ trực tiếp:
 
 ### Yêu cầu
 
-| Thứ | Trạng thái trên máy này |
+| Thứ | Yêu cầu |
 |---|---|
-| Driver NVIDIA trên **Windows** | ✅ 616.92 (không bao giờ cài driver *trong* WSL) |
-| `/dev/dxg` | ✅ |
-| `/usr/lib/wsl/lib/libcuda.so.1` | ✅ |
-| systemd PID 1 | ✅ |
-| NVIDIA Container Toolkit | ❌ script sẽ cài |
+| Driver NVIDIA trên **Windows** | bắt buộc — không bao giờ cài driver *trong* WSL |
+| `/dev/dxg` | do driver tạo |
+| `/usr/lib/wsl/lib/libcuda.so.1` | do driver tạo |
+| systemd PID 1 | `wsl.conf` bật |
+| NVIDIA Container Toolkit | script cài |
 
 ---
 
@@ -94,9 +123,10 @@ curl http://localhost:8000/v1/models
 Nhờ `networkingMode=mirrored` trong `.wslconfig`, `localhost:8000` truy cập
 được **từ cả Windows lẫn WSL**, không cần port-proxy.
 
-### Chọn model cho 16 GB (RTX 4080 SUPER)
+### Chọn model theo VRAM
 
 VRAM là ràng buộc cứng. Weight chỉ là một phần — còn KV cache cho context.
+`install-localllm.ps1` tự ghi `.env` theo VRAM dò được; bảng dưới là ví dụ cho 16 GB.
 
 | Cấu hình | VRAM weights | Nhận xét |
 |---|---|---|

@@ -114,8 +114,10 @@ if (-not $NoAutostart) {
     Write-Host "`n[autostart]" -ForegroundColor Magenta
     $startup  = [Environment]::GetFolderPath("Startup")
     $lnk      = Join-Path $startup "komorebi-desktop.lnk"
-    $target   = (Get-Command pwsh.exe -ErrorAction SilentlyContinue)?.Source
-    if (-not $target) { $target = (Get-Command powershell.exe).Source }
+    # No ?. here: this script has to parse under Windows PowerShell 5.1, which
+    # is all a freshly installed Windows 11 has until winget brings pwsh 7.
+    $pwshCmd = Get-Command pwsh.exe -ErrorAction SilentlyContinue
+    if ($pwshCmd) { $target = $pwshCmd.Source } else { $target = (Get-Command powershell.exe).Source }
 
     try {
         $shell = New-Object -ComObject WScript.Shell

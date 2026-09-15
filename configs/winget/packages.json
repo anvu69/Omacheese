@@ -36,7 +36,7 @@
         { "id": "7zip.7zip",                       "note": "7z" }
       ]
     },
-    "ai": {
+    "agents": {
       "description": "Coding agents and the runtimes they need. Managed by scripts/omarchy/omarchy-default-agent.ps1.",
       "packages": [
         { "id": "Anthropic.ClaudeCode",           "note": "Claude Code" },
