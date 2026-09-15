@@ -111,7 +111,7 @@ Install-ConfigFile -Source (Join-Path $Repo "configs\ssh\config.example") `
                    -Destination (Join-Path $env:USERPROFILE ".ssh\config.example") | Out-Null
 
 Write-Host "`n[omarchy helpers]" -ForegroundColor Magenta
-foreach ($s in Get-ChildItem (Join-Path $Repo "scripts\omarchy") -Filter "*.ps1") {
+foreach ($s in Get-ChildItem (Join-Path $Repo "scripts\omarchy") | Where-Object { $_.Extension -in @(".ps1", ".cmd") }) {
     & $Install -Source $s.FullName -Destination (Join-Path $omarchy $s.Name) | Out-Null
 }
 & $Install -Source (Join-Path $Repo "scripts\start-desktop.ps1") `

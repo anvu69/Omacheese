@@ -172,23 +172,82 @@ function Install-WingetManifest {
   return [pscustomobject]@{ Installed = $installed; Skipped = $skipped; Failed = $failed }
 }
 
+# Installs the profile's modules INTO POWERSHELL 7, whatever host we are in.
+#
+# This has to shell out rather than just call Install-Module, because the two
+# PowerShells do not share a module directory:
+#
+#   Windows PowerShell 5.1 -> Documents\WindowsPowerShell\Modules
+#   PowerShell 7           -> Documents\PowerShell\Modules
+#
+# The profile this repo ships is PS7-only, so modules installed from a 5.1
+# host land somewhere PS7 never looks and the profile silently degrades:
+# no prediction colours, no Ctrl+T, no git prompt.
+#
+# 5.1 also needs two things PS7 does not: TLS 1.2 (PSGallery dropped 1.0/1.1)
+# and the NuGet provider, whose bootstrap is an interactive prompt that would
+# hang a non-interactive installer.
 function Install-PowerShellModule {
   param([Parameter(Mandatory)][object]$Manifest)
 
   Write-Host ""
-  Write-Host "[modules] PowerShell modules" -ForegroundColor Magenta
+  Write-Host "[modules] PowerShell 7 modules" -ForegroundColor Magenta
 
-  foreach ($m in $Manifest.powershellModules) {
-    if (Get-Module -ListAvailable -Name $m.name) {
-      Write-Host ("  = {0,-24} already installed" -f $m.name) -ForegroundColor DarkGray
-      continue
-    }
-    Write-Host ("  + {0,-24} {1}" -f $m.name, $m.note) -ForegroundColor Cyan
+  # winget may have installed pwsh moments ago, in which case this process
+  # still has the old PATH.
+  $env:PATH = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
+              [Environment]::GetEnvironmentVariable("Path", "User")
+
+  $pwsh = Get-Command pwsh.exe -ErrorAction SilentlyContinue
+  if (-not $pwsh) {
+    Write-Host "  - PowerShell 7 not installed yet; skipping." -ForegroundColor Yellow
+    Write-Host "    Install the 'core' group first, then re-run with -Groups core." -ForegroundColor DarkGray
+    return
+  }
+
+  $names = @($Manifest.powershellModules | ForEach-Object { $_.name })
+  $notes = @{}
+  foreach ($m in $Manifest.powershellModules) { $notes[$m.name] = $m.note }
+
+  foreach ($name in $names) {
+    Write-Host ("  . {0,-24} {1}" -f $name, $notes[$name]) -ForegroundColor DarkGray
+  }
+
+  $script = @'
+param([string]$Names)
+# Split into a NEW variable. Assigning the array back to $Names would hit the
+# [string] type constraint on the parameter, and PowerShell coerces an array
+# to string by joining with SPACES - so all five module names became one.
+$list = @($Names -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+if (-not (Get-PackageProvider -ListAvailable -Name NuGet -ErrorAction SilentlyContinue)) {
+    Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser | Out-Null
+}
+foreach ($n in $list) {
+    if (Get-Module -ListAvailable -Name $n) { "= $n"; continue }
     try {
-      Install-Module $m.name -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop
+        Install-Module $n -Scope CurrentUser -Force -AllowClobber -Repository PSGallery -ErrorAction Stop
+        "+ $n"
     } catch {
-      Write-Warning "    $($m.name) failed: $($_.Exception.Message)"
+        "! $n : $($_.Exception.Message)"
     }
+}
+'@
+
+  $tmp = Join-Path $env:TEMP "w11-install-modules.ps1"
+  [System.IO.File]::WriteAllText($tmp, $script, (New-Object System.Text.UTF8Encoding($false)))
+
+  # Join into a local first. Passing the expression inline let the array reach
+  # the child as separate tokens, which -File then flattened with spaces, and
+  # the child tried to install one module called "A B C D E".
+  $nameArg = [string]::Join(",", $names)
+  $out = & $pwsh.Source -NoProfile -ExecutionPolicy Bypass -File $tmp -Names $nameArg 2>&1
+  foreach ($line in $out) {
+    $t = [string]$line
+    if     ($t.StartsWith("+ ")) { Write-Host ("  + {0}" -f $t.Substring(2)) -ForegroundColor Green }
+    elseif ($t.StartsWith("= ")) { Write-Host ("  = {0} already installed" -f $t.Substring(2)) -ForegroundColor DarkGray }
+    elseif ($t.StartsWith("! ")) { Write-Host ("  ! {0}" -f $t.Substring(2)) -ForegroundColor Yellow }
   }
 }
 

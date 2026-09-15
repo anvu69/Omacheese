@@ -195,6 +195,66 @@ gitconfig của repo `[include]` vào và repo **không bao giờ đụng tới*
 
 ---
 
+## Hai phiên bản PowerShell
+
+Repo chạy trên cả hai, và chúng **không giống nhau** ở những chỗ quan trọng.
+
+| | Windows PowerShell 5.1 | PowerShell 7 |
+|---|---|---|
+| Có sẵn trên máy sạch | có | không (winget cài qua `core`) |
+| Dùng cho | `setup.ps1` và mọi script cài | profile hằng ngày, helper Omarchy |
+| Module path | `Documents\WindowsPowerShell\Modules` | `Documents\PowerShell\Modules` |
+
+### Cú pháp PS 7 gây parse error trên 5.1
+
+`?.`  `??`  ternary `? :`  `&&`  `||`  `` `e ``
+
+Script chết **trước khi in dòng nào**. `doctor.ps1` + CI parse mọi script bằng
+chính `powershell.exe` 5.1 nên bắt được nhóm này.
+
+### Nguy hiểm hơn: cú pháp parse được nhưng chạy sai
+
+Parse check **không** bắt được nhóm này, chỉ chạy thật mới lộ:
+
+| Viết | Trên 5.1 |
+|---|---|
+| `'a'..'z'` | throw, trả mảng rỗng — từng làm doctor báo failure giả |
+| `ConvertFrom-Json -AsHashtable` | tham số không tồn tại |
+| `Get-Content -AsByteStream` | dùng `-Encoding Byte` |
+| `Split-Path -LeafBase` | không có |
+| `ForEach-Object -Parallel` | không có |
+| `Set-Content -Encoding utf8NoBOM` | không có (utf8 = **có BOM**) |
+
+### Bẫy không liên quan phiên bản nhưng dễ dính
+
+**`powershell.exe -File` không tách comma.** `-Modules a,b` vào `[string[]]`
+thành **một** phần tử; `-Command` thì tách. Script tự split, và
+`install-windows.ps1` bỏ `ValidateSet` vì nó reject trước khi split kịp.
+
+**Gán mảng vào biến param kiểu `[string]`** khiến PowerShell ép về string,
+**nối bằng dấu cách**. Từng làm 5 module thành một tên `"A B C D E"`.
+
+### Module phải cài bằng pwsh 7
+
+Hai PowerShell không dùng chung thư mục module. Profile là PS7-only, nên cài
+module từ 5.1 sẽ rơi vào chỗ PS7 không đọc → profile hỏng âm thầm.
+
+`Install-PowerShellModule` luôn shell ra `pwsh` và xử lý hai thứ chỉ 5.1 cần:
+**TLS 1.2** (PSGallery bỏ 1.0/1.1) và **NuGet provider** (bootstrap của nó là
+prompt tương tác — sẽ treo installer).
+
+```powershell
+./scripts/install-windows.ps1 -ModulesOnly
+./scripts/doctor.ps1     # mục "powershell 7 modules"
+```
+
+### Helper Omarchy không phụ thuộc pwsh
+
+whkdrc gọi `omarchy-run.cmd`, chọn pwsh nếu có, không thì `powershell.exe`.
+Trước đây 11 binding hardcode `pwsh` và im lặng không làm gì khi bỏ qua `core`.
+
+---
+
 ## Thêm module
 
 Sửa `scripts/lib/modules.ps1`:

@@ -15,6 +15,7 @@ param(
     # script can split it. Validated against the manifest below instead.
     [string[]]$Groups,
     [switch]$SkipModules,
+    [switch]$ModulesOnly,
     [switch]$Force
 )
 
@@ -44,6 +45,11 @@ if (Test-IsElevated) {
     Write-Host "Running elevated." -ForegroundColor DarkGray
 } else {
     Write-Host "Running unelevated; winget may prompt for machine-scope installs." -ForegroundColor DarkGray
+}
+
+if ($ModulesOnly) {
+    Install-PowerShellModule -Manifest $manifest
+    return
 }
 
 $result = Install-WingetManifest -Manifest $manifest -Groups $Groups -Force:$Force

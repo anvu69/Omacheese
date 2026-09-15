@@ -48,6 +48,14 @@ function Get-SetupModules {
         -Est "3-6 min" `
         -Action { param($ctx) & $ctx.InstallWindows -Groups @("core") }))
 
+    # Separate from `core` on purpose: these go into PowerShell 7's module
+    # directory, so pwsh has to exist and be on PATH first. Running it as its
+    # own step means PATH has been refreshed since core installed pwsh.
+    $mods.Add((New-Mod -Key "psmodules" -Description "PSReadLine, PSFzf, posh-git, Terminal-Icons (into pwsh 7)" `
+        -Available $wingetOk -Note "needs winget (installs after 'core')" `
+        -Est "1-3 min" `
+        -Action { param($ctx) & $ctx.InstallModules }))
+
     $mods.Add((New-Mod -Key "cli" -Description "fzf, ripgrep, fd, bat, eza, zoxide, lazygit, gh, jq" `
         -Available $wingetOk -Note "needs winget" -Est "3-5 min" `
         -Action { param($ctx) & $ctx.InstallWindows -Groups @("cli") }))
@@ -130,22 +138,22 @@ function Get-SetupProfiles {
         [pscustomobject]@{
             Key = "minimal"; Title = "Minimal"
             Description = "Terminal, shell, CLI tools, dotfiles. No tiling WM."
-            Modules = @("core", "cli", "configs", "verify")
+            Modules = @("core", "psmodules", "cli", "configs", "verify")
         }
         [pscustomobject]@{
             Key = "desktop"; Title = "Desktop"
             Description = "Minimal + tiling WM with the Omarchy keymap, and debloat."
-            Modules = @("core", "cli", "wm", "desktop", "configs", "debloat", "verify")
+            Modules = @("core", "psmodules", "cli", "wm", "desktop", "configs", "debloat", "verify")
         }
         [pscustomobject]@{
             Key = "full"; Title = "Full"
             Description = "Desktop + coding agents + WSL2 AlmaLinux."
-            Modules = @("core", "cli", "wm", "desktop", "agents", "configs", "debloat", "wsl", "verify")
+            Modules = @("core", "psmodules", "cli", "wm", "desktop", "agents", "configs", "debloat", "wsl", "verify")
         }
         [pscustomobject]@{
             Key = "everything"; Title = "Everything"
             Description = "Full + local LLM, where the hardware allows it."
-            Modules = @("core", "cli", "wm", "desktop", "agents", "configs", "debloat", "wsl", "localllm", "verify")
+            Modules = @("core", "psmodules", "cli", "wm", "desktop", "agents", "configs", "debloat", "wsl", "localllm", "verify")
         }
         [pscustomobject]@{
             Key = "custom"; Title = "Custom"

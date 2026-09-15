@@ -204,6 +204,11 @@ $ctx = @{
             -File (Join-Path $RepoRoot "scripts\install-windows.ps1") `
             -Arguments @("-Groups", ($Groups -join ","), "-SkipModules")
     }
+    InstallModules = {
+        Invoke-Step -Key "psmodules" `
+            -File (Join-Path $RepoRoot "scripts\install-windows.ps1") `
+            -Arguments @("-ModulesOnly")
+    }
     LinkConfigs = {
         Invoke-Step -Key "configs" -File (Join-Path $RepoRoot "scripts\link-configs.ps1") -Arguments @()
     }

@@ -186,9 +186,56 @@ if (Test-Path -LiteralPath $ps51) {
     Warn "Windows PowerShell 5.1 not found - skipped the clean-machine parse check"
 }
 
+Section "powershell 7 modules"
+# The shipped profile is PS7-only, and the two PowerShells do not share a
+# module directory (5.1 -> Documents\WindowsPowerShell\Modules,
+# 7 -> Documents\PowerShell\Modules). Modules installed from the wrong host
+# land where the profile never looks, and it degrades silently.
+$pwshCmd = Get-Command pwsh.exe -ErrorAction SilentlyContinue
+if (-not $pwshCmd) {
+    Warn "PowerShell 7 not installed - the shipped profile needs it (-Groups core)"
+} else {
+    $wanted = @("PSReadLine", "Terminal-Icons", "PSFzf", "posh-git", "CompletionPredictor")
+    $found = & $pwshCmd.Source -NoProfile -Command "
+        foreach (`$m in @('$($wanted -join "','")')) {
+            if (Get-Module -ListAvailable -Name `$m) { `$m }
+        }" 2>$null
+    $found = @($found | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ })
+    $missing = @($wanted | Where-Object { $found -notcontains $_ })
+    if ($missing.Count) {
+        Warn "missing from pwsh 7: $($missing -join ', ')  (./scripts/install-windows.ps1 -ModulesOnly)"
+    } else {
+        Ok "all $($wanted.Count) profile modules present in pwsh 7"
+    }
+
+    # Modules in the 5.1 tree that pwsh 7 cannot see are the classic symptom
+    # of installing them from the wrong host.
+    $ps51Modules = Join-Path $env:USERPROFILE "Documents\WindowsPowerShell\Modules"
+    if (Test-Path -LiteralPath $ps51Modules) {
+        $stray = @(Get-ChildItem -LiteralPath $ps51Modules -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $wanted -contains $_.Name } | ForEach-Object { $_.Name })
+        if ($stray.Count) {
+            Warn "also in the 5.1 module tree (pwsh 7 ignores these): $($stray -join ', ')"
+        }
+    }
+}
+
 Section "whkd"
 $whkdrcPath = if ($Repo) { Join-Path $RepoRoot "configs\whkd\whkdrc" } else { Join-Path $cfg "whkdrc" }
 Test-Whkdrc $whkdrcPath
+
+# whkd shells out to the helper launcher; if that is missing, 11 bindings do
+# nothing and whkd has no way to say so.
+$runner = Join-Path $cfg "omarchy\bin\omarchy-run.cmd"
+if ((Get-Content -LiteralPath $whkdrcPath -ErrorAction SilentlyContinue | Select-String -Quiet "omarchy-run.cmd")) {
+    if ($Repo) {
+        Ok "whkdrc uses the shell-agnostic launcher"
+    } elseif (Test-Path -LiteralPath $runner) {
+        Ok "omarchy-run.cmd installed"
+    } else {
+        Bad "whkdrc calls omarchy-run.cmd but it is missing ($runner) - run link-configs.ps1"
+    }
+}
 
 Section "komorebi"
 $kjson = if ($Repo) { Join-Path $RepoRoot "configs\komorebi\komorebi.json" } else { Join-Path $cfg "komorebi\komorebi.json" }
