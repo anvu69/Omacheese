@@ -1,0 +1,119 @@
+# ~/.gitconfig
+#
+# Install with scripts/link-configs.ps1, or by hand:
+#   copy configs\git\gitconfig %USERPROFILE%\.gitconfig
+#
+# Your identity lives in ~/.gitconfig.local, included below. That file is
+# never touched by this repo, and link-configs.ps1 migrates an existing
+# user.name/user.email into it before replacing this file - so installing on
+# a machine that already had git set up does not silently break your commits.
+#
+#   git config --global user.name  "Your Name"
+#   git config --global user.email "you@example.com"
+# (those write to ~/.gitconfig, so move them to ~/.gitconfig.local by hand if
+#  you set them after installing)
+
+[include]
+	path = .gitconfig.local
+
+[init]
+	defaultBranch = main
+
+[core]
+	# Windows still has a 260-character path limit unless git is told
+	# otherwise. node_modules and deep monorepos hit it constantly.
+	longpaths = true
+
+	# Keep line endings exactly as committed. `true` (the Windows default)
+	# rewrites LF to CRLF on checkout, which breaks shell scripts the moment
+	# they are run in WSL or a container from the same working tree - and
+	# this repo is used from both sides.
+	autocrlf = false
+	eol = lf
+
+	editor = nvim
+	pager = delta
+	untrackedCache = true
+	fsmonitor = true
+
+[delta]
+	navigate = true
+	line-numbers = true
+	side-by-side = false
+	syntax-theme = "Nord"
+
+[interactive]
+	diffFilter = delta --color-only
+
+[merge]
+	conflictstyle = zdiff3
+	tool = nvimdiff
+
+[diff]
+	algorithm = histogram
+	colorMoved = default
+	mnemonicPrefix = true
+	renames = true
+
+[pull]
+	rebase = true
+
+[push]
+	default = current
+	autoSetupRemote = true
+	followTags = true
+
+[fetch]
+	prune = true
+	pruneTags = true
+
+[rebase]
+	autoStash = true
+	autoSquash = true
+	updateRefs = true
+
+[rerere]
+	enabled = true
+	autoupdate = true
+
+[branch]
+	sort = -committerdate
+
+[tag]
+	sort = -version:refname
+
+[log]
+	date = iso
+
+[status]
+	showUntrackedFiles = all
+
+[help]
+	autocorrect = prompt
+
+[color]
+	ui = auto
+
+[alias]
+	st = status --short --branch
+	co = checkout
+	sw = switch
+	br = branch
+	ci = commit
+	cm = commit -m
+	amend = commit --amend --no-edit
+	unstage = restore --staged
+	last = log -1 HEAD --stat
+	lg = log --oneline --graph --decorate --all -30
+	wip = !git add -A && git commit -m 'wip'
+	undo = reset --soft HEAD~1
+	# Branches you have, sorted by how recently you touched them.
+	recent = for-each-ref --count=15 --sort=-committerdate refs/heads/ --format='%(refname:short)  %(committerdate:relative)'
+
+[credential]
+	helper = manager
+
+[safe]
+	# WSL and Windows see different owners for the same working tree; without
+	# this, git refuses to operate on /mnt/d checkouts from inside WSL.
+	directory = *

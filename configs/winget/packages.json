@@ -1,0 +1,68 @@
+{
+  "$comment": "Single source of truth for winget packages. Both install-windows.ps1 and bootstrap-windows.ps1 read this file. Every id here is verified against 'winget show --id <id> -e'.",
+  "groups": {
+    "core": {
+      "description": "Terminal, shell, git, fonts. Required.",
+      "packages": [
+        { "id": "Microsoft.PowerShell",            "note": "PowerShell 7" },
+        { "id": "Git.Git",                         "note": "git" },
+        { "id": "Alacritty.Alacritty",             "note": "GPU terminal" },
+        { "id": "JanDeDobbeleer.OhMyPosh",         "note": "prompt" },
+        { "id": "DEVCOM.JetBrainsMonoNerdFont",    "note": "Nerd Font (bar + prompt glyphs)" }
+      ]
+    },
+    "wm": {
+      "description": "Tiling window manager stack. Required for the Omarchy-style desktop.",
+      "packages": [
+        { "id": "LGUG2Z.komorebi",                 "note": "tiling WM" },
+        { "id": "LGUG2Z.whkd",                     "note": "hotkey daemon" },
+        { "id": "AmN.yasb",                        "note": "status bar (YASB Reborn) - NOT amnweb.yasb" }
+      ]
+    },
+    "cli": {
+      "description": "CLI productivity tools used by the shell profile and the Omarchy menu.",
+      "packages": [
+        { "id": "junegunn.fzf",                    "note": "fuzzy finder - required by the menu + ssh picker" },
+        { "id": "BurntSushi.ripgrep.MSVC",         "note": "rg" },
+        { "id": "sharkdp.fd",                      "note": "fd" },
+        { "id": "sharkdp.bat",                     "note": "bat" },
+        { "id": "eza-community.eza",               "note": "eza" },
+        { "id": "ajeetdsouza.zoxide",              "note": "zoxide" },
+        { "id": "jqlang.jq",                       "note": "jq" },
+        { "id": "dandavison.delta",                "note": "git delta pager" },
+        { "id": "JesseDuffield.lazygit",           "note": "lazygit" },
+        { "id": "GitHub.cli",                      "note": "gh" },
+        { "id": "Neovim.Neovim",                   "note": "nvim on the Windows side too" },
+        { "id": "7zip.7zip",                       "note": "7z" }
+      ]
+    },
+    "agents": {
+      "description": "Coding agents and the runtimes they need. Managed by scripts/omarchy/omarchy-default-agent.ps1.",
+      "packages": [
+        { "id": "Anthropic.ClaudeCode",           "note": "Claude Code" },
+        { "id": "OpenAI.Codex",                   "note": "Codex" },
+        { "id": "Schniz.fnm",                     "note": "fast node version manager - for npm-installed agents" },
+        { "id": "astral-sh.uv",                   "note": "python package/runtime manager, used by the ML stack" }
+      ]
+    },
+
+    "desktop": {
+      "description": "GUI applications.",
+      "packages": [
+        { "id": "Microsoft.PowerToys",             "note": "Run, PowerRename, FancyZones fallback, Awake" },
+        { "id": "voidtools.Everything",            "note": "instant file search" },
+        { "id": "Brave.Brave",                     "note": "browser" },
+        { "id": "Bitwarden.Bitwarden",             "note": "vault + SSH agent" },
+        { "id": "electerm.electerm",               "note": "GUI SSH/SFTP" },
+        { "id": "DBeaver.DBeaver.Community",       "note": "DB GUI - NOT dbeaver.dbeaver" }
+      ]
+    }
+  },
+  "powershellModules": [
+    { "name": "PSReadLine",         "note": "Vi mode, prediction" },
+    { "name": "Terminal-Icons",     "note": "icons in Get-ChildItem" },
+    { "name": "PSFzf",              "note": "Ctrl+R / Ctrl+T fzf bindings" },
+    { "name": "posh-git",           "note": "git status in prompt + completion" },
+    { "name": "CompletionPredictor","note": "IntelliSense-style predictions" }
+  ]
+}

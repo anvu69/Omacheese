@@ -1,3 +1,19 @@
+# ============================================================================
+#  yasb - Omarchy-style top bar for komorebi
+# ============================================================================
+#  Layout mirrors the Omarchy bar (manual/05-the-top-bar.md):
+#    left   menu launcher + workspace indicators + active layout
+#    center clock
+#    right  system readouts, then power
+#
+#  Workspace indicators follow the Omarchy convention: every workspace is a
+#  dot, and the focused one expands to its name. Colours live in styles.css.
+#
+#  Widget option names were taken from a working YASB Reborn 2.0.x config -
+#  they are version-sensitive, so check the wiki before inventing new ones:
+#  https://github.com/amnweb/yasb/wiki
+# ============================================================================
+
 watch_stylesheet: true
 watch_config: true
 debug: false
@@ -18,62 +34,180 @@ bars:
     blur_effect:
       enabled: false
     window_flags:
-      always_on_top: true
+      always_on_top: false
       windows_app_bar: true
     dimensions:
       width: "100%"
-      height: 32
+      height: 34
     padding:
       top: 0
-      left: 6
+      left: 8
       bottom: 0
-      right: 6
+      right: 8
     widgets:
       left:
+        - "omarchy_menu"
         - "komorebi_workspaces"
+        - "komorebi_active_layout"
+        - "active_window"
       center:
         - "clock"
       right:
         - "cpu"
         - "memory"
+        - "volume"
+        - "wifi"
         - "battery"
+        - "power_menu"
 
 widgets:
+
+  # The Omarchy logo slot: one click opens the same menu as SUPER+SPACE.
+  omarchy_menu:
+    type: "yasb.custom.CustomWidget"
+    options:
+      label: "󰜿"
+      label_alt: "󰜿"
+      class_name: "omarchy-menu-widget"
+      callbacks:
+        on_left: "exec alacritty --class omarchy-menu,omarchy-menu -e pwsh -NoProfile -ExecutionPolicy Bypass -File %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-menu.ps1"
+        on_right: "exec alacritty --class omarchy-menu,omarchy-menu -e pwsh -NoProfile -ExecutionPolicy Bypass -File %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-keybindings.ps1"
+
   komorebi_workspaces:
     type: "komorebi.workspaces.WorkspaceWidget"
     options:
-      label_offline: "Komorebi Offline"
-      label_workspace_btn: "{index}"
-      label_workspace_active_btn: "[{index}]"
-      label_workspace_populated_btn: "{index}"
+      label_offline: "󰸹 offline"
+      # Empty and populated stay as dots; the active workspace shows its name.
+      label_workspace_btn: "󰐽"
+      label_workspace_populated_btn: "󰐾"
+      label_workspace_active_btn: "{name}"
       label_default_name: "{index}"
       label_zero_index: false
       hide_empty_workspaces: false
       hide_if_offline: false
+      enable_scroll_switching: true
+      reverse_scroll_direction: false
+      toggle_workspace_layer:
+        enabled: true
+        tiling_label: "󰙀"
+        floating_label: ""
+      app_icons:
+        enabled_populated: false
+        enabled_active: false
+        size: 14
+        max_icons: 4
+        hide_label: false
+        hide_duplicates: true
+        hide_floating: false
+
+  komorebi_active_layout:
+    type: "komorebi.active_layout.ActiveLayoutWidget"
+    options:
+      hide_if_offline: true
+      label: "{icon}"
+      layouts:
+        - "bsp"
+        - "columns"
+        - "rows"
+        - "grid"
+        - "vertical_stack"
+        - "horizontal_stack"
+        - "ultrawide_vertical_stack"
+        - "right_main_vertical_stack"
+        - "scrolling"
+      layout_icons:
+        bsp: ""
+        columns: ""
+        rows: ""
+        grid: "󰝘"
+        scrolling: ""
+        vertical_stack: ""
+        horizontal_stack: ""
+        ultrawide_vertical_stack: ""
+        right_main_vertical_stack: ""
+        monocle: ""
+        maximized: ""
+        floating: ""
+        paused: "󰾉"
+        tiling: "󰙀"
+
+  active_window:
+    type: "yasb.active_window.ActiveWindowWidget"
+    options:
+      label: "{win[title]}"
+      label_alt: "{win[process][name]}"
+      label_no_window: ""
+      label_icon: false
+      max_length: 48
+      max_length_ellipsis: "…"
+      monitor_exclusive: true
 
   clock:
     type: "yasb.clock.ClockWidget"
     options:
       label: "{%H:%M}"
-      label_alt: "{%A, %d %B %Y %H:%M}"
+      label_alt: "{%A %d %B %Y  %H:%M:%S}"
       timezones: []
 
   cpu:
     type: "yasb.cpu.CpuWidget"
     options:
-      label: "CPU {info[percent][total]}%"
-      update_interval: 1000
+      label: " {info[percent][total]}%"
+      label_alt: " {info[histograms][cpu_percent]}"
+      update_interval: 2000
 
   memory:
     type: "yasb.memory.MemoryWidget"
     options:
-      label: "RAM {virtual_mem_percent}%"
+      label: " {virtual_mem_percent}%"
+      label_alt: " {virtual_mem_used}/{virtual_mem_total}"
       update_interval: 5000
+
+  volume:
+    type: "yasb.volume.VolumeWidget"
+    options:
+      label: "<span>{icon}</span> {level}"
+      label_alt: "{volume}"
+      volume_icons:
+        - ""
+        - ""
+        - ""
+        - ""
+        - ""
+      callbacks:
+        on_right: "exec cmd.exe /c start ms-settings:sound"
+
+  wifi:
+    type: "yasb.wifi.WifiWidget"
+    options:
+      label: "<span>{wifi_icon}</span>"
+      label_alt: "{wifi_name} {wifi_strength}%"
+      update_interval: 10000
+      callbacks:
+        on_left: "toggle_label"
+        on_right: "exec cmd.exe /c start ms-settings:network"
 
   battery:
     type: "yasb.battery.BatteryWidget"
     options:
-      label: "{icon} {percent}%"
+      label: "<span>{icon}</span> {percent}%"
       label_alt: "{icon} {percent}% | {time_remaining}"
       charging_options:
         icon_format: "{charging_icon}"
+
+  power_menu:
+    type: "yasb.power_menu.PowerMenuWidget"
+    options:
+      label: ""
+      uptime: true
+      blur: false
+      blur_background: true
+      animation_duration: 200
+      button_row: 3
+      buttons:
+        lock: ["", "Lock"]
+        signout: ["󰍃", "Sign out"]
+        sleep: ["⏾", "Sleep"]
+        restart: ["", "Restart"]
+        shutdown: ["", "Shut Down"]
+        cancel: ["󰜺", "Cancel"]

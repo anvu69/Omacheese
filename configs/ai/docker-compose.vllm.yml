@@ -1,0 +1,71 @@
+# Compose project name is pinned so both files share the hf-cache volume.
+name: ai
+
+# vLLM - OpenAI-compatible inference server on the local GPU.
+#
+#   docker compose -f docker-compose.vllm.yml up -d
+#   curl http://localhost:8000/v1/models
+#
+# Sized for an RTX 4080 SUPER (16 GB, compute 8.9 / Ada).
+#
+# WHAT FITS IN 16 GB
+#   fp16  8B   ~16 GB of weights alone - will not leave room for KV cache
+#   fp8   8B   ~8 GB, and Ada has native FP8, so this is the sweet spot here
+#   awq/gptq 4-bit 14B  ~9 GB
+#   fp16  3-4B ~7 GB, comfortable with a long context
+# Anything past ~14B needs 4-bit and a short context, or a second GPU.
+#
+# HF_TOKEN is needed for gated repos (Llama, Gemma). Put it in a .env file
+# next to this one; never commit it.
+
+services:
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: vllm
+    restart: unless-stopped
+
+    # Set MODEL in .env to override without editing this file.
+    command: >
+      --model ${MODEL:-Qwen/Qwen3-8B}
+      --served-model-name ${SERVED_NAME:-local}
+      --quantization ${QUANT:-fp8}
+      --max-model-len ${MAX_LEN:-16384}
+      --gpu-memory-utilization ${GPU_UTIL:-0.90}
+      --host 0.0.0.0
+      --port 8000
+
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+      HUGGING_FACE_HUB_TOKEN: ${HF_TOKEN:-}
+      # Keep the weights cache on the Linux filesystem. Putting it under
+      # /mnt/d turns every load into a 9p round trip and is dramatically slower.
+      HF_HOME: /root/.cache/huggingface
+
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+
+    ports:
+      # Bound to localhost only. With networkingMode=mirrored in .wslconfig
+      # this is reachable from Windows at http://localhost:8000 as well.
+      - "127.0.0.1:8000:8000"
+
+    ipc: host          # vLLM needs a large /dev/shm for tensor parallelism
+    shm_size: "8gb"
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 20
+      start_period: 300s   # first run downloads the weights
+
+volumes:
+  hf-cache:
