@@ -10,13 +10,17 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet("core", "wm", "cli", "agents", "desktop")]
+    # No ValidateSet here on purpose: powershell.exe -File binds "core,cli"
+    # as ONE array element, and a ValidateSet would reject it before the
+    # script can split it. Validated against the manifest below instead.
     [string[]]$Groups,
     [switch]$SkipModules,
     [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
+
+if ($Groups) { $Groups = @($Groups -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
 
 $Repo = Split-Path -Parent $PSScriptRoot
 . (Join-Path $Repo "scripts\lib\common.ps1")
@@ -26,6 +30,14 @@ if (-not (Test-Path -LiteralPath $manifestPath)) {
     throw "Missing package manifest: $manifestPath"
 }
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+
+$known = @($manifest.groups.PSObject.Properties.Name)
+if ($Groups) {
+    $unknown = @($Groups | Where-Object { $known -notcontains $_ })
+    if ($unknown.Count) {
+        throw "Unknown group(s): $($unknown -join ', '). Known: $($known -join ', ')"
+    }
+}
 
 Write-Host "Windows 11 power-user setup" -ForegroundColor Green
 if (Test-IsElevated) {

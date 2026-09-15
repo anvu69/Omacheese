@@ -20,6 +20,13 @@ param(
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $cfg      = Join-Path $env:USERPROFILE ".config"
 
+# Pick up anything winget just installed. A process inherits the PATH it was
+# started with, so running this straight after an install would otherwise
+# report half the toolchain as missing - which is a false alarm, and the kind
+# that teaches people to ignore the checker.
+$env:PATH = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
+            [Environment]::GetEnvironmentVariable("Path", "User")
+
 $script:Pass = 0; $script:Warn = 0; $script:Fail = 0
 
 function Ok   { param($m) $script:Pass++; Write-Host "  PASS  $m" -ForegroundColor Green }
@@ -46,10 +53,14 @@ $ValidKeys = @(
     'media_next_track','media_prev_track','media_stop','media_play_pause',
     'launch_mail','launch_media_select','launch_app1','launch_app2'
 )
-$ValidKeys += 0..9 | ForEach-Object { "$_" }
-$ValidKeys += 'a'..'z'
+$ValidKeys += 0..9  | ForEach-Object { "$_" }
+# NOT 'a'..'z': the string range operator is PowerShell 7+. On Windows
+# PowerShell 5.1 it throws and yields nothing, so every single-letter key
+# looked invalid and doctor reported a false failure on exactly the clean
+# machines this repo is for. Build the letters from character codes instead.
+$ValidKeys += 97..122 | ForEach-Object { [string][char]$_ }
 $ValidKeys += 1..24 | ForEach-Object { "f$_" }
-$ValidKeys += 0..9 | ForEach-Object { "numpad$_" }
+$ValidKeys += 0..9  | ForEach-Object { "numpad$_" }
 
 function Test-Whkdrc {
     param([string]$Path)
@@ -298,8 +309,35 @@ if (Get-Command wsl -ErrorAction SilentlyContinue) {
     $wslConf = Join-Path $env:USERPROFILE ".wslconfig"
     if (Test-Path -LiteralPath $wslConf) { Ok ".wslconfig present" } else { Warn ".wslconfig missing" }
 
-    $probe = & wsl.exe -d $distro -- bash -lc 'printf "%s|%s|%s|%s" "$(ps -p 1 -o comm=)" "$(command -v docker || echo -)" "$(command -v nvidia-ctk || echo -)" "$([ -e /dev/dxg ] && echo dxg || echo -)"' 2>$null
-    $probe = ($probe -replace "`0", "").Trim()
+    # Getting a shell snippet into WSL from PowerShell is fiddlier than it
+    # looks, and two things broke here before this shape:
+    #   * `wsl -- bash -lc '<script>'` loses the inner quotes on the way
+    #     through PowerShell's native-argument handling, so bash ended up
+    #     trying to run "%s" as a command
+    #   * piping the script in adds a UTF-8 BOM on 5.1, and bash reports
+    #     "<BOM>printf: command not found"
+    # Writing a BOM-less temp file and running that avoids both.
+    #
+    # WSL also prints noise on stderr ("your 131072x1 screen size is bogus"),
+    # so the payload is tagged and pulled back out by marker.
+    $probeBody = "printf 'W11PROBE|%s|%s|%s|%s\n' `"`$(ps -p 1 -o comm=)`" `"`$(command -v docker || echo -)`" `"`$(command -v nvidia-ctk || echo -)`" `"`$([ -e /dev/dxg ] && echo dxg || echo -)`"`n"
+    $probeFile = Join-Path $env:TEMP "w11-doctor-probe.sh"
+    [System.IO.File]::WriteAllText($probeFile, ($probeBody -replace "`r`n", "`n"),
+        (New-Object System.Text.UTF8Encoding($false)))
+
+    $probeLinux = & wsl.exe -d $distro -- wslpath -a ($probeFile -replace '\\', '/') 2>$null
+    $probeLinux = (($probeLinux -join '') -replace "`0", "").Trim()
+
+    $probe = ""
+    if ($probeLinux) {
+        $raw = & wsl.exe -d $distro -- bash $probeLinux 2>$null
+        $raw = (($raw -join "`n") -replace "`0", "")
+        foreach ($ln in ($raw -split "`r?`n")) {
+            $idx = $ln.IndexOf("W11PROBE|")
+            if ($idx -ge 0) { $probe = $ln.Substring($idx + 9).Trim(); break }
+        }
+    }
+
     if ($probe) {
         $parts = $probe -split '\|'
         if ($parts[0] -eq "systemd") { Ok "$distro runs systemd" } else { Warn "$distro PID 1 is '$($parts[0])' - set [boot] systemd=true in /etc/wsl.conf" }

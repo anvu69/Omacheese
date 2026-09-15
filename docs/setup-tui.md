@@ -146,6 +146,55 @@ giờ đè** file `.env` đã có (nó giữ HF token).
 
 ---
 
+## Backup: máy đã có config sẵn
+
+Mọi file bị thay đều được backup **trước**, vào **một folder duy nhất cho mỗi
+lần chạy**:
+
+```text
+%USERPROFILE%\.config\windows11-dev-poweruser\backups\<timestamp>\
+    C\Users\ban\.config\whkdrc
+    C\Users\ban\.config\yasb\config.yaml
+    C\Users\ban\Documents\PowerShell\Microsoft.PowerShell_profile.ps1
+    manifest.tsv
+```
+
+Cây thư mục mirror đường dẫn gốc nên nhìn là biết file nào ở đâu ra.
+`manifest.tsv` map backup -> đường dẫn gốc.
+
+Đường dẫn được **in ra ở màn hình cuối của TUI** và cuối output của
+`link-configs.ps1`:
+
+```text
+| Your previous config was backed up (5 file(s)):                      |
+|   C:\Users\ban\.config\windows11-dev-poweruser\backups\20260916-013020|
+|   restore: ./scripts/restore-backup.ps1                              |
+```
+
+Hoàn tác:
+
+```powershell
+./scripts/restore-backup.ps1 -List      # xem các lần backup
+./scripts/restore-backup.ps1 -WhatIf    # xem sẽ khôi phục gì
+./scripts/restore-backup.ps1            # khôi phục lần gần nhất
+./scripts/restore-backup.ps1 -From <path>
+```
+
+### Git identity không bị mất
+
+Trường hợp nguy hiểm nhất khi cài lên máy đã dùng: `~/.gitconfig` bị thay và
+`user.name`/`user.email` biến mất - commit tiếp theo hỏng mà không có gì báo.
+
+`link-configs.ps1` đọc identity cũ và ghi vào `~/.gitconfig.local`, file mà
+gitconfig của repo `[include]` vào và repo **không bao giờ đụng tới**:
+
+```text
+  + kept git identity in C:\Users\ban\.gitconfig.local
+    BeHax <email@example.com>
+```
+
+---
+
 ## Thêm module
 
 Sửa `scripts/lib/modules.ps1`:

@@ -23,6 +23,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# powershell.exe -File binds "a,b,c" to a [string[]] parameter as ONE element,
+# unlike -Command. Split here so both invocation styles behave the same.
+if ($Modules) { $Modules = @($Modules -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
+
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $RepoRoot "scripts\lib\tui.ps1")
 . (Join-Path $RepoRoot "scripts\lib\detect.ps1")
@@ -129,6 +133,38 @@ if ($DryRun) {
     return
 }
 
+# The local-LLM module is the one step that downloads many GB, can take half
+# an hour, and is useless on the wrong hardware. It is never selected by
+# default, and selecting it asks again here with the actual cost spelled out.
+$llmStep = $steps | Where-Object { $_.Key -eq "localllm" } | Select-Object -First 1
+if ($llmStep -and -not $Yes) {
+    Write-Host ""
+    Write-Host ("  {0}OPTIONAL: local LLM{1}" -f ($T.Yellow + $T.Bold), $T.Reset)
+    Write-Host ("  {0}Nothing else in this setup depends on it. Skip it and everything" -f $T.Dim)
+    Write-Host ("  else still works - the coding agents talk to hosted APIs.{0}" -f $T.Reset)
+    Write-Host ""
+    if ($Machine.LlmTier -eq "vllm") {
+        Write-Host ("  backend   {0}vLLM in a GPU container{1}" -f $T.Fg, $T.Reset)
+        Write-Host ("  needs     {0}WSL2 + Docker + NVIDIA Container Toolkit{1}" -f $T.Fg, $T.Reset)
+        Write-Host ("  download  {0}~10 GB image, plus several GB of model weights{1}" -f $T.Yellow, $T.Reset)
+        Write-Host ("  time      {0}10-30 min on a fast connection{1}" -f $T.Yellow, $T.Reset)
+        if ($Machine.ModelHint) {
+            Write-Host ("  model     {0}{1} @ {2}, sized for {3} GB VRAM{4}" -f `
+                $T.Fg, $Machine.ModelHint.Model, $Machine.ModelHint.Quant, $Machine.Gpu.VramGb, $T.Reset)
+        }
+    } else {
+        Write-Host ("  backend   {0}Ollama{1}" -f $T.Fg, $T.Reset)
+        Write-Host ("  needs     {0}nothing extra - no WSL, no Docker, no CUDA{1}" -f $T.Fg, $T.Reset)
+        Write-Host ("  download  {0}a few GB per model you pull{1}" -f $T.Yellow, $T.Reset)
+        Write-Host ("  note      {0}{1}{2}" -f $T.Dim, $Machine.LlmNote, $T.Reset)
+    }
+
+    if (-not (Confirm-Tui "Include the local LLM step?" -DefaultNo)) {
+        $steps = @($steps | Where-Object { $_.Key -ne "localllm" })
+        Write-Host ("  {0}skipped - run ./scripts/install-localllm.ps1 later if you change your mind{1}" -f $T.Dim, $T.Reset)
+    }
+}
+
 if (-not $Yes) {
     if (-not (Confirm-Tui "Run these $($steps.Count) steps?")) {
         Write-Host "Cancelled."
@@ -182,7 +218,23 @@ $ctx = @{
             -Arguments @("-Tier", $Machine.LlmTier)
     }
     Doctor = {
-        Invoke-Step -Key "verify" -File (Join-Path $RepoRoot "scripts\doctor.ps1") -Arguments @("-Quick")
+        # doctor exits 1 whenever anything failed, which for a partial install
+        # (say, configs without the window manager) is expected rather than an
+        # error in this run. Report its own tally instead of a bare exit code,
+        # and only treat real failures as a failed step.
+        $code = Invoke-Step -Key "verify" -File (Join-Path $RepoRoot "scripts\doctor.ps1") -Arguments @("-Quick")
+
+        $log = Join-Path $RunDir "verify.log"
+        if (Test-Path -LiteralPath $log) {
+            $summary = Get-Content -LiteralPath $log |
+                Where-Object { $_ -match '(\d+) passed\s+(\d+) warnings\s+(\d+) failures' } |
+                Select-Object -Last 1
+            if ($summary -and $summary -match '(\d+) passed\s+(\d+) warnings\s+(\d+) failures') {
+                $script:DoctorSummary = "{0} passed, {1} warnings, {2} failures" -f $Matches[1], $Matches[2], $Matches[3]
+                return [int]$Matches[3]
+            }
+        }
+        return $code
     }
 }
 
@@ -201,6 +253,11 @@ for ($i = 0; $i -lt $steps.Count; $i++) {
             ("{0}logs: {1}{2}" -f $T.Dim, $RunDir, $T.Reset)
         )
 
+    # Refresh PATH between steps so a module can use what the previous one
+    # installed (configs looks for komorebic, verify looks for everything).
+    $env:PATH = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
+                [Environment]::GetEnvironmentVariable("Path", "User")
+
     $t0 = Get-Date
     $code = 0
     try {
@@ -215,10 +272,18 @@ for ($i = 0; $i -lt $steps.Count; $i++) {
 
     if ($code -eq 0) {
         $s.Status = "Done"
-        $s.Detail = "{0}s" -f $elapsed
+        if ($s.Key -eq "verify" -and $script:DoctorSummary) {
+            $s.Detail = "{0}s - {1}" -f $elapsed, $script:DoctorSummary
+        } else {
+            $s.Detail = "{0}s" -f $elapsed
+        }
     } else {
         $s.Status = "Failed"
-        $s.Detail = "exit $code after {0}s - see {1}.log" -f $elapsed, $s.Key
+        if ($s.Key -eq "verify" -and $script:DoctorSummary) {
+            $s.Detail = "{0} - see verify.log" -f $script:DoctorSummary
+        } else {
+            $s.Detail = "exit $code after {0}s - see {1}.log" -f $elapsed, $s.Key
+        }
         $failed += $s.Key
     }
     Write-SetupLog "$($s.Key): $($s.Status) in ${elapsed}s (exit $code)"
@@ -237,6 +302,26 @@ if ($failed.Count) {
 
 $didWsl = @($steps | Where-Object { $_.Key -eq "wsl" -and $_.Status -eq "Done" }).Count -gt 0
 $didWm  = @($steps | Where-Object { $_.Key -eq "wm"  -and $_.Status -eq "Done" }).Count -gt 0
+
+# Where the machine's previous configs went. The most important line for
+# anyone who ran this on a box that already had a setup.
+$marker = Join-Path $env:USERPROFILE ".config\windows11-dev-poweruser\last-backup.txt"
+if (Test-Path -LiteralPath $marker) {
+    $backupDir = (Get-Content -LiteralPath $marker -Raw).Trim()
+    if ($backupDir -and (Test-Path -LiteralPath $backupDir)) {
+        $mf = Join-Path $backupDir "manifest.tsv"
+        $n = 0
+        if (Test-Path -LiteralPath $mf) {
+            $n = @(Get-Content -LiteralPath $mf | Where-Object { $_ -notmatch '^#' }).Count
+        }
+        if ($n -gt 0) {
+            $footer += ""
+            $footer += "{0}Your previous config was backed up ({1} file(s)):{2}" -f ($T.Yellow + $T.Bold), $n, $T.Reset
+            $footer += "  {0}{1}{2}" -f $T.Cyan, $backupDir, $T.Reset
+            $footer += "  {0}restore: ./scripts/restore-backup.ps1{1}" -f $T.Dim, $T.Reset
+        }
+    }
+}
 
 $footer += ""
 $footer += "{0}Next:{1}" -f $T.Bright, $T.Reset

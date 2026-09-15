@@ -4,9 +4,13 @@
 #   ./scripts/link-configs.ps1 -Copy      plain copies instead
 #   ./scripts/link-configs.ps1 -NoAutostart
 #
-# Anything already present is backed up to <file>.<timestamp>.bak before being
-# replaced. Symlinks need Developer Mode or an elevated shell; without either
-# the script falls back to copying and says so.
+# Anything already present is backed up first, into ONE folder per run:
+#   %USERPROFILE%\.config\windows11-dev-poweruser\backups\<timestamp>\
+# mirroring the original paths, with a manifest.tsv. The path is printed at
+# the end; restore-backup.ps1 puts it all back.
+#
+# Symlinks need Developer Mode or an elevated shell; without either the script
+# falls back to copying and says so.
 
 [CmdletBinding()]
 param(
@@ -65,6 +69,35 @@ Put "configs\powershell\Microsoft.PowerShell_profile.ps1" `
     (Join-Path $env:USERPROFILE "Documents\PowerShell\Microsoft.PowerShell_profile.ps1")
 
 Write-Host "`n[git]" -ForegroundColor Magenta
+# Carry the existing identity across before replacing ~/.gitconfig. Without
+# this, installing on a machine that already had git configured silently
+# removes user.name/user.email, and the next commit either fails or is
+# attributed to nobody. The repo's gitconfig includes ~/.gitconfig.local.
+$gitLocal = Join-Path $env:USERPROFILE ".gitconfig.local"
+$existingName  = ""
+$existingEmail = ""
+if (Get-Command git -ErrorAction SilentlyContinue) {
+    $existingName  = (git config --global --get user.name)  2>$null
+    $existingEmail = (git config --global --get user.email) 2>$null
+}
+if (($existingName -or $existingEmail) -and -not (Test-Path -LiteralPath $gitLocal)) {
+    $body = @("# Preserved from your previous ~/.gitconfig by link-configs.ps1.", "[user]")
+    if ($existingName)  { $body += "`tname = $existingName" }
+    if ($existingEmail) { $body += "`temail = $existingEmail" }
+
+    # Written BOM-less on purpose. git itself tolerates a BOM here, but
+    # Set-Content -Encoding utf8 adds one on Windows PowerShell 5.1, and the
+    # same habit already broke the WSL probe in doctor.ps1 (bash reported
+    # "<BOM>printf: command not found"). Config files this repo generates are
+    # consistently BOM-less so that stops being a class of bug.
+    [System.IO.File]::WriteAllText($gitLocal, (($body -join "`n") + "`n"),
+        (New-Object System.Text.UTF8Encoding($false)))
+    Write-Host ("  + kept git identity in {0}" -f $gitLocal) -ForegroundColor Green
+    Write-Host ("    {0} <{1}>" -f $existingName, $existingEmail) -ForegroundColor DarkGray
+} elseif (Test-Path -LiteralPath $gitLocal) {
+    Write-Host "  = .gitconfig.local already present (identity kept)" -ForegroundColor DarkGray
+}
+
 Put "configs\git\gitconfig" (Join-Path $env:USERPROFILE ".gitconfig")
 
 Write-Host "`n[wsl]" -ForegroundColor Magenta
@@ -137,6 +170,18 @@ Write-Host ""
 Write-Host "Done." -ForegroundColor Green
 Write-Host "  whkd config       : $(Join-Path $cfg 'whkdrc')"
 Write-Host "  KOMOREBI_CONFIG_HOME = $env:KOMOREBI_CONFIG_HOME"
+
+# Tell the user exactly where their old files went. On a machine that already
+# had configs this is the most important line of the whole run.
+Write-BackupSummary
+$backupRoot = Get-BackupRoot
+if ($backupRoot) {
+    # Leave a breadcrumb so setup.ps1 can surface it in the final summary.
+    $marker = Join-Path $env:USERPROFILE ".config\windows11-dev-poweruser\last-backup.txt"
+    Ensure-Dir (Split-Path -Parent $marker)
+    Set-Content -LiteralPath $marker -Value $backupRoot -Encoding utf8
+}
+
 Write-Host ""
 Write-Host "  Review ~/.ssh/config.example before renaming it to config." -ForegroundColor Yellow
 Write-Host "  Inside WSL: sudo cp ~/.config/wsl/wsl.conf /etc/wsl.conf && wsl --shutdown" -ForegroundColor Yellow

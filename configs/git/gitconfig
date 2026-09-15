@@ -3,9 +3,18 @@
 # Install with scripts/link-configs.ps1, or by hand:
 #   copy configs\git\gitconfig %USERPROFILE%\.gitconfig
 #
-# Set your identity separately so it never lands in the repo:
+# Your identity lives in ~/.gitconfig.local, included below. That file is
+# never touched by this repo, and link-configs.ps1 migrates an existing
+# user.name/user.email into it before replacing this file - so installing on
+# a machine that already had git set up does not silently break your commits.
+#
 #   git config --global user.name  "Your Name"
 #   git config --global user.email "you@example.com"
+# (those write to ~/.gitconfig, so move them to ~/.gitconfig.local by hand if
+#  you set them after installing)
+
+[include]
+	path = .gitconfig.local
 
 [init]
 	defaultBranch = main

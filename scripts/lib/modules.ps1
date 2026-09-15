@@ -95,20 +95,20 @@ function Get-SetupModules {
 
     switch ($Machine.LlmTier) {
         "vllm" {
-            $llmDesc = "Local LLM: Docker + NVIDIA toolkit + vLLM (GPU)"
+            $llmDesc = "OPTIONAL - local LLM: vLLM on the GPU (~10 GB download)"
             if (-not $Machine.HasAlmaLinux) {
                 $llmNote = "$($Machine.LlmNote) - select 'wsl' too, or run it after the reboot"
             }
         }
         "ollama" {
-            $llmDesc = "Local LLM: Ollama (small models, no GPU needed)"
+            $llmDesc = "OPTIONAL - local LLM: Ollama (no GPU needed)"
             # Ollama is installed through winget; vLLM is not (it lives in WSL).
             if (-not $wingetOk) {
                 $llmAvailable = $false
                 $llmNote = "needs winget to install Ollama"
             }
         }
-        default { $llmDesc = "Local LLM" }
+        default { $llmDesc = "OPTIONAL - local LLM" }
     }
 
     $mods.Add((New-Mod -Key "localllm" -Description $llmDesc `

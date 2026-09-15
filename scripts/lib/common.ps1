@@ -1,11 +1,103 @@
-# Shared helpers for install-windows.ps1 and bootstrap-windows.ps1.
+# Shared helpers for the installer scripts.
 # Dot-source this file; it defines functions only and has no side effects.
+#
+# Must stay parseable by Windows PowerShell 5.1 - see scripts/lib/tui.ps1.
 
 function Ensure-Dir {
   param([Parameter(Mandatory)][string]$Path)
   if (-not (Test-Path -LiteralPath $Path)) {
     New-Item -ItemType Directory -Force -Path $Path | Out-Null
   }
+}
+
+# =============================================================================
+# Backups
+# =============================================================================
+# Every file this repo would overwrite is copied somewhere first. The previous
+# version scattered "<file>.<timestamp>.bak" next to each original, which is
+# useless on a machine that already had configs: you end up hunting through
+# five directories to undo one run.
+#
+# Instead there is ONE backup root per run:
+#
+#   %USERPROFILE%\.config\windows11-dev-poweruser\backups\<timestamp>\
+#       C\Users\you\.config\whkdrc
+#       C\Users\you\Documents\PowerShell\Microsoft.PowerShell_profile.ps1
+#       manifest.tsv
+#
+# The tree mirrors the original paths, so what a file was is obvious from
+# where it sits. manifest.tsv maps backup -> original for restore-backup.ps1.
+
+$script:BackupRoot = $null
+
+function Initialize-BackupRoot {
+  param([string]$Root)
+
+  if ($script:BackupRoot) { return $script:BackupRoot }
+
+  if (-not $Root) {
+    $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    $Root  = Join-Path $env:USERPROFILE ".config\windows11-dev-poweruser\backups\$stamp"
+  }
+  Ensure-Dir $Root
+  $script:BackupRoot = $Root
+
+  $manifest = Join-Path $Root "manifest.tsv"
+  if (-not (Test-Path -LiteralPath $manifest)) {
+    Set-Content -LiteralPath $manifest -Encoding utf8 `
+      -Value "# backup_relative_path`toriginal_path`ttaken_at"
+  }
+  return $script:BackupRoot
+}
+
+function Get-BackupRoot { return $script:BackupRoot }
+
+# Returns the backup path, or $null when there was nothing to back up.
+function Backup-ExistingItem {
+  param([Parameter(Mandatory)][string]$Path)
+
+  if (-not (Test-Path -LiteralPath $Path)) { return $null }
+
+  $root = Initialize-BackupRoot
+
+  # C:\Users\you\.config\whkdrc  ->  <root>\C\Users\you\.config\whkdrc
+  $full = (Resolve-Path -LiteralPath $Path).Path
+  $rel  = $full -replace '^([A-Za-z]):\\', '$1\'
+  $rel  = $rel -replace '^\\\\', 'UNC\'
+  $dest = Join-Path $root $rel
+
+  Ensure-Dir (Split-Path -Parent $dest)
+
+  # A symlink we created on an earlier run is not worth preserving - copy what
+  # it points at only if it is a real file.
+  $item = Get-Item -LiteralPath $full -Force
+  if ($item.LinkType -eq "SymbolicLink") {
+    Add-Content -LiteralPath (Join-Path $root "manifest.tsv") `
+      -Value ("{0}`t{1}`t{2}" -f "(symlink, not copied)", $full, (Get-Date -Format "s"))
+    return $null
+  }
+
+  Copy-Item -LiteralPath $full -Destination $dest -Force -Recurse
+  Add-Content -LiteralPath (Join-Path $root "manifest.tsv") `
+    -Value ("{0}`t{1}`t{2}" -f $rel, $full, (Get-Date -Format "s"))
+
+  return $dest
+}
+
+function Write-BackupSummary {
+  if (-not $script:BackupRoot) { return }
+
+  $manifest = Join-Path $script:BackupRoot "manifest.tsv"
+  $count = 0
+  if (Test-Path -LiteralPath $manifest) {
+    $count = @(Get-Content -LiteralPath $manifest | Where-Object { $_ -notmatch '^#' }).Count
+  }
+  if ($count -eq 0) { return }
+
+  Write-Host ""
+  Write-Host ("  {0} existing file(s) were backed up to:" -f $count) -ForegroundColor Yellow
+  Write-Host ("  $script:BackupRoot") -ForegroundColor Cyan
+  Write-Host ("  Restore with: ./scripts/restore-backup.ps1 -From `"$script:BackupRoot`"") -ForegroundColor DarkGray
 }
 
 function Test-IsElevated {
@@ -130,10 +222,8 @@ function Install-ConfigFile {
       return $false
     }
     if (-not $NoBackup) {
-      $stamp  = Get-Date -Format "yyyyMMdd-HHmmss"
-      $backup = "$Destination.$stamp.bak"
-      Copy-Item -LiteralPath $Destination -Destination $backup -Force
-      Write-Host ("  ~ backed up -> {0}" -f (Split-Path -Leaf $backup)) -ForegroundColor DarkYellow
+      $backup = Backup-ExistingItem -Path $Destination
+      if ($backup) { Write-Host ("  ~ backed up") -ForegroundColor DarkYellow }
     }
   }
 
@@ -164,10 +254,9 @@ function Install-ConfigLink {
       Write-Host ("  = {0} -> repo" -f $Destination) -ForegroundColor DarkGray
       return $true
     }
-    $stamp  = Get-Date -Format "yyyyMMdd-HHmmss"
-    $backup = "$Destination.$stamp.bak"
-    Move-Item -LiteralPath $Destination -Destination $backup -Force
-    Write-Host ("  ~ backed up -> {0}" -f (Split-Path -Leaf $backup)) -ForegroundColor DarkYellow
+    $backup = Backup-ExistingItem -Path $Destination
+    if ($backup) { Write-Host ("  ~ backed up") -ForegroundColor DarkYellow }
+    Remove-Item -LiteralPath $Destination -Force -Recurse
   }
 
   try {
