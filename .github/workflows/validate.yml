@@ -1,0 +1,141 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # Catches the two bug classes that actually shipped in this repo:
+  #   * whkdrc key names that VKey::from_keyname rejects (one kills whkd
+  #     entirely, so every hotkey silently stops working)
+  #   * config files that do not parse
+  configs:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JSON
+        shell: pwsh
+        run: |
+          $bad = 0
+          Get-ChildItem configs -Recurse -Filter *.json | ForEach-Object {
+            try {
+              Get-Content $_.FullName -Raw | ConvertFrom-Json | Out-Null
+              Write-Host "ok   $($_.FullName)"
+            } catch {
+              Write-Host "FAIL $($_.FullName): $($_.Exception.Message)"
+              $bad++
+            }
+          }
+          if ($bad) { exit 1 }
+
+      - name: Validate YAML and TOML
+        shell: bash
+        run: |
+          python -m pip install --quiet pyyaml
+          python - <<'PY'
+          import sys, glob, tomllib, yaml
+          bad = 0
+          for f in glob.glob("configs/**/*.yaml", recursive=True) + glob.glob("configs/**/*.yml", recursive=True):
+              try:
+                  yaml.safe_load(open(f, encoding="utf-8")); print("ok  ", f)
+              except Exception as e:
+                  print("FAIL", f, e); bad += 1
+          for f in glob.glob("configs/**/*.toml", recursive=True):
+              try:
+                  tomllib.load(open(f, "rb")); print("ok  ", f)
+              except Exception as e:
+                  print("FAIL", f, e); bad += 1
+          sys.exit(1 if bad else 0)
+          PY
+
+      - name: Validate whkdrc key names and chords
+        shell: pwsh
+        run: ./scripts/doctor.ps1 -Repo -Quick
+
+  powershell:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -ErrorAction Stop
+          # Exclusions, and why each one is deliberate:
+          #   WriteHost            - these are interactive installers, not cmdlets
+          #   ShouldProcess        - same
+          #   PositionalParameters - komorebic/winget calls read better positionally
+          #   InvokeExpression     - `oh-my-posh init | iex` and `zoxide init | iex`
+          #                          are the vendor-documented way to load them
+          #   ApprovedVerbs        - user-facing shortcuts (reload-profile) and
+          #                          internal helpers (Ensure-Dir) are not cmdlets
+          #   GlobalVars           - bootstrap must read $global:repo, because
+          #                          `irm ... | iex` is how it is invoked
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error,Warning `
+            -ExcludeRule PSAvoidUsingWriteHost,PSUseShouldProcessForStateChangingFunctions,
+                         PSAvoidUsingPositionalParameters,PSAvoidUsingInvokeExpression,
+                         PSUseApprovedVerbs,PSAvoidGlobalVars
+          if ($results) {
+            $results | Format-Table -AutoSize | Out-String -Width 200 | Write-Host
+            if ($results | Where-Object Severity -eq 'Error') { exit 1 }
+          } else {
+            Write-Host "PSScriptAnalyzer: clean"
+          }
+
+      - name: Parse every script
+        shell: pwsh
+        run: |
+          $bad = 0
+          Get-ChildItem -Recurse -Filter *.ps1 | ForEach-Object {
+            $errs = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$errs) | Out-Null
+            if ($errs) {
+              Write-Host "FAIL $($_.Name)"
+              $errs | ForEach-Object { Write-Host "   line $($_.Extent.StartLineNumber): $($_.Message)" }
+              $bad++
+            } else { Write-Host "ok   $($_.Name)" }
+          }
+          if ($bad) { exit 1 }
+
+  shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: shellcheck
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          shellcheck -S warning scripts/*.sh configs/wsl/*.sh
+
+      - name: zsh syntax
+        run: |
+          sudo apt-get install -y -qq zsh
+          zsh -n configs/zsh/zshrc
+          zsh -n configs/zsh/aliases.zsh
+
+  winget-ids:
+    # Package ids are the other thing that broke here: bootstrap shipped
+    # "amnweb.yasb" and install shipped "dbeaver.dbeaver", neither of which
+    # resolves. Scheduled so upstream renames surface before a user hits them.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve every winget id
+        shell: pwsh
+        run: |
+          $manifest = Get-Content configs/winget/packages.json -Raw | ConvertFrom-Json
+          $ids = $manifest.groups.PSObject.Properties.Value.packages.id
+          $bad = @()
+          foreach ($id in $ids) {
+            $out = winget show --id $id -e --disable-interactivity --accept-source-agreements 2>&1 | Out-String
+            if ($out -match "No package found") { Write-Host "FAIL $id"; $bad += $id }
+            else { Write-Host "ok   $id" }
+          }
+          if ($bad.Count) {
+            Write-Host "`nUnresolvable ids: $($bad -join ', ')"
+            exit 1
+          }

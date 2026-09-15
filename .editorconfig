@@ -1,0 +1,25 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# whkd parses this file itself; keep it plain.
+[whkdrc]
+indent_style = space
+
+[*.{ps1,psm1}]
+indent_size = 4
+
+[*.{sh,zsh}]
+indent_size = 2
+
+[gitconfig]
+indent_style = tab
+
+[*.md]
+trim_trailing_whitespace = false

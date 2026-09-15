@@ -1,68 +1,251 @@
+# ============================================================================
+#  whkdrc - Omarchy-style keybindings for komorebi on Windows 11
+# ============================================================================
+#
+#  Ported from Omarchy (omacom/omarchy, branch `quattro`):
+#    default/hypr/bindings/{tiling,applications,utilities}.lua
+#
+#  Design, straight from Omarchy:
+#    - SUPER (the Windows key) is the ONLY window-management modifier.
+#    - Arrow keys navigate. hjkl is kept as an alias for Vim hands.
+#    - SHIFT moves/swaps what SUPER focuses.
+#    - ALT is the group/stack dimension.
+#    - CTRL is the system/toggle dimension.
+#    - SUPER+SHIFT+<letter> launches applications.
+#
+#  whkd blocks the OS shortcut it shadows (it installs a WH_KEYBOARD_LL hook
+#  and returns LRESULT(1) on a match), so Win+1..9, Win+Tab, Win+E and friends
+#  are ours. Two chords the kernel keeps and we can never take:
+#      Win+L          -> lock (that is why layout toggle sits on SUPER+SHIFT+L)
+#      Ctrl+Alt+Del   -> secure attention sequence
+#
+#  KEY NAMES ARE NOT LITERAL. whkd feeds each token to VKey::from_keyname, and
+#  one bad name aborts the whole daemon, so every binding silently dies.
+#  Verified spellings for this file:
+#      enter -> return      ,  -> oem_comma     .  -> oem_period
+#      -     -> oem_minus   =  -> oem_plus      `  -> oem_3
+#      /     -> oem_2       ;  -> oem_1         backspace -> back
+#  scripts/doctor.ps1 validates every key name in this file. Run it after
+#  editing rather than discovering the breakage the next time you log in.
+# ============================================================================
+
 .shell cmd
 
-# Apps
-alt + enter : start "" alacritty
-alt + b : start "" brave
-alt + e : start "" explorer
-alt + shift + e : start "" everything
+# Toggle every binding off/on (useful for games and RDP).
+.pause win + shift + alt + p
 
-# Close / minimize
-alt + q : komorebic close
-alt + shift + q : komorebic minimize
+# ----------------------------------------------------------------------------
+# Applications                                          SUPER+SHIFT+<letter>
+# ----------------------------------------------------------------------------
+win + return                 : start "" alacritty
+win + shift + return         : start "" brave
+win + alt + return           : start "" alacritty -e wsl.exe -d AlmaLinux-9 -- tmux new-session -A -s main
 
-# Focus windows
-alt + h : komorebic focus left
-alt + j : komorebic focus down
-alt + k : komorebic focus up
-alt + l : komorebic focus right
+win + shift + b              : start "" brave
+win + shift + alt + b        : start "" brave --incognito
+win + shift + f              : start "" explorer
+win + shift + e              : start "" everything
+win + shift + n              : start "" alacritty -e wsl.exe -d AlmaLinux-9 -- nvim
+win + shift + g              : start "" electerm
+win + shift + d              : start "" dbeaver
+win + shift + oem_2          : start "" bitwarden
+win + shift + t              : start "" alacritty -e btop
 
-# Move windows
-alt + shift + h : komorebic move left
-alt + shift + j : komorebic move down
-alt + shift + k : komorebic move up
-alt + shift + l : komorebic move right
+# ----------------------------------------------------------------------------
+# Menus and discovery
+# ----------------------------------------------------------------------------
+# SUPER+/ prints every binding below into a searchable fzf window. This is the
+# one binding worth memorising; it teaches you the rest.
+# (Omarchy puts this on SUPER+K. SUPER+/ reads as "help" and leaves K free.)
+win + oem_2                  : start "" alacritty --class omarchy-menu,omarchy-menu -e pwsh -NoProfile -ExecutionPolicy Bypass -File "%USERPROFILE%\.config\omarchy\bin\omarchy-keybindings.ps1"
+win + space                  : start "" alacritty --class omarchy-menu,omarchy-menu -e pwsh -NoProfile -ExecutionPolicy Bypass -File "%USERPROFILE%\.config\omarchy\bin\omarchy-menu.ps1"
+win + escape                 : start "" alacritty --class omarchy-menu,omarchy-menu -e pwsh -NoProfile -ExecutionPolicy Bypass -File "%USERPROFILE%\.config\omarchy\bin\omarchy-menu.ps1" -Menu system
 
-# Resize focused window
-alt + ctrl + h : komorebic resize-axis horizontal decrease
-alt + ctrl + l : komorebic resize-axis horizontal increase
-alt + ctrl + j : komorebic resize-axis vertical increase
-alt + ctrl + k : komorebic resize-axis vertical decrease
+# ----------------------------------------------------------------------------
+# Window lifecycle
+# ----------------------------------------------------------------------------
+win + w                      : komorebic close
+win + q                      : komorebic close
+win + shift + q              : komorebic minimize
 
-# Focus workspaces
-alt + 1 : komorebic focus-workspace 0
-alt + 2 : komorebic focus-workspace 1
-alt + 3 : komorebic focus-workspace 2
-alt + 4 : komorebic focus-workspace 3
-alt + 5 : komorebic focus-workspace 4
-alt + 6 : komorebic focus-workspace 5
-alt + 7 : komorebic focus-workspace 6
-alt + 8 : komorebic focus-workspace 7
-alt + 9 : komorebic focus-workspace 8
+# ----------------------------------------------------------------------------
+# Focus                                                    SUPER + arrows
+# ----------------------------------------------------------------------------
+# Omarchy navigates with arrow keys, and on Windows there is no room to also
+# put focus on hjkl: SUPER+J is toggle-split, SUPER+K is free only because the
+# cheatsheet moved to SUPER+/, and SUPER+L is the one chord the OS will never
+# release (it locks the session). See the Vim overlay at the end of this file
+# if you would rather have hjkl and give those up.
+# ----------------------------------------------------------------------------
+win + left                   : komorebic focus left
+win + down                   : komorebic focus down
+win + up                     : komorebic focus up
+win + right                  : komorebic focus right
 
-# Move focused window to workspace
-alt + shift + 1 : komorebic move-to-workspace 0
-alt + shift + 2 : komorebic move-to-workspace 1
-alt + shift + 3 : komorebic move-to-workspace 2
-alt + shift + 4 : komorebic move-to-workspace 3
-alt + shift + 5 : komorebic move-to-workspace 4
-alt + shift + 6 : komorebic move-to-workspace 5
-alt + shift + 7 : komorebic move-to-workspace 6
-alt + shift + 8 : komorebic move-to-workspace 7
-alt + shift + 9 : komorebic move-to-workspace 8
+# ALT+TAB cycles managed windows on the focused workspace, Omarchy-style.
+# Comment these two lines out to hand Alt+Tab back to Windows.
+alt + tab                    : komorebic cycle-focus next
+alt + shift + tab            : komorebic cycle-focus previous
 
-# Cycle workspaces
-alt + left : komorebic cycle-workspace previous
-alt + right : komorebic cycle-workspace next
+# ----------------------------------------------------------------------------
+# Move / swap windows                                 SUPER + SHIFT + arrows
+# ----------------------------------------------------------------------------
+win + shift + left           : komorebic move left
+win + shift + down           : komorebic move down
+win + shift + up             : komorebic move up
+win + shift + right          : komorebic move right
 
+win + p                      : komorebic promote
+win + shift + p              : komorebic promote-focus
+
+# ----------------------------------------------------------------------------
+# Workspaces                                              SUPER + 1..9,0
+# ----------------------------------------------------------------------------
+#   SUPER            -> focus workspace
+#   SUPER+SHIFT      -> move the window there AND follow it
+#   SUPER+SHIFT+ALT  -> send the window there and STAY PUT   (Omarchy silent)
+# ----------------------------------------------------------------------------
+win + 1                      : komorebic focus-workspace 0
+win + 2                      : komorebic focus-workspace 1
+win + 3                      : komorebic focus-workspace 2
+win + 4                      : komorebic focus-workspace 3
+win + 5                      : komorebic focus-workspace 4
+win + 6                      : komorebic focus-workspace 5
+win + 7                      : komorebic focus-workspace 6
+win + 8                      : komorebic focus-workspace 7
+win + 9                      : komorebic focus-workspace 8
+win + 0                      : komorebic focus-workspace 9
+
+win + shift + 1              : komorebic move-to-workspace 0
+win + shift + 2              : komorebic move-to-workspace 1
+win + shift + 3              : komorebic move-to-workspace 2
+win + shift + 4              : komorebic move-to-workspace 3
+win + shift + 5              : komorebic move-to-workspace 4
+win + shift + 6              : komorebic move-to-workspace 5
+win + shift + 7              : komorebic move-to-workspace 6
+win + shift + 8              : komorebic move-to-workspace 7
+win + shift + 9              : komorebic move-to-workspace 8
+win + shift + 0              : komorebic move-to-workspace 9
+
+win + shift + alt + 1        : komorebic send-to-workspace 0
+win + shift + alt + 2        : komorebic send-to-workspace 1
+win + shift + alt + 3        : komorebic send-to-workspace 2
+win + shift + alt + 4        : komorebic send-to-workspace 3
+win + shift + alt + 5        : komorebic send-to-workspace 4
+win + shift + alt + 6        : komorebic send-to-workspace 5
+win + shift + alt + 7        : komorebic send-to-workspace 6
+win + shift + alt + 8        : komorebic send-to-workspace 7
+win + shift + alt + 9        : komorebic send-to-workspace 8
+win + shift + alt + 0        : komorebic send-to-workspace 9
+
+# Cycling. SUPER+CTRL+TAB is the Omarchy former-workspace toggle - the
+# back-and-forth that ends up carrying most of a working day.
+win + tab                    : komorebic cycle-workspace next
+win + shift + tab            : komorebic cycle-workspace previous
+win + control + tab          : komorebic focus-last-workspace
+win + control + shift + tab  : komorebic cycle-empty-workspace next
+
+# Scratchpad on workspace 10: press to visit, press again to fall back.
+win + s                      : pwsh -NoProfile -ExecutionPolicy Bypass -File "%USERPROFILE%\.config\omarchy\bin\omarchy-scratchpad.ps1"
+win + oem_3                  : pwsh -NoProfile -ExecutionPolicy Bypass -File "%USERPROFILE%\.config\omarchy\bin\omarchy-scratchpad.ps1"
+win + alt + s                : komorebic send-to-workspace 9
+win + shift + oem_3          : komorebic send-to-workspace 9
+
+# ----------------------------------------------------------------------------
 # Monitors
-alt + , : komorebic focus-monitor previous
-alt + . : komorebic focus-monitor next
-alt + shift + , : komorebic move-to-monitor previous
-alt + shift + . : komorebic move-to-monitor next
+# ----------------------------------------------------------------------------
+control + alt + tab          : komorebic cycle-monitor next
+control + alt + shift + tab  : komorebic cycle-monitor previous
+win + oem_comma              : komorebic cycle-monitor previous
+win + oem_period             : komorebic cycle-monitor next
+win + shift + oem_comma      : komorebic cycle-move-to-monitor previous
+win + shift + oem_period     : komorebic cycle-move-to-monitor next
+win + shift + alt + left     : komorebic cycle-move-workspace-to-monitor previous
+win + shift + alt + right    : komorebic cycle-move-workspace-to-monitor next
 
-# Layout / state
-alt + space : komorebic toggle-float
-alt + f : komorebic toggle-monocle
-alt + shift + f : komorebic toggle-maximize
-alt + r : komorebic retile
-alt + p : komorebic toggle-pause
+# ----------------------------------------------------------------------------
+# Stacking = Omarchy window grouping (SUPER+G)
+# ----------------------------------------------------------------------------
+win + g                      : pwsh -NoProfile -ExecutionPolicy Bypass -File "%USERPROFILE%\.config\omarchy\bin\omarchy-stack-toggle.ps1"
+win + alt + g                : komorebic unstack
+
+win + alt + left             : komorebic stack left
+win + alt + down             : komorebic stack down
+win + alt + up               : komorebic stack up
+win + alt + right            : komorebic stack right
+
+win + alt + tab              : komorebic cycle-stack next
+win + alt + shift + tab      : komorebic cycle-stack previous
+win + control + left         : komorebic cycle-stack previous
+win + control + right        : komorebic cycle-stack next
+
+win + alt + 1                : komorebic focus-stack-window 0
+win + alt + 2                : komorebic focus-stack-window 1
+win + alt + 3                : komorebic focus-stack-window 2
+win + alt + 4                : komorebic focus-stack-window 3
+win + alt + 5                : komorebic focus-stack-window 4
+
+# ----------------------------------------------------------------------------
+# Layout and window state
+# ----------------------------------------------------------------------------
+win + t                      : komorebic toggle-float
+win + f                      : komorebic toggle-maximize
+win + control + f            : komorebic toggle-monocle
+win + o                      : komorebic toggle-float-override
+win + shift + l              : komorebic cycle-layout next
+win + shift + alt + l        : komorebic cycle-layout previous
+win + j                      : komorebic flip-layout horizontal
+win + shift + j              : komorebic flip-layout vertical
+win + r                      : komorebic retile
+win + shift + r              : komorebic reload-configuration
+win + control + p            : komorebic toggle-pause
+win + shift + space          : komorebic toggle-workspace-layer
+
+# ----------------------------------------------------------------------------
+# Resize                                  SUPER + minus/equals, three sizes
+# ----------------------------------------------------------------------------
+#   (none) 100px      ALT 25px (fine)      CTRL 300px (coarse)
+#   SHIFT switches the axis from horizontal to vertical.
+# ----------------------------------------------------------------------------
+win + oem_plus               : komorebic resize-delta 100 && komorebic resize-axis horizontal increase
+win + oem_minus              : komorebic resize-delta 100 && komorebic resize-axis horizontal decrease
+win + shift + oem_plus       : komorebic resize-delta 100 && komorebic resize-axis vertical increase
+win + shift + oem_minus      : komorebic resize-delta 100 && komorebic resize-axis vertical decrease
+
+win + alt + oem_plus         : komorebic resize-delta 25 && komorebic resize-axis horizontal increase
+win + alt + oem_minus        : komorebic resize-delta 25 && komorebic resize-axis horizontal decrease
+win + shift + alt + oem_plus : komorebic resize-delta 25 && komorebic resize-axis vertical increase
+win + shift + alt + oem_minus: komorebic resize-delta 25 && komorebic resize-axis vertical decrease
+
+win + control + oem_plus     : komorebic resize-delta 300 && komorebic resize-axis horizontal increase
+win + control + oem_minus    : komorebic resize-delta 300 && komorebic resize-axis horizontal decrease
+
+# ----------------------------------------------------------------------------
+# System
+# ----------------------------------------------------------------------------
+win + control + l            : rundll32.exe user32.dll,LockWorkStation
+win + control + b            : pwsh -NoProfile -ExecutionPolicy Bypass -File "%USERPROFILE%\.config\omarchy\bin\omarchy-toggle-bar.ps1"
+win + control + r            : pwsh -NoProfile -ExecutionPolicy Bypass -File "%USERPROFILE%\.config\omarchy\bin\omarchy-restart-desktop.ps1"
+win + snapshot               : start "" ms-screenclip:
+win + shift + snapshot       : start "" snippingtool:
+
+# ----------------------------------------------------------------------------
+# OPTIONAL: Vim navigation overlay
+# ----------------------------------------------------------------------------
+# Uncomment this block to put focus and move on hjkl as well as the arrows.
+# It is off by default because it is not free - you give up two things:
+#
+#   win + j   stops flipping the layout   (delete the flip-layout line above)
+#   win + l   CANNOT be captured at all   -> focus right stays on the arrow key
+#
+# Win+L is handled by the kernel on the secure desktop, so no hotkey daemon on
+# Windows can reach it. That is a hard limit, not a komorebi or whkd gap.
+# ----------------------------------------------------------------------------
+# win + h                      : komorebic focus left
+# win + j                      : komorebic focus down
+# win + k                      : komorebic focus up
+#
+# win + shift + h              : komorebic move left
+# win + shift + j              : komorebic move down
+# win + shift + k              : komorebic move up
+# win + shift + oem_1          : komorebic move right

@@ -1,0 +1,237 @@
+/* ==========================================================================
+   yasb - Omarchy Tokyo Night
+   --------------------------------------------------------------------------
+   Palette copied verbatim from omacom/omarchy themes/tokyo-night/colors.toml
+   so the bar, the komorebi borders and Alacritty agree:
+
+     background        #1a1b26      foreground        #a9b1d6
+     lighter_bg        #24283b      bright_foreground #c0caf5
+     selection         #292e42      dark_foreground   #565f89
+     muted             #414868      accent / blue     #7aa2f7
+     red     #f7768e   yellow #e0af68   green  #9ece6a
+     magenta #bb9af7   cyan   #7dcfff   orange #ff9e64
+
+   This is PyQt6 QSS, not a browser. No flexbox, no CSS variables, no
+   descendant selectors beyond what Qt supports. Colours are therefore
+   repeated literally - change them with find/replace.
+   ========================================================================== */
+
+* {
+    font-family: "JetBrainsMono Nerd Font", "Segoe UI", sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: #a9b1d6;
+}
+
+.yasb-bar {
+    background-color: #1a1b26;
+    padding: 0;
+    margin: 0;
+}
+
+.widget {
+    padding: 0 8px;
+    margin: 0;
+}
+
+.widget .label {
+    padding: 0 2px;
+}
+
+.widget .label.alt {
+    color: #c0caf5;
+}
+
+.widget .icon {
+    font-size: 14px;
+    color: #7aa2f7;
+    padding: 0 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Left: the Omarchy menu launcher
+   -------------------------------------------------------------------------- */
+
+.omarchy-menu-widget {
+    padding: 0 10px 0 6px;
+}
+
+.omarchy-menu-widget .label {
+    font-size: 16px;
+    color: #7aa2f7;
+}
+
+.omarchy-menu-widget:hover .label {
+    color: #bb9af7;
+}
+
+/* --------------------------------------------------------------------------
+   Workspaces - the Omarchy dot row
+   Empty and populated render as dots; the focused one expands to its name.
+   -------------------------------------------------------------------------- */
+
+.komorebi-workspaces {
+    padding: 0 4px;
+}
+
+.komorebi-workspaces .widget-container {
+    background-color: transparent;
+    margin: 0;
+}
+
+.komorebi-workspaces .ws-btn {
+    font-size: 11px;
+    color: #414868;
+    background-color: transparent;
+    margin: 0 1px;
+    padding: 0 5px;
+    border-radius: 10px;
+}
+
+.komorebi-workspaces .ws-btn.populated {
+    color: #7aa2f7;
+}
+
+.komorebi-workspaces .ws-btn.active {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1a1b26;
+    background-color: #7aa2f7;
+    padding: 0 10px;
+}
+
+.komorebi-workspaces .ws-btn:hover {
+    color: #c0caf5;
+    background-color: #292e42;
+}
+
+.komorebi-workspaces .ws-btn.active:hover {
+    color: #1a1b26;
+    background-color: #7da6ff;
+}
+
+.komorebi-workspaces .offline-status {
+    color: #565f89;
+    padding: 0 6px;
+}
+
+/* --------------------------------------------------------------------------
+   Active layout + focused window title
+   -------------------------------------------------------------------------- */
+
+.komorebi-active-layout {
+    padding: 0 8px;
+}
+
+.komorebi-active-layout .label {
+    font-size: 14px;
+    color: #bb9af7;
+}
+
+.komorebi-active-layout .widget-container:hover {
+    background-color: #292e42;
+    border-radius: 6px;
+}
+
+.komorebi-layout-menu .menu-item {
+    background-color: #1a1b26;
+    color: #a9b1d6;
+    padding: 6px 14px;
+}
+
+.komorebi-layout-menu .menu-item:hover {
+    background-color: #292e42;
+    color: #c0caf5;
+}
+
+.active-window-widget {
+    padding: 0 10px;
+}
+
+.active-window-widget .label {
+    color: #565f89;
+    font-weight: 400;
+}
+
+/* --------------------------------------------------------------------------
+   Center: clock
+   -------------------------------------------------------------------------- */
+
+.clock-widget .label {
+    color: #c0caf5;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+/* --------------------------------------------------------------------------
+   Right: system readouts
+   -------------------------------------------------------------------------- */
+
+.cpu-widget .label    { color: #9ece6a; }
+.memory-widget .label { color: #e0af68; }
+.volume-widget .label { color: #7dcfff; }
+.wifi-widget .label   { color: #7aa2f7; }
+
+.battery-widget .label { color: #9ece6a; }
+
+.power-menu-widget {
+    padding: 0 10px 0 8px;
+}
+
+.power-menu-widget .label {
+    color: #f7768e;
+    font-size: 14px;
+}
+
+.power-menu-widget:hover .label {
+    color: #ff7a93;
+}
+
+/* The power menu overlay */
+.power-menu-popup {
+    background-color: #1a1b26;
+    border: 1px solid #292e42;
+    border-radius: 12px;
+}
+
+.power-menu-popup .button {
+    background-color: #24283b;
+    color: #a9b1d6;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    margin: 6px;
+}
+
+.power-menu-popup .button:hover {
+    background-color: #292e42;
+    color: #c0caf5;
+}
+
+.power-menu-popup .button .label {
+    color: #a9b1d6;
+    font-size: 12px;
+}
+
+.power-menu-popup .button .icon {
+    font-size: 30px;
+    color: #7aa2f7;
+}
+
+/* --------------------------------------------------------------------------
+   Shared chrome
+   -------------------------------------------------------------------------- */
+
+.context-menu {
+    background-color: #1a1b26;
+    border: 1px solid #292e42;
+    border-radius: 8px;
+}
+
+.tooltip {
+    background-color: #24283b;
+    color: #c0caf5;
+    border: 1px solid #414868;
+    border-radius: 6px;
+    padding: 4px 8px;
+}

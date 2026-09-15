@@ -1,5 +1,11 @@
-# Safe default Alacritty config.
-# Start PowerShell 7 first. Switch to WSL after confirming your distro name.
+# Alacritty - Windows host shell (PowerShell 7).
+#
+# For the WSL variant see alacritty.wsl.toml in this directory; scripts install
+# it next to this file so you can switch with:
+#   alacritty --config-file %APPDATA%\alacritty\alacritty.wsl.toml
+#
+# Colours are Omarchy's Tokyo Night (themes/tokyo-night/colors.toml) so the
+# terminal, the komorebi borders and the yasb bar are one palette.
 
 [terminal.shell]
 program = "pwsh.exe"
@@ -12,21 +18,76 @@ size = 11.5
 family = "JetBrainsMono Nerd Font"
 style = "Regular"
 
+[font.bold]
+family = "JetBrainsMono Nerd Font"
+style = "Bold"
+
+[font.italic]
+family = "JetBrainsMono Nerd Font"
+style = "Italic"
+
 [window]
 decorations = "Full"
 dynamic_padding = false
 startup_mode = "Windowed"
+opacity = 1.0
 
 [window.padding]
-x = 4
-y = 2
+x = 8
+y = 6
 
 [scrolling]
-history = 10000
+history = 50000
+
+[selection]
+save_to_clipboard = true
+
+[cursor]
+style = { shape = "Block", blinking = "Off" }
 
 [keyboard]
 bindings = [
   { key = "N", mods = "Control|Shift", action = "CreateNewWindow" },
   { key = "V", mods = "Control|Shift", action = "Paste" },
-  { key = "C", mods = "Control|Shift", action = "Copy" }
+  { key = "C", mods = "Control|Shift", action = "Copy" },
+  { key = "F", mods = "Control|Shift", action = "SearchForward" },
+  { key = "Equals", mods = "Control", action = "IncreaseFontSize" },
+  { key = "Minus", mods = "Control", action = "DecreaseFontSize" },
+  { key = "Key0", mods = "Control", action = "ResetFontSize" },
 ]
+
+# --- Omarchy Tokyo Night --------------------------------------------------
+
+[colors.primary]
+background = "#1a1b26"
+foreground = "#a9b1d6"
+dim_foreground = "#565f89"
+bright_foreground = "#c0caf5"
+
+[colors.cursor]
+text = "#1a1b26"
+cursor = "#7aa2f7"
+
+[colors.selection]
+text = "CellForeground"
+background = "#292e42"
+
+[colors.normal]
+black = "#1a1b26"
+red = "#f7768e"
+green = "#9ece6a"
+yellow = "#e0af68"
+blue = "#7aa2f7"
+magenta = "#ad8ee6"
+cyan = "#449dab"
+white = "#a9b1d6"
+
+[colors.bright]
+black = "#414868"
+red = "#ff7a93"
+green = "#b9f27c"
+yellow = "#ff9e64"
+blue = "#7da6ff"
+magenta = "#bb9af7"
+cyan = "#0db9d7"
+white = "#c0caf5"

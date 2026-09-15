@@ -1,27 +1,79 @@
 {
   "$schema": "https://raw.githubusercontent.com/LGUG2Z/komorebi/master/schema.json",
+
+  "app_specific_configuration_path": "$Env:USERPROFILE/.config/komorebi/applications.json",
+
   "default_workspace_padding": 8,
   "default_container_padding": 6,
+
   "border": true,
   "border_width": 2,
+  "border_offset": -1,
+  "border_style": "Rounded",
+  "border_colours": {
+    "single": "#7aa2f7",
+    "stack": "#bb9af7",
+    "monocle": "#9ece6a",
+    "floating": "#e0af68",
+    "unfocused": "#414868",
+    "unfocused_locked": "#f7768e"
+  },
+
+  "stackbar": {
+    "mode": "OnStack",
+    "height": 30,
+    "label": "Title",
+    "tabs": {
+      "width": 220,
+      "font_family": "JetBrainsMono Nerd Font",
+      "font_size": 12,
+      "background": "#1a1b26",
+      "focused_text": "#c0caf5",
+      "unfocused_text": "#565f89"
+    }
+  },
+
+  "animation": {
+    "enabled": true,
+    "duration": 160,
+    "fps": 60,
+    "style": "EaseOutQuart"
+  },
+
+  "mouse_follows_focus": false,
+  "window_hiding_behaviour": "Cloak",
+  "cross_monitor_move_behaviour": "Insert",
+  "unmanaged_window_operation_behaviour": "Op",
+
   "monitors": [
     {
       "workspaces": [
-        { "name": "term", "layout": "BSP" },
-        { "name": "web", "layout": "BSP" },
-        { "name": "ssh", "layout": "BSP" },
-        { "name": "db", "layout": "BSP" },
-        { "name": "docs", "layout": "BSP" },
-        { "name": "chat", "layout": "BSP" },
+        { "name": "term",    "layout": "BSP" },
+        { "name": "web",     "layout": "BSP" },
+        { "name": "code",    "layout": "BSP" },
+        { "name": "ssh",     "layout": "BSP" },
+        { "name": "db",      "layout": "BSP" },
+        { "name": "docs",    "layout": "BSP" },
+        { "name": "chat",    "layout": "BSP" },
         { "name": "monitor", "layout": "BSP" },
-        { "name": "media", "layout": "BSP" },
-        { "name": "misc", "layout": "BSP" }
+        { "name": "media",   "layout": "BSP" },
+        { "name": "scratch", "layout": "BSP" }
       ]
     }
   ],
-  "float_rules": [
-    { "kind": "Exe", "id": "Bitwarden.exe" },
-    { "kind": "Exe", "id": "electerm.exe" },
-    { "kind": "Exe", "id": "DBeaver.exe" }
+
+  "floating_applications": [
+    { "kind": "Exe", "id": "Bitwarden.exe",   "matching_strategy": "Equals" },
+    { "kind": "Exe", "id": "electerm.exe",    "matching_strategy": "Equals" },
+    { "kind": "Exe", "id": "dbeaver.exe",     "matching_strategy": "Equals" },
+    { "kind": "Exe", "id": "Everything.exe",  "matching_strategy": "Equals" },
+    { "kind": "Exe", "id": "PowerToys.exe",   "matching_strategy": "Equals" },
+    { "kind": "Class", "id": "omarchy-menu",  "matching_strategy": "Equals" }
+  ],
+
+  "ignore_rules": [
+    { "kind": "Exe", "id": "SnippingTool.exe",     "matching_strategy": "Equals" },
+    { "kind": "Exe", "id": "ScreenClippingHost.exe","matching_strategy": "Equals" },
+    { "kind": "Exe", "id": "yasb.exe",             "matching_strategy": "Equals" }
   ]
 }

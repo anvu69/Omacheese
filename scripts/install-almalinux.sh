@@ -1,100 +1,105 @@
 #!/usr/bin/env bash
+# AlmaLinux (WSL2) dev environment.
+#
+#   bash ./scripts/install-almalinux.sh
+#
+# Installs packages and Oh My Zsh plugins only. It deliberately does NOT write
+# to ~/.zshrc: bootstrap-almalinux.sh copies the repo's zshrc over it straight
+# afterwards, so anything appended here would be wiped. Everything this script
+# used to append already lives in configs/zsh/zshrc.
+
 set -euo pipefail
 
-echo "==> Updating AlmaLinux packages"
+say() { printf '\n==> %s\n' "$1"; }
+
+say "Updating AlmaLinux packages"
 sudo dnf update -y
 
-echo "==> Enabling CRB + EPEL"
+say "Enabling CRB + EPEL"
 sudo dnf install -y dnf-plugins-core epel-release
 sudo dnf config-manager --set-enabled crb || true
 sudo dnf makecache -y
 
-echo "==> Installing base packages"
+say "Installing base packages"
 sudo dnf install -y \
-  git \
-  curl \
-  wget \
-  unzip \
-  tar \
-  zsh \
-  util-linux-user \
-  tmux \
-  python3 \
-  python3-pip \
-  gcc \
-  gcc-c++ \
-  make \
-  openssl-devel \
-  pkgconf-pkg-config
+  git curl wget unzip tar \
+  zsh util-linux-user tmux \
+  python3 python3-pip \
+  gcc gcc-c++ make cmake \
+  openssl-devel pkgconf-pkg-config \
+  socat
 
-echo "==> Installing EPEL/dev CLI packages"
+say "Installing CLI tooling"
+# `|| true` because EPEL package names drift between minor releases and a
+# missing extra should not abort the whole run.
 sudo dnf install -y \
-  fzf \
-  ripgrep \
-  fd-find \
-  bat \
-  neovim \
-  pipx \
-  ansible-core || true
+  fzf ripgrep fd-find bat neovim jq pipx ansible-core || true
 
-echo "==> Ensuring pipx"
+say "Ensuring pipx"
 if ! command -v pipx >/dev/null 2>&1; then
   python3 -m pip install --user pipx
   python3 -m pipx ensurepath || true
 fi
-
 export PATH="$HOME/.local/bin:$PATH"
 
-echo "==> Installing Ansible full via pipx if needed"
-if command -v pipx >/dev/null 2>&1; then
-  if ! command -v ansible >/dev/null 2>&1; then
+say "Installing Ansible"
+if ! command -v ansible >/dev/null 2>&1; then
+  if command -v pipx >/dev/null 2>&1; then
     pipx install --include-deps ansible || true
+  else
+    python3 -m pip install --user ansible || true
   fi
-else
-  python3 -m pip install --user ansible || true
 fi
 
-echo "==> Installing Rust toolchain for eza/zoxide fallback"
+say "Installing Rust toolchain (for eza/zoxide)"
 if ! command -v cargo >/dev/null 2>&1; then
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 fi
-
 # shellcheck disable=SC1091
 source "$HOME/.cargo/env" 2>/dev/null || true
 
-echo "==> Installing eza fallback"
-if ! command -v eza >/dev/null 2>&1; then
-  cargo install eza || true
-fi
+command -v eza    >/dev/null 2>&1 || cargo install eza || true
+command -v zoxide >/dev/null 2>&1 || cargo install zoxide --locked || true
 
-echo "==> Installing zoxide fallback"
-if ! command -v zoxide >/dev/null 2>&1; then
-  cargo install zoxide --locked || true
-fi
-
-echo "==> Installing Oh My Zsh"
+say "Installing Oh My Zsh"
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
-  RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+  RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 fi
 
-echo "==> Setting zsh as default shell"
-if command -v zsh >/dev/null 2>&1; then
-  if [ "${SHELL:-}" != "$(command -v zsh)" ]; then
-    chsh -s "$(command -v zsh)" || true
+say "Installing Zsh plugins"
+# The repo's zshrc enables these only when the directories exist, so a failed
+# clone degrades to a plain prompt instead of a broken shell.
+ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
+for plugin in zsh-autosuggestions zsh-syntax-highlighting; do
+  target="$ZSH_CUSTOM/plugins/$plugin"
+  if [ ! -d "$target" ]; then
+    git clone --depth=1 "https://github.com/zsh-users/$plugin" "$target" || true
   fi
+done
+
+say "Installing oh-my-posh (shared prompt with the Windows side)"
+if ! command -v oh-my-posh >/dev/null 2>&1; then
+  mkdir -p "$HOME/.local/bin"
+  curl -s https://ohmyposh.dev/install.sh | bash -s -- -d "$HOME/.local/bin" || true
 fi
 
-echo "==> Ensuring shell paths"
-grep -q 'export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"' "$HOME/.zshrc" 2>/dev/null || {
-  echo 'export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"' >> "$HOME/.zshrc"
-}
+say "Setting zsh as the default shell"
+if command -v zsh >/dev/null 2>&1 && [ "${SHELL:-}" != "$(command -v zsh)" ]; then
+  chsh -s "$(command -v zsh)" || true
+fi
 
-grep -q 'zoxide init zsh' "$HOME/.zshrc" 2>/dev/null || {
-  echo 'if command -v zoxide >/dev/null 2>&1; then eval "$(zoxide init zsh)"; fi' >> "$HOME/.zshrc"
-}
+cat <<'EOF'
 
-echo ""
-echo "AlmaLinux dev packages installed."
-echo "If shell did not change immediately, run this from Windows:"
-echo "  wsl --shutdown"
-echo "Then reopen Alacritty."
+AlmaLinux packages installed.
+
+Next:
+  1. Copy the configs:   bash scripts/bootstrap-almalinux.sh --repo <raw-url> --skip-install
+     (or, from a clone:  cp configs/zsh/zshrc ~/.zshrc  etc.)
+  2. Install wsl.conf:   sudo cp ~/.config/wsl/wsl.conf /etc/wsl.conf
+  3. From Windows:       wsl --shutdown
+  4. Reopen Alacritty.
+
+For SSH keys from Bitwarden inside WSL you also need, on Windows:
+  winget install --id albertony.npiperelay -e
+EOF

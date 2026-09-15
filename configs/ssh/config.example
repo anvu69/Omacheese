@@ -1,31 +1,81 @@
-# OpenSSH config example
-# Prefer ProxyJump over ForwardAgent for jump-server workflows.
+# OpenSSH client config - example. Copy to ~/.ssh/config and edit.
+# Works unchanged on Windows (%USERPROFILE%\.ssh\config) and in WSL.
+#
+# ---------------------------------------------------------------------------
+# Why IdentitiesOnly yes
+# ---------------------------------------------------------------------------
+# With an agent holding several keys (which is the whole point of the
+# Bitwarden SSH agent), the client offers EVERY key it knows until the server
+# accepts one. Servers default to MaxAuthTries 6, so once the vault holds more
+# than a handful of keys, connections start failing with "Too many
+# authentication failures" - and which key gets refused depends on ordering,
+# so it looks intermittent.
+#
+# IdentitiesOnly yes makes the client offer only the key named for that host.
+# Pair it with IdentityFile pointing at the PUBLIC key: with an agent, the
+# public key is enough to select the matching private key inside the agent.
+# ---------------------------------------------------------------------------
+
+Host *
+  # Bitwarden Desktop implements the standard OpenSSH agent pipe on Windows,
+  # which is why Bitwarden asks you to disable the built-in "OpenSSH
+  # Authentication Agent" service - both want the same pipe name.
+  # On Windows this line is optional (that pipe is already the default); it is
+  # here so the file is explicit and portable.
+  #   Windows : IdentityAgent \\.\pipe\openssh-ssh-agent
+  #   WSL     : IdentityAgent ~/.ssh/agent.sock   (see docs/ssh-bitwarden-electerm.md)
+  IdentityAgent \\.\pipe\openssh-ssh-agent
+
+  IdentitiesOnly yes
+  AddKeysToAgent no
+  ForwardAgent no
+
+  ServerAliveInterval 30
+  ServerAliveCountMax 3
+  TCPKeepAlive no
+
+  # Reuse one TCP connection for extra sessions: scp/rsync/tmux splits to the
+  # same host become instant. ControlPersist keeps it warm for 10 minutes.
+  ControlMaster auto
+  ControlPath ~/.ssh/cm-%r@%h:%p
+  ControlPersist 10m
+
+  HashKnownHosts yes
+  StrictHostKeyChecking ask
+
+  # Prefer modern algorithms. Drop these if you still touch very old servers.
+  PubkeyAcceptedAlgorithms ssh-ed25519,sk-ssh-ed25519@openssh.com,rsa-sha2-512,rsa-sha2-256
+  HostKeyAlgorithms ssh-ed25519,sk-ssh-ed25519@openssh.com,rsa-sha2-512,rsa-sha2-256
+
+# ---------------------------------------------------------------------------
+# Jump host
+# ---------------------------------------------------------------------------
+# Prefer ProxyJump over ForwardAgent: ProxyJump tunnels through the bastion
+# without ever exposing your agent socket to it, so a compromised bastion
+# cannot impersonate you to the next hop while you are connected.
 
 Host jump-main
   HostName jump.example.com
   User jumpuser
   Port 22
-  ForwardAgent no
-  IdentitiesOnly no
-  ServerAliveInterval 30
-  ServerAliveCountMax 3
+  IdentityFile ~/.ssh/id_ed25519_jump.pub
 
 Host prod-web-01
   HostName 10.10.10.11
   User almalinux
   Port 22
   ProxyJump jump-main
-  ForwardAgent no
-  IdentitiesOnly no
-  ServerAliveInterval 30
-  ServerAliveCountMax 3
+  IdentityFile ~/.ssh/id_ed25519_prod.pub
 
 Host prod-db-01
   HostName 10.10.20.15
   User almalinux
   Port 22
   ProxyJump jump-main
-  ForwardAgent no
-  IdentitiesOnly no
-  ServerAliveInterval 30
-  ServerAliveCountMax 3
+  IdentityFile ~/.ssh/id_ed25519_prod.pub
+
+# Reach a whole internal range through the bastion without listing each host.
+Host 10.10.*
+  ProxyJump jump-main
+  User almalinux
+  IdentityFile ~/.ssh/id_ed25519_prod.pub

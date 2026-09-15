@@ -1,7 +1,11 @@
-export ZSH="$HOME/.oh-my-zsh"
+# ~/.zshrc - WSL2 AlmaLinux
 
+export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME="robbyrussell"
 
+# zsh-autosuggestions and zsh-syntax-highlighting are not bundled with Oh My
+# Zsh; install-almalinux.sh clones them into $ZSH_CUSTOM. The guard keeps the
+# shell usable if they are missing.
 plugins=(
   git
   sudo
@@ -9,26 +13,54 @@ plugins=(
   colored-man-pages
   command-not-found
 )
+[ -d "${ZSH_CUSTOM:-$ZSH/custom}/plugins/zsh-autosuggestions" ] && plugins+=(zsh-autosuggestions)
+[ -d "${ZSH_CUSTOM:-$ZSH/custom}/plugins/zsh-syntax-highlighting" ] && plugins+=(zsh-syntax-highlighting)
 
 source "$ZSH/oh-my-zsh.sh"
 
-# User paths
-export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
+# --- Paths ------------------------------------------------------------------
+export PATH="$HOME/.local/bin:$HOME/bin:$HOME/.cargo/bin:$PATH"
 
-# Tools
-if command -v zoxide >/dev/null 2>&1; then
-  eval "$(zoxide init zsh)"
-fi
+# --- History ----------------------------------------------------------------
+HISTSIZE=50000
+SAVEHIST=50000
+HISTFILE="$HOME/.zsh_history"
+setopt SHARE_HISTORY HIST_IGNORE_ALL_DUPS HIST_IGNORE_SPACE
+setopt HIST_REDUCE_BLANKS EXTENDED_HISTORY INC_APPEND_HISTORY
 
-# Aliases
-if [ -f "$HOME/.config/zsh/aliases.zsh" ]; then
-  source "$HOME/.config/zsh/aliases.zsh"
-fi
-
-# Editor
+# --- Editor -----------------------------------------------------------------
 export EDITOR="nvim"
 export VISUAL="nvim"
 
-# fzf defaults
+# --- fzf --------------------------------------------------------------------
 export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
+export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border=rounded
+  --color=bg+:#292e42,bg:#1a1b26,spinner:#bb9af7,hl:#7aa2f7
+  --color=fg:#a9b1d6,header:#7aa2f7,info:#e0af68,pointer:#bb9af7
+  --color=marker:#9ece6a,fg+:#c0caf5,prompt:#7aa2f7,hl+:#7dcfff'
+
+# Key bindings (Ctrl+R history, Ctrl+T files, Alt+C cd) are shipped separately
+# from the binary on EPEL; without sourcing them FZF_CTRL_T_COMMAND above does
+# nothing at all.
+for _fzf in \
+  /usr/share/fzf/shell/key-bindings.zsh \
+  /usr/share/zsh/site-functions/fzf-key-bindings.zsh \
+  "$HOME/.fzf/shell/key-bindings.zsh"
+do
+  [ -f "$_fzf" ] && source "$_fzf" && break
+done
+unset _fzf
+command -v fzf >/dev/null 2>&1 && eval "$(fzf --zsh 2>/dev/null)" || true
+
+# --- Tools ------------------------------------------------------------------
+command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
+command -v oh-my-posh >/dev/null 2>&1 && [ -f "$HOME/.config/oh-my-posh/poweruser.omp.json" ] \
+  && eval "$(oh-my-posh init zsh --config $HOME/.config/oh-my-posh/poweruser.omp.json)"
+
+# --- Bitwarden SSH agent bridge (Windows -> WSL) -----------------------------
+[ -f "$HOME/.config/wsl/ssh-agent-bridge.sh" ] && source "$HOME/.config/wsl/ssh-agent-bridge.sh"
+
+# --- Aliases ----------------------------------------------------------------
+[ -f "$HOME/.config/zsh/aliases.zsh" ] && source "$HOME/.config/zsh/aliases.zsh"

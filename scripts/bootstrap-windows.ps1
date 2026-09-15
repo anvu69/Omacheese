@@ -1,174 +1,111 @@
+# Bootstrap the Windows side straight from GitHub Raw, without cloning.
+#
+#   $repo="https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main"
+#   irm "$repo/scripts/bootstrap-windows.ps1" | iex
+#
+# This downloads the repo's scripts and configs into a temp directory and then
+# runs the SAME install-windows.ps1 / link-configs.ps1 the cloned repo uses.
+# The previous version re-declared its own package list, which is how it ended
+# up shipping a yasb id that does not exist ("amnweb.yasb") and silently
+# skipping git, fzf, zoxide, eza and bat. There is now exactly one list:
+# configs/winget/packages.json.
+
+[CmdletBinding()]
 param(
-  [string]$RepoRawBase = "",
-  [switch]$SkipInstall,
-  [switch]$SkipConfigs
+    [string]$RepoRawBase = "",
+    [ValidateSet("core", "wm", "cli", "desktop")]
+    [string[]]$Groups,
+    [switch]$SkipInstall,
+    [switch]$SkipConfigs,
+    [switch]$NoAutostart
 )
 
 $ErrorActionPreference = "Stop"
 
-function Ensure-Dir {
-  param([string]$Path)
-
-  if (!(Test-Path $Path)) {
-    New-Item -ItemType Directory -Force -Path $Path | Out-Null
-  }
-}
-
-function Download-File {
-  param(
-    [string]$RemotePath,
-    [string]$LocalPath
-  )
-
-  $uri = "$RepoRawBase/$RemotePath"
-  Write-Host "Downloading $RemotePath" -ForegroundColor Cyan
-
-  Ensure-Dir (Split-Path -Parent $LocalPath)
-  Invoke-WebRequest -UseBasicParsing -Uri $uri -OutFile $LocalPath
-}
-
+# `irm ... | iex` runs in the caller's scope, so $repo set at the prompt is
+# visible here. Fall back through the usual env vars too.
 if ([string]::IsNullOrWhiteSpace($RepoRawBase)) {
-  if ($script:repo) {
-    $RepoRawBase = $script:repo
-  } elseif ($global:repo) {
-    $RepoRawBase = $global:repo
-  } elseif ($env:DEV_REPO_RAW) {
-    $RepoRawBase = $env:DEV_REPO_RAW
-  } elseif ($env:WINDOWS11_DEV_POWERUSER_REPO_RAW) {
-    $RepoRawBase = $env:WINDOWS11_DEV_POWERUSER_REPO_RAW
-  }
+    foreach ($candidate in @(
+        $repo, $script:repo, $global:repo,
+        $env:DEV_REPO_RAW, $env:WINDOWS11_DEV_POWERUSER_REPO_RAW
+    )) {
+        if (-not [string]::IsNullOrWhiteSpace($candidate)) { $RepoRawBase = $candidate; break }
+    }
 }
 
 if ([string]::IsNullOrWhiteSpace($RepoRawBase) -or $RepoRawBase -like "*<YOUR_USERNAME>*") {
-  throw "Set -RepoRawBase to your GitHub raw URL, for example: https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main"
+    throw @"
+Set -RepoRawBase to your GitHub raw URL, for example:
+
+  `$repo="https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main"
+  irm "`$repo/scripts/bootstrap-windows.ps1" | iex
+"@
 }
 
 $RepoRawBase = $RepoRawBase.TrimEnd("/")
+Write-Host "Repo raw base: $RepoRawBase" -ForegroundColor Green
 
-Write-Host "Using repo raw base: $RepoRawBase" -ForegroundColor Green
+$WorkDir = Join-Path $env:TEMP "windows11-dev-poweruser-bootstrap"
+if (Test-Path -LiteralPath $WorkDir) { Remove-Item -LiteralPath $WorkDir -Recurse -Force }
+New-Item -ItemType Directory -Force -Path $WorkDir | Out-Null
 
-if (!$SkipInstall) {
-  $apps = @(
-    "Alacritty.Alacritty",
-    "LGUG2Z.komorebi",
-    "LGUG2Z.whkd",
-    "amnweb.yasb",
-    "Microsoft.PowerShell",
-    "JanDeDobbeleer.OhMyPosh",
-    "DEVCOM.JetBrainsMonoNerdFont",
-    "voidtools.Everything",
-    "Brave.Brave",
-    "dbeaver.dbeaver",
-    "electerm.electerm",
-    "Bitwarden.Bitwarden"
-  )
-
-  foreach ($app in $apps) {
-    Write-Host "Installing $app" -ForegroundColor Cyan
-    winget install --id $app -e --accept-source-agreements --accept-package-agreements
-  }
+function Get-RepoFile {
+    param([Parameter(Mandatory)][string]$Path)
+    $dest = Join-Path $WorkDir $Path
+    $dir  = Split-Path -Parent $dest
+    if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+    Write-Host "  . $Path" -ForegroundColor DarkGray
+    Invoke-WebRequest -UseBasicParsing -Uri "$RepoRawBase/$Path" -OutFile $dest
 }
 
-if (!$SkipConfigs) {
-  $WorkDir = Join-Path $env:TEMP "windows11-dev-poweruser-bootstrap"
-
-  if (Test-Path $WorkDir) {
-    Remove-Item $WorkDir -Recurse -Force
-  }
-
-  Ensure-Dir $WorkDir
-
-  $files = @(
-    "configs/alacritty/alacritty.toml",
-    "configs/ssh/config.example",
-    "configs/oh-my-posh/poweruser.omp.json",
-    "configs/powershell/Microsoft.PowerShell_profile.ps1",
-    "configs/komorebi/komorebi.json",
-    "configs/whkd/whkdrc",
-    "configs/yasb/config.yaml",
+# Everything install-windows.ps1 and link-configs.ps1 touch.
+$files = @(
+    "scripts/lib/common.ps1"
+    "scripts/install-windows.ps1"
+    "scripts/link-configs.ps1"
     "scripts/start-desktop.ps1"
-  )
+    "scripts/doctor.ps1"
+    "scripts/omarchy/omarchy-menu.ps1"
+    "scripts/omarchy/omarchy-keybindings.ps1"
+    "scripts/omarchy/omarchy-scratchpad.ps1"
+    "scripts/omarchy/omarchy-stack-toggle.ps1"
+    "scripts/omarchy/omarchy-toggle-bar.ps1"
+    "scripts/omarchy/omarchy-restart-desktop.ps1"
+    "configs/winget/packages.json"
+    "configs/alacritty/alacritty.toml"
+    "configs/alacritty/alacritty.wsl.toml"
+    "configs/komorebi/komorebi.json"
+    "configs/whkd/whkdrc"
+    "configs/yasb/config.yaml"
+    "configs/yasb/styles.css"
+    "configs/oh-my-posh/poweruser.omp.json"
+    "configs/powershell/Microsoft.PowerShell_profile.ps1"
+    "configs/git/gitconfig"
+    "configs/ssh/config.example"
+    "configs/wsl/.wslconfig"
+    "configs/wsl/wsl.conf"
+    "configs/wsl/ssh-agent-bridge.sh"
+)
 
-  foreach ($file in $files) {
-    Download-File $file (Join-Path $WorkDir $file)
-  }
+Write-Host "`nDownloading repo files" -ForegroundColor Cyan
+foreach ($f in $files) { Get-RepoFile $f }
 
-  Ensure-Dir "$env:APPDATA\alacritty"
-  Ensure-Dir "$env:USERPROFILE\.ssh"
-  Ensure-Dir "$env:USERPROFILE\.config"
-  Ensure-Dir "$env:USERPROFILE\.config\komorebi"
-  Ensure-Dir "$env:USERPROFILE\.config\yasb"
-  Ensure-Dir "$env:USERPROFILE\.config\oh-my-posh"
-  Ensure-Dir "$env:USERPROFILE\.config\windows11-dev-poweruser"
-
-  # Environment variables
-  $KomorebiConfigHome = "$env:USERPROFILE\.config\komorebi"
-
-  [Environment]::SetEnvironmentVariable(
-    "KOMOREBI_CONFIG_HOME",
-    $KomorebiConfigHome,
-    [EnvironmentVariableTarget]::User
-  )
-
-  $env:KOMOREBI_CONFIG_HOME = $KomorebiConfigHome
-
-  # Alacritty
-  Copy-Item `
-    (Join-Path $WorkDir "configs/alacritty/alacritty.toml") `
-    "$env:APPDATA\alacritty\alacritty.toml" `
-    -Force
-
-  # SSH example only
-  Copy-Item `
-    (Join-Path $WorkDir "configs/ssh/config.example") `
-    "$env:USERPROFILE\.ssh\config.example" `
-    -Force
-
-  # Oh My Posh
-  Copy-Item `
-    (Join-Path $WorkDir "configs/oh-my-posh/poweruser.omp.json") `
-    "$env:USERPROFILE\.config\oh-my-posh\poweruser.omp.json" `
-    -Force
-
-  # komorebi
-  Copy-Item `
-    (Join-Path $WorkDir "configs/komorebi/komorebi.json") `
-    "$env:USERPROFILE\.config\komorebi\komorebi.json" `
-    -Force
-
-  # whkd default path:
-  # whkd reads C:\Users\<USER>\.config\whkdrc by default.
-  Copy-Item `
-    (Join-Path $WorkDir "configs/whkd/whkdrc") `
-    "$env:USERPROFILE\.config\whkdrc" `
-    -Force
-
-  # YASB
-  Copy-Item `
-    (Join-Path $WorkDir "configs/yasb/config.yaml") `
-    "$env:USERPROFILE\.config\yasb\config.yaml" `
-    -Force
-
-  # Start helper
-  Copy-Item `
-    (Join-Path $WorkDir "scripts/start-desktop.ps1") `
-    "$env:USERPROFILE\.config\windows11-dev-poweruser\start-desktop.ps1" `
-    -Force
-
-  # PowerShell 7 profile only.
-  # Do NOT copy into Documents\WindowsPowerShell because that is Windows PowerShell 5.1.
-  $PwshProfile = "$env:USERPROFILE\Documents\PowerShell\Microsoft.PowerShell_profile.ps1"
-  $PwshProfileDir = Split-Path -Parent $PwshProfile
-  Ensure-Dir $PwshProfileDir
-
-  Copy-Item `
-    (Join-Path $WorkDir "configs/powershell/Microsoft.PowerShell_profile.ps1") `
-    $PwshProfile `
-    -Force
-
-  Write-Host ""
-  Write-Host "Configs installed." -ForegroundColor Green
-  Write-Host "PowerShell profile installed only for PowerShell 7: $PwshProfile" -ForegroundColor Yellow
-  Write-Host "whkd config installed at: $env:USERPROFILE\.config\whkdrc" -ForegroundColor Yellow
-  Write-Host "KOMOREBI_CONFIG_HOME=$env:KOMOREBI_CONFIG_HOME" -ForegroundColor Yellow
+if (-not $SkipInstall) {
+    Write-Host "`nInstalling packages" -ForegroundColor Cyan
+    & (Join-Path $WorkDir "scripts/install-windows.ps1") -Groups $Groups
 }
+
+if (-not $SkipConfigs) {
+    Write-Host "`nInstalling configs" -ForegroundColor Cyan
+    # Always copy here. Symlinking would point at $WorkDir under %TEMP%, which
+    # the next bootstrap run deletes - the configs would quietly vanish.
+    # Clone the repo and use link-configs.ps1 if you want live-editable links.
+    & (Join-Path $WorkDir "scripts/link-configs.ps1") -Copy -NoAutostart:$NoAutostart
+}
+
+Write-Host ""
+Write-Host "Bootstrap complete." -ForegroundColor Green
+Write-Host "Configs were COPIED. Clone the repo and run link-configs.ps1 if you" -ForegroundColor DarkGray
+Write-Host "want edits in the repo to take effect without reinstalling." -ForegroundColor DarkGray
+Write-Host ""
+Write-Host "Verify with: & `"$WorkDir/scripts/doctor.ps1`"" -ForegroundColor Cyan

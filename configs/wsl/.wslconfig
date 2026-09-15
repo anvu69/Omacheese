@@ -1,0 +1,41 @@
+# %USERPROFILE%\.wslconfig
+#
+# Global WSL2 settings. Applies to every distro; needs `wsl --shutdown` to
+# take effect. This is the file that decides whether WSL feels like a VM you
+# are fighting or like part of the machine.
+#
+# Tuned for a 32 GB / 24-thread box. Adjust memory and processors to roughly
+# half of what the host has, so Windows keeps enough to stay responsive.
+#
+# Requires WSL 2.0+ for the networkingMode/dnsTunneling/autoProxy keys and
+# 2.5+ for the defaults assumed here. Check with `wsl --version`.
+
+[wsl2]
+
+# Hard ceiling on the VM. Without this WSL will happily claim most of RAM and
+# only give it back lazily.
+memory=16GB
+processors=12
+swap=8GB
+
+# Mirrored networking makes the distro share the host's network interfaces, so
+# localhost works in both directions, VPNs are inherited, and servers bound
+# inside WSL are reachable from Windows without port-proxy hacks.
+networkingMode=mirrored
+
+# Resolve DNS through the host. Fixes the classic "WSL loses DNS on VPN".
+dnsTunneling=true
+
+# Inherit the Windows proxy configuration.
+autoProxy=true
+
+# Let the Windows firewall apply to WSL traffic.
+firewall=true
+
+# Reclaim disk space when files are deleted inside the distro instead of
+# growing the VHDX forever.
+[experimental]
+sparseVhd=true
+
+# Return freed memory to Windows instead of holding the whole balloon.
+autoMemoryReclaim=gradual
