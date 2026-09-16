@@ -254,6 +254,20 @@ It is now a WPF window, which needs nothing installed: WPF ships with Windows.
 Sections nest in place rather than opening a second window, so `Workspaces` is
 built from komorebi's live state and shows how many windows each one holds.
 
+**Speed.** Building the window costs ~770ms, nearly all of it XAML parsing and
+PowerShell startup - far too slow for a keystroke. `start-desktop.ps1` keeps one
+built and hidden, and `SUPER+SPACE` just signals it, which opens in **~170ms**.
+Nothing depends on the server: with it stopped the launcher builds a one-shot
+window exactly as before, only slower.
+
+**Finding apps.** GUI installers do not put their binaries on PATH - measured on
+this machine, of everything the menu offers only `explorer` and `nvim` were
+there at all, so `Browser` used to report Brave as not installed when it plainly
+was. Apps are now resolved the way Windows itself does: PATH, then the App Paths
+registry (what Win+R uses), then the start menu shortcut (what you would click),
+then explicit fallbacks. That also picks the real `dbeaver.exe` rather than the
+`dbeaver-cli.exe` a directory scan finds first.
+
 The keybinding cheatsheet on `SUPER + /` is still fzf in a terminal - it is a
 reference table rather than a launcher, so a terminal suits it.
 

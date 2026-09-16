@@ -544,6 +544,19 @@ if (Test-Path -LiteralPath $scrollPid) {
 if ($scrollUp) { Ok "scroll daemon running" }
 else { Warn "scroll daemon not running - scrolling mode loses its peek (./scripts/start-desktop.ps1)" }
 
+# Also a pwsh process, so also invisible to an image-name check. Without it the
+# menu still opens, it just takes ~770ms instead of ~170ms.
+$menuPid = Join-Path $env:USERPROFILE ".config\omarchy\menu-server.pid"
+$menuUp = $false
+if (Test-Path -LiteralPath $menuPid) {
+    try {
+        $mp = [int](Get-Content -LiteralPath $menuPid -Raw).Trim()
+        if (Get-Process -Id $mp -ErrorAction SilentlyContinue) { $menuUp = $true }
+    } catch { }
+}
+if ($menuUp) { Ok "menu server running" }
+else { Warn "menu server not running - SUPER+SPACE will be slow (./scripts/start-desktop.ps1)" }
+
 Write-Host ""
 Write-Host ("=" * 52)
 Write-Host ("  {0} passed   {1} warnings   {2} failures" -f $script:Pass, $script:Warn, $script:Fail) -ForegroundColor $(

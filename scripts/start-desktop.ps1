@@ -29,11 +29,15 @@ function Stop-Proc { param([string]$n) Get-Process $n -ErrorAction SilentlyConti
 $env:KOMOREBI_CONFIG_HOME = $KomorebiConfigHome
 
 $ScrollDaemon = Join-Path $cfg "omarchy\bin\omarchy-scroll-daemon.ps1"
+$MenuScript   = Join-Path $cfg "omarchy\bin\omarchy-menu.ps1"
 
 if ($Stop -or $Restart) {
     Write-Host "Stopping komorebi / whkd / yasb..." -ForegroundColor Yellow
     if (Test-Path -LiteralPath $ScrollDaemon) {
         & $ScrollDaemon -Stop 2>$null | Out-Null
+    }
+    if (Test-Path -LiteralPath $MenuScript) {
+        & $MenuScript -Stop 2>$null | Out-Null
     }
     if (Have "komorebic") { komorebic stop --whkd 2>$null | Out-Null }
     Stop-Proc "komorebi"; Stop-Proc "whkd"; Stop-Proc "yasb"
@@ -130,6 +134,19 @@ if (Test-Path -LiteralPath $ScrollDaemon) {
     Write-Host "scroll daemon is up." -ForegroundColor Green
 } else {
     Write-Host "omarchy-scroll-daemon.ps1 missing - run ./scripts/link-configs.ps1" -ForegroundColor Yellow
+}
+
+# The menu costs ~770ms to build, almost all of it XAML parsing and PowerShell
+# startup, and it sits on SUPER+SPACE. Kept warm it opens in ~170ms. Everything
+# still works without it - omarchy-menu.cmd falls back to building one.
+if (Test-Path -LiteralPath $MenuScript) {
+    $menuPwsh = (Get-Command pwsh -ErrorAction SilentlyContinue).Source
+    if (-not $menuPwsh) { $menuPwsh = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" }
+    & $MenuScript -Stop 2>$null | Out-Null
+    Start-Process -FilePath $menuPwsh `
+        -ArgumentList "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$MenuScript`"", "-Serve" `
+        -WindowStyle Hidden -ErrorAction SilentlyContinue
+    Write-Host "menu server is up." -ForegroundColor Green
 }
 
 Write-Host ""

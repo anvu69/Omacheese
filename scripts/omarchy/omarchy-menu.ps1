@@ -27,36 +27,54 @@
 
 [CmdletBinding()]
 param(
-    [string]$Menu = "root"
+    [string]$Menu = "root",
+    [switch]$Serve,
+    [switch]$Stop
 )
 
 $ErrorActionPreference = "Stop"
 
-# The console window belongs to whatever launched us. Hide it before anything is
-# drawn, so the menu does not arrive with a black rectangle behind it.
-try {
-    Add-Type -Namespace Omarchy -Name Native -MemberDefinition @"
-[System.Runtime.InteropServices.DllImport("kernel32.dll")]
-public static extern System.IntPtr GetConsoleWindow();
-[System.Runtime.InteropServices.DllImport("user32.dll")]
-public static extern bool ShowWindow(System.IntPtr hWnd, int nCmdShow);
-"@ -ErrorAction Stop
-    $console = [Omarchy.Native]::GetConsoleWindow()
-    if ($console -ne [IntPtr]::Zero) { [void][Omarchy.Native]::ShowWindow($console, 0) }
-} catch { }
+# The menu is slow to build - ~300ms of that is XAML parsing - and it sits on a
+# keystroke. -Serve builds the window once, keeps it hidden, and shows it when
+# a signal file appears, which turns 770ms into roughly the poll interval.
+$SignalFile = Join-Path $env:USERPROFILE ".config\omarchy\menu.show"
+$ServerPid  = Join-Path $env:USERPROFILE ".config\omarchy\menu-server.pid"
+
+if ($Stop) {
+    try {
+        if (Test-Path -LiteralPath $ServerPid) {
+            $old = [int](Get-Content -LiteralPath $ServerPid -Raw).Trim()
+            Stop-Process -Id $old -Force -ErrorAction SilentlyContinue
+            Remove-Item -LiteralPath $ServerPid -Force -ErrorAction SilentlyContinue
+        }
+    } catch { }
+    exit 0
+}
+
+if ($Serve) {
+    # One server. A second would sit on the same signal file and both would pop
+    # a window for every request.
+    $mutex = $null
+    try { $mutex = New-Object System.Threading.Mutex($false, "Local\omarchy-menu-server") } catch { $mutex = $null }
+    if ($mutex -and -not $mutex.WaitOne(0)) { exit 0 }
+    try { $PID | Set-Content -LiteralPath $ServerPid -Encoding ASCII } catch { }
+    Remove-Item -LiteralPath $SignalFile -Force -ErrorAction SilentlyContinue
+}
 
 Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName PresentationCore
 Add-Type -AssemblyName WindowsBase
 Add-Type -AssemblyName System.Windows.Forms
 
+# No Add-Type -MemberDefinition anywhere in here. It compiles C# at runtime and
+# cost 288ms of the ~930ms it took this menu to appear - by far the largest
+# single item. It was only being used to hide a console window that
+# omarchy-menu.cmd already starts hidden.
+
 $cfg = Join-Path $env:USERPROFILE ".config"
 $bin = Join-Path $cfg "omarchy\bin"
 
-# Resolve binaries instead of trusting PATH. This menu is launched from the bar,
-# and a GUI process inherits the PATH of whatever started it - so a bare
-# "alacritty" or "nvim" silently did nothing, which is why picking an action
-# used to just close the window.
+# CLI tools: PATH is the right answer, plus a couple of known install spots.
 function Resolve-Bin {
     param([string]$Name, [string[]]$Fallbacks = @())
     $c = Get-Command $Name -ErrorAction SilentlyContinue
@@ -68,13 +86,96 @@ function Resolve-Bin {
     return $null
 }
 
-$term = Resolve-Bin "alacritty" @(
-    "%ProgramFiles%\Alacritty\alacritty.exe",
-    "%LOCALAPPDATA%\Programs\Alacritty\alacritty.exe"
-)
+# GUI apps are a different problem, and getting it wrong is why picking
+# "Browser" used to report that Brave was not installed when it plainly was:
+# installers do not put GUI apps on PATH. Measured on this machine, of the apps
+# this menu offers only explorer and nvim were on PATH at all.
+#
+# So resolve the way Windows itself does, cheapest first:
+#
+#   1. PATH                 - right for CLI tools, occasionally right for apps
+#   2. App Paths registry   - what Win+R uses. Brave registers here; many do not
+#   3. Start menu shortcut  - what the user would click. Found Brave, DBeaver,
+#                             Bitwarden and Alacritty when the first two failed,
+#                             and picks the real dbeaver.exe rather than the
+#                             dbeaver-cli.exe that a directory scan turns up
+#   4. explicit fallbacks   - last resort, machine-specific
+#
+# Enumerating the start menu is ~40ms and only happens when a lookup gets that
+# far, so the common case costs nothing.
+$script:LnkCache = $null
+
+function Get-StartMenuTarget {
+    param([string]$Name)
+    if ($null -eq $script:LnkCache) {
+        $script:LnkCache = @()
+        foreach ($r in @([Environment]::GetFolderPath("Programs"),
+                         [Environment]::GetFolderPath("CommonPrograms"))) {
+            if ($r -and (Test-Path -LiteralPath $r)) {
+                $script:LnkCache += Get-ChildItem $r -Filter *.lnk -Recurse -ErrorAction SilentlyContinue
+            }
+        }
+    }
+    $needle = ($Name -replace "[^a-zA-Z0-9]", "")
+    if (-not $needle) { return $null }
+    $hit = $script:LnkCache |
+        Where-Object { ($_.BaseName -replace "[^a-zA-Z0-9]", "") -like "*$needle*" } |
+        Sort-Object { $_.BaseName.Length } |
+        Select-Object -First 1
+    if (-not $hit) { return $null }
+    try {
+        $sh = New-Object -ComObject WScript.Shell
+        $t = $sh.CreateShortcut($hit.FullName).TargetPath
+        if ($t -and (Test-Path -LiteralPath $t)) { return $t }
+    } catch { }
+    return $null
+}
+
+function Resolve-App {
+    param([string]$Name, [string[]]$Fallbacks = @())
+
+    $c = Get-Command $Name -ErrorAction SilentlyContinue
+    if ($c -and $c.Source) { return $c.Source }
+
+    foreach ($hive in @("HKLM:", "HKCU:")) {
+        $k = "$hive\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\$Name.exe"
+        if (Test-Path -LiteralPath $k) {
+            $v = (Get-ItemProperty -LiteralPath $k -ErrorAction SilentlyContinue)."(default)"
+            if ($v) {
+                $v = $v.Trim('"')
+                if (Test-Path -LiteralPath $v) { return $v }
+            }
+        }
+    }
+
+    $sm = Get-StartMenuTarget $Name
+    if ($sm) { return $sm }
+
+    foreach ($f in $Fallbacks) {
+        $expanded = [Environment]::ExpandEnvironmentVariables($f)
+        if (Test-Path -LiteralPath $expanded) { return $expanded }
+    }
+    return $null
+}
+
+# Looked up on demand, not at startup: every menu open paid for this before,
+# including the ones that never touch a terminal.
+$script:Term = $null
+function Get-Terminal {
+    if ($null -eq $script:Term) {
+        $script:Term = Resolve-App "alacritty" @(
+            "%ProgramFiles%\Alacritty\alacritty.exe",
+            "%LOCALAPPDATA%\Programs\Alacritty\alacritty.exe"
+        )
+        if (-not $script:Term) { $script:Term = "" }
+    }
+    if ($script:Term) { return $script:Term }
+    return $null
+}
 
 function Start-InTerminal {
     param([Parameter(Mandatory)][string[]]$Command)
+    $term = Get-Terminal
     if ($term) {
         Start-Process -FilePath $term -ArgumentList (@("-e") + $Command)
     } else {
@@ -105,8 +206,11 @@ function Show-Problem {
 
 function Start-App {
     param([string]$Name, [string[]]$Arguments = @(), [string[]]$Fallbacks = @())
-    $p = Resolve-Bin $Name $Fallbacks
-    if (-not $p) { Show-Problem "$Name is not installed."; return }
+    $p = Resolve-App $Name $Fallbacks
+    if (-not $p) {
+        Show-Problem "Could not find $Name.`n`nLooked on PATH, in App Paths and in the Start menu."
+        return
+    }
     if ($Arguments.Count) { Start-Process -FilePath $p -ArgumentList $Arguments }
     else { Start-Process -FilePath $p }
 }
@@ -117,7 +221,7 @@ function Edit-Config {
     if (-not (Test-Path -LiteralPath $Path)) { Show-Problem "Not found: $Path"; return }
 
     $editor = Resolve-Bin "nvim"
-    if (-not $editor) { $editor = Resolve-Bin "code" }
+    if (-not $editor) { $editor = Resolve-App "code" }
     if (-not $editor) { $editor = Resolve-Bin "notepad" @("%SystemRoot%\System32\notepad.exe") }
     if (-not $editor) { Show-Problem "No editor found (looked for nvim, code, notepad)."; return }
 
@@ -160,7 +264,8 @@ function Get-Menu {
         "apps" { @(
             # No -e: let Alacritty start its configured shell (pwsh).
             (New-Entry "Terminal" "Alacritty with PowerShell" -Action {
-                if ($term) { Start-Process -FilePath $term } else { Show-Problem "Alacritty is not installed." } })
+                $t = Get-Terminal
+                if ($t) { Start-Process -FilePath $t } else { Show-Problem "Could not find Alacritty." } })
             (New-Entry "Terminal (WSL + tmux)" "AlmaLinux, attached to the main session" -Action {
                 Start-InTerminal @("wsl.exe","-d","AlmaLinux-9","--","tmux","new-session","-A","-s","main") })
             (New-Entry "Neovim (WSL)" "Editor in AlmaLinux" -Action {
@@ -497,6 +602,26 @@ function Enter-PromptMode {
     $search.Text       = ""
 }
 
+# One-shot closes the window and lets the action run after ShowDialog returns.
+# The server hides it instead and runs the action straight away - same visible
+# behaviour, but the window survives to be shown again.
+function Hide-Menu {
+    if ($Serve) { $win.Hide() } else { $win.Close() }
+}
+
+function Complete-Entry {
+    param([scriptblock]$Action)
+    if ($Serve) {
+        $win.Hide()
+        # Let the hide actually paint before the new process steals focus.
+        [System.Windows.Forms.Application]::DoEvents()
+        try { & $Action } catch { Show-Problem $_.Exception.Message }
+    } else {
+        $script:Pending = $Action
+        $win.Close()
+    }
+}
+
 function Invoke-Entry {
     param($Item)
     if (-not $Item) { return }
@@ -511,12 +636,9 @@ function Invoke-Entry {
         return
     }
     if ($Item.Action) {
-        # Close first, then run. The window is topmost and holds focus, so
-        # anything launched underneath it would come up behind the menu.
-        $script:Pending = $Item.Action
-        $win.Close()
+        Complete-Entry $Item.Action
     }
-}
+    }
 
 function Step-Selection {
     param([int]$Delta)
@@ -535,7 +657,7 @@ function Step-Back {
         $script:Stack.RemoveAt($script:Stack.Count - 1)
         Show-MenuPage $prev
     } else {
-        $win.Close()
+        Hide-Menu
     }
 }
 
@@ -549,9 +671,8 @@ $win.Add_PreviewKeyDown({
         "Return" {
             if ($script:PromptItem) {
                 $text = $search.Text
-                $block = $script:PromptItem.Prompt
-                $script:Pending = { & $block $text }.GetNewClosure()
-                $win.Close()
+                $blk  = $script:PromptItem.Prompt
+                Complete-Entry ({ & $blk $text }.GetNewClosure())
             } else {
                 Invoke-Entry $list.SelectedItem
             }
@@ -597,13 +718,17 @@ $list.Add_PreviewMouseLeftButtonUp({
 
 # A launcher that stays open behind the window you just clicked is a bug, not a
 # feature.
-$win.Add_Deactivated({ $win.Close() })
+$win.Add_Deactivated({ Hide-Menu })
 
 $win.Add_Loaded({
-    # Centre on the monitor the pointer is on, not on the primary one. WPF works
-    # in device-independent units while Screen reports physical pixels, so the
-    # DPI scale has to come out of it or the window lands off-centre on a scaled
-    # display.
+    Set-MenuPlacement
+    [void]$win.Activate()
+    [void]$search.Focus()
+})
+
+# Positioning has to happen on every show, not once at load: the pointer may be
+# on a different monitor than it was last time.
+function Set-MenuPlacement {
     try {
         $mouse  = [System.Windows.Forms.Cursor]::Position
         $screen = [System.Windows.Forms.Screen]::FromPoint($mouse)
@@ -618,16 +743,47 @@ $win.Add_Loaded({
         if ($sy -le 0) { $sy = 1.0 }
         $win.Left = ($wa.X / $sx) + ((($wa.Width  / $sx) - $win.Width)  / 2)
         $win.Top  = ($wa.Y / $sy) + ((($wa.Height / $sy) - $win.Height) / 2)
-    } catch {
-        $win.WindowStartupLocation = "CenterScreen"
-    }
+    } catch { }
+}
+
+if (-not $Serve) {
+    Show-MenuPage $script:Current
+    [void]$win.ShowDialog()
+
+    # Actions run after the window is gone, so whatever they launch comes up in
+    # front instead of behind a topmost menu.
+    if ($script:Pending) { & $script:Pending }
+    exit 0
+}
+
+# --- server ------------------------------------------------------------------
+#
+# A file rather than a pipe, on purpose. The window lives on this thread, and a
+# blocking pipe read would either freeze the UI or need a second thread to hand
+# work back across - which is exactly the shape that deadlocked the komorebi
+# listener. A timer checking for a file cannot deadlock anything, and the cost
+# is one File.Exists every 60ms.
+$timer = New-Object System.Windows.Threading.DispatcherTimer
+$timer.Interval = [TimeSpan]::FromMilliseconds(60)
+$timer.Add_Tick({
+    if (-not (Test-Path -LiteralPath $SignalFile)) { return }
+    $section = "root"
+    try {
+        $req = (Get-Content -LiteralPath $SignalFile -Raw -ErrorAction SilentlyContinue)
+        if ($req) { $req = $req.Trim() }
+        if ($req) { $section = $req }
+    } catch { }
+    Remove-Item -LiteralPath $SignalFile -Force -ErrorAction SilentlyContinue
+
+    # Every show starts clean: no leftover search text, no half-walked stack.
+    $script:Stack.Clear()
+    Show-MenuPage $section
+    Set-MenuPlacement
+    $win.Show()
     [void]$win.Activate()
     [void]$search.Focus()
 })
+$timer.Start()
 
 Show-MenuPage $script:Current
-[void]$win.ShowDialog()
-
-# Actions run after the window is gone, so whatever they launch comes up in
-# front instead of behind a topmost menu.
-if ($script:Pending) { & $script:Pending }
+[System.Windows.Threading.Dispatcher]::Run()
