@@ -77,6 +77,40 @@ Nếu palette thiếu một key mà template có dùng, generator **để nguyê
 thành màu đen và trông như lỗi style, còn `{{accent}}` nằm chình ình thì biết
 ngay là thiếu key.
 
+### Alacritty: keybinding phải là array-of-tables
+
+`configs/alacritty/alacritty.toml` viết keybinding dạng
+
+```toml
+[[keyboard.bindings]]
+key = "N"
+mods = "Control|Shift"
+action = "CreateNewWindow"
+```
+
+chứ **không** phải `bindings = [ ... ]` dưới `[keyboard]`, và đây là ràng buộc
+đúng nghĩa, không phải sở thích: các coding agent **ghi vào file này**.
+`/terminal-setup` của Claude Code nối thêm một block `[[keyboard.bindings]]` vào
+cuối. TOML không cho mở rộng một mảng đã định nghĩa tĩnh, nên với dạng inline,
+một lần nối đó biến cả file thành lỗi parse:
+
+```
+config error: %APPDATA%\alacritty\alacritty.toml:104:12  duplicate key
+```
+
+Alacritty rơi về mặc định của nó. Triệu chứng đúng như một bug theme: cửa sổ đầu
+tiên vẫn đẹp, rồi mọi cửa sổ mở sau lần chạy agent đầu tiên mất sạch màu và Nerd
+Font. Dạng array-of-tables thì merge bình thường.
+
+File cũng ship sẵn binding Shift+Enter (`chars = "\r"`) để agent không còn
+gì phải thêm vào.
+
+Kiểm nhanh sau khi sửa tay:
+
+```powershell
+alacritty migrate --dry-run --config-file $env:APPDATA\alacritty\alacritty.toml
+```
+
 Cả `doctor.ps1` lẫn CI đều bắt chuyện này:
 
 ```

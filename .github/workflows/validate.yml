@@ -51,6 +51,41 @@ jobs:
           sys.exit(1 if bad else 0)
           PY
 
+      - name: Alacritty keybindings survive an agent appending to them
+        shell: bash
+        run: |
+          # Coding agents WRITE to alacritty.toml: Claude Code's /terminal-setup
+          # appends its Shift+Enter binding as a `[[keyboard.bindings]]` block.
+          # TOML cannot extend an array that was defined statically, so the
+          # inline `bindings = [ ... ]` form turned that one append into
+          # "alacritty.toml:104:12 duplicate key" - and Alacritty fell back to
+          # its defaults, losing the theme and the Nerd Font on every window
+          # opened after the first agent launch.
+          #
+          # Parsing the file alone cannot catch this: the inline form is valid
+          # TOML right up until something appends. So check both: the array of
+          # tables is used, and appending a block still parses.
+          bad=0
+          for f in configs/alacritty/*.toml configs/alacritty/*.toml.tmpl; do
+            if grep -qE '^\s*bindings\s*=\s*\[' "$f"; then
+              echo "FAIL $f uses inline 'bindings = [...]'; use [[keyboard.bindings]]"
+              bad=1
+            fi
+          done
+          python - <<'PY'
+          import sys, glob, tomllib
+          EXTRA = '\n[[keyboard.bindings]]\nkey = "Return"\nmods = "Shift"\nchars = "\\u001B\\r"\n'
+          bad = 0
+          for f in glob.glob("configs/alacritty/*.toml") + glob.glob("configs/alacritty/*.toml.tmpl"):
+              text = open(f, encoding="utf-8").read() + EXTRA
+              try:
+                  tomllib.loads(text); print("ok   append survives", f)
+              except Exception as e:
+                  print("FAIL", f, "breaks when an agent appends a binding:", e); bad += 1
+          sys.exit(1 if bad else 0)
+          PY
+          exit $bad
+
       - name: Installer references only files that exist
         shell: pwsh
         run: |

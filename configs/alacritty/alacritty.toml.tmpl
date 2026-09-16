@@ -54,16 +54,60 @@ save_to_clipboard = true
 [cursor]
 style = { shape = "Block", blinking = "Off" }
 
-[keyboard]
-bindings = [
-  { key = "N", mods = "Control|Shift", action = "CreateNewWindow" },
-  { key = "V", mods = "Control|Shift", action = "Paste" },
-  { key = "C", mods = "Control|Shift", action = "Copy" },
-  { key = "F", mods = "Control|Shift", action = "SearchForward" },
-  { key = "Equals", mods = "Control", action = "IncreaseFontSize" },
-  { key = "Minus", mods = "Control", action = "DecreaseFontSize" },
-  { key = "Key0", mods = "Control", action = "ResetFontSize" },
-]
+# KEYBINDINGS ARE AN ARRAY OF TABLES, not `bindings = [ ... ]` under [keyboard].
+#
+# Coding agents write to this file. Claude Code's /terminal-setup appends its
+# Shift+Enter binding as a `[[keyboard.bindings]]` block, and TOML cannot
+# extend an array that was already defined statically - so with the inline
+# form that one append turned the whole file into a parse error:
+#
+#   config error: .../alacritty.toml:104:12
+#
+# Alacritty then falls back to its built-in defaults, which is why the first
+# window looked right and every window opened after the first agent launch had
+# lost the theme and the Nerd Font. The array-of-tables form merges instead.
+[[keyboard.bindings]]
+key = "N"
+mods = "Control|Shift"
+action = "CreateNewWindow"
+
+[[keyboard.bindings]]
+key = "V"
+mods = "Control|Shift"
+action = "Paste"
+
+[[keyboard.bindings]]
+key = "C"
+mods = "Control|Shift"
+action = "Copy"
+
+[[keyboard.bindings]]
+key = "F"
+mods = "Control|Shift"
+action = "SearchForward"
+
+[[keyboard.bindings]]
+key = "Equals"
+mods = "Control"
+action = "IncreaseFontSize"
+
+[[keyboard.bindings]]
+key = "Minus"
+mods = "Control"
+action = "DecreaseFontSize"
+
+[[keyboard.bindings]]
+key = "Key0"
+mods = "Control"
+action = "ResetFontSize"
+
+# Shift+Enter inserts a newline instead of submitting the prompt. Shipped here
+# so the coding agents' terminal setup finds it already done and appends
+# nothing. The escape is ESC + CR, which is what they write themselves.
+[[keyboard.bindings]]
+key = "Return"
+mods = "Shift"
+chars = "\u001B\r"
 
 # --- Tokyo Night --------------------------------------------------
 
