@@ -149,11 +149,13 @@ Xem thêm [`docs/no-clone-install.md`](docs/no-clone-install.md).
 │   ├── windows/         debloat.json   (profile Win11Debloat)
 │   ├── ai/              compose vLLM + fine-tune
 │   └── lazyvim/
+├── raycast/             script commands cho Raycast (tuỳ chọn)
 ├── docs/
 │   ├── setup-tui.md              TUI installer + gating
 │   ├── keybindings.md            keymap Omarchy + chỗ lệch
 │   ├── ai-stack.md               agents, Docker/GPU, vLLM
 │   ├── windows-tuning.md         debloat + taskbar
+│   ├── raycast.md                script commands (tuỳ chọn)
 │   ├── aliases-and-shell.md
 │   ├── ssh-bitwarden-electerm.md agent → WSL
 │   ├── jump-server.md
@@ -176,7 +178,7 @@ Xem thêm [`docs/no-clone-install.md`](docs/no-clone-install.md).
 │   ├── lib/detect.ps1            dò phần cứng
 │   ├── lib/modules.ps1           module + gating
 │   ├── lib/common.ps1            helper dùng chung
-│   └── omarchy/                  menu, cheatsheet, scratchpad, stack, agents
+│   └── omarchy/                  menu (GUI), cheatsheet, scroll daemon, agents
 └── .github/workflows/validate.yml
 ```
 

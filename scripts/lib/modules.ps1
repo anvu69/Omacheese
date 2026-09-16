@@ -72,6 +72,16 @@ function Get-SetupModules {
         -Available $wingetOk -Note "needs winget" -Est "2-4 min" `
         -Action { param($ctx) & $ctx.InstallWindows -Groups @("agents") }))
 
+    # Off by default, and deliberately so. Raycast is a Microsoft Store package
+    # that wants an account, which is a poor fit for provisioning a machine
+    # unattended - but it is an excellent launcher, and the repo ships script
+    # commands for it, so it is one checkbox away.
+    $mods.Add((New-Mod -Key "raycast" -Description "Raycast launcher + the Omarchy script commands" `
+        -Default $false `
+        -Available $wingetOk -Note "Microsoft Store package; sign-in may be required" `
+        -Est "2-4 min" `
+        -Action { param($ctx) & $ctx.InstallWindows -Groups @("raycast") }))
+
     # --- configuration -------------------------------------------------------
     $mods.Add((New-Mod -Key "configs" -Description "Install dotfiles, keymap, theme, autostart" `
         -Est "10 s" `

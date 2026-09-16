@@ -147,9 +147,17 @@ function Install-WingetManifest {
       }
 
       Write-Host ("  + {0,-34} {1}" -f $pkg.id, $pkg.note) -ForegroundColor Cyan
-      winget install --id $pkg.id -e `
-        --accept-source-agreements --accept-package-agreements `
-        --disable-interactivity --silent
+
+      # A package can name its own source. Everything here comes from the
+      # community repo except Raycast, which ships only as a Store package -
+      # msstore ids are opaque numbers, so the note is what identifies it.
+      $wingetArgs = @("install", "--id", $pkg.id, "-e",
+                      "--accept-source-agreements", "--accept-package-agreements",
+                      "--disable-interactivity", "--silent")
+      if ($pkg.PSObject.Properties.Name -contains "source" -and $pkg.source) {
+        $wingetArgs += @("--source", $pkg.source)
+      }
+      winget @wingetArgs
       $code = $LASTEXITCODE
 
       # 0 = ok. -1978335189 (0x8A15002B) = no applicable upgrade, i.e. current.

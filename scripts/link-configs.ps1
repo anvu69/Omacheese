@@ -117,6 +117,23 @@ foreach ($s in Get-ChildItem (Join-Path $Repo "scripts\omarchy") | Where-Object 
 & $Install -Source (Join-Path $Repo "scripts\start-desktop.ps1") `
            -Destination (Join-Path $omarchy "start-desktop.ps1") | Out-Null
 
+# --- Raycast script commands -------------------------------------------------
+# Installed whether or not Raycast is present: they are inert .ps1 files, and
+# having them in place means enabling Raycast later is one setting rather than
+# another install step. Raycast has to be pointed at the folder by hand -
+# Settings -> Extensions -> Script Commands -> Add Script Directory - because
+# that lives in its own store, not on disk where we could write it.
+Write-Host "`n[raycast script commands]" -ForegroundColor Magenta
+$raycastDir = Join-Path $cfg "omarchy\raycast"
+Ensure-Dir $raycastDir
+$raycastSrc = Join-Path $Repo "raycast"
+if (Test-Path -LiteralPath $raycastSrc) {
+    foreach ($s in Get-ChildItem $raycastSrc -Filter *.ps1) {
+        & $Install -Source $s.FullName -Destination (Join-Path $raycastDir $s.Name) | Out-Null
+    }
+    Write-Host "  point Raycast at: $raycastDir" -ForegroundColor DarkGray
+}
+
 # --- komorebi application-specific config ------------------------------------
 # This is the community-maintained ruleset that teaches komorebi how Electron
 # apps, installers and dialogs behave. komorebic check nags without it, and

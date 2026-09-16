@@ -456,6 +456,39 @@ if (Get-Command wsl -ErrorAction SilentlyContinue) {
     }
 }
 
+Section "raycast script commands"
+# These are inert without Raycast, but a malformed metadata header means the
+# command silently never appears - so validate the header rather than the app.
+$rcDir = Join-Path $env:USERPROFILE ".config\omarchy\raycast"
+if (-not (Test-Path -LiteralPath $rcDir)) {
+    Warn "not installed - run ./scripts/link-configs.ps1"
+} else {
+    $rcFiles = @(Get-ChildItem $rcDir -Filter *.ps1 | Where-Object { $_.Name -notlike "_*" })
+    if ($rcFiles.Count -eq 0) {
+        Warn "no script commands in $rcDir"
+    } else {
+        $validModes = @("fullOutput", "compact", "silent", "inline")
+        $rcBad = 0
+        foreach ($f in $rcFiles) {
+            $text = Get-Content -LiteralPath $f.FullName -Raw
+            $meta = @{}
+            foreach ($m in [regex]::Matches($text, '(?m)^#\s*@raycast\.(\w+)\s+(.*?)\s*$')) {
+                $meta[$m.Groups[1].Value] = $m.Groups[2].Value
+            }
+            $missing = @("schemaVersion", "title", "mode") | Where-Object { -not $meta.ContainsKey($_) }
+            if ($missing) { Fail "$($f.Name): missing @raycast.$($missing -join ', ')"; $rcBad++; continue }
+            if ($validModes -notcontains $meta["mode"]) { Fail "$($f.Name): bad mode '$($meta['mode'])'"; $rcBad++; continue }
+            $argBad = $false
+            foreach ($k in $meta.Keys) {
+                if ($k -notlike "argument*") { continue }
+                try { $null = $meta[$k] | ConvertFrom-Json } catch { Fail "$($f.Name): $k is not valid JSON"; $argBad = $true }
+            }
+            if ($argBad) { $rcBad++ }
+        }
+        if ($rcBad -eq 0) { Ok "$($rcFiles.Count) script commands valid" }
+    }
+}
+
 Section "processes"
 foreach ($p in @("komorebi","whkd","yasb")) {
     if (Get-Process $p -ErrorAction SilentlyContinue) { Ok "$p running" }

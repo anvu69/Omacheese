@@ -79,6 +79,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Raycast script command metadata
+        shell: pwsh
+        run: |
+          # A malformed header does not error - the command just never shows up
+          # in Raycast, which is the worst kind of broken.
+          $valid = @("fullOutput", "compact", "silent", "inline")
+          $bad = 0
+          $files = Get-ChildItem raycast -Filter *.ps1 | Where-Object { $_.Name -notlike "_*" }
+          foreach ($f in $files) {
+            $text = Get-Content -LiteralPath $f.FullName -Raw
+            $meta = @{}
+            foreach ($m in [regex]::Matches($text, '(?m)^#\s*@raycast\.(\w+)\s+(.*?)\s*$')) {
+              $meta[$m.Groups[1].Value] = $m.Groups[2].Value
+            }
+            $missing = @("schemaVersion", "title", "mode") | Where-Object { -not $meta.ContainsKey($_) }
+            if ($missing) { Write-Host "FAIL $($f.Name): missing $($missing -join ', ')"; $bad++; continue }
+            if ($valid -notcontains $meta["mode"]) { Write-Host "FAIL $($f.Name): bad mode '$($meta['mode'])'"; $bad++; continue }
+            foreach ($k in $meta.Keys) {
+              if ($k -notlike "argument*") { continue }
+              try { $null = $meta[$k] | ConvertFrom-Json }
+              catch { Write-Host "FAIL $($f.Name): $k is not valid JSON"; $bad++ }
+            }
+            Write-Host "ok   $($f.Name)"
+          }
+          if ($bad) { exit 1 }
+
       - name: PSScriptAnalyzer
         shell: pwsh
         run: |
@@ -172,12 +198,17 @@ jobs:
         shell: pwsh
         run: |
           $manifest = Get-Content configs/winget/packages.json -Raw | ConvertFrom-Json
-          $ids = $manifest.groups.PSObject.Properties.Value.packages.id
+          $pkgs = $manifest.groups.PSObject.Properties.Value.packages
           $bad = @()
-          foreach ($id in $ids) {
-            $out = winget show --id $id -e --disable-interactivity --accept-source-agreements 2>&1 | Out-String
-            if ($out -match "No package found") { Write-Host "FAIL $id"; $bad += $id }
-            else { Write-Host "ok   $id" }
+          foreach ($pkg in $pkgs) {
+            # A package may name its own source; Raycast is only on msstore.
+            $args = @("show", "--id", $pkg.id, "-e", "--disable-interactivity", "--accept-source-agreements")
+            if ($pkg.PSObject.Properties.Name -contains "source" -and $pkg.source) {
+              $args += @("--source", $pkg.source)
+            }
+            $out = winget @args 2>&1 | Out-String
+            if ($out -match "No package found") { Write-Host "FAIL $($pkg.id)"; $bad += $pkg.id }
+            else { Write-Host "ok   $($pkg.id)" }
           }
           if ($bad.Count) {
             Write-Host "`nUnresolvable ids: $($bad -join ', ')"
