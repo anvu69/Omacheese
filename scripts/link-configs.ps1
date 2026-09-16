@@ -134,6 +134,15 @@ if (Test-Path -LiteralPath $raycastSrc) {
     Write-Host "  point Raycast at: $raycastDir" -ForegroundColor DarkGray
 }
 
+# The theme lives one level up, NOT in the scanned script directory - Raycast
+# walks that folder looking for commands and a stray .json there is just noise.
+$themeSrc = Join-Path $Repo "configs\raycast\omarchy-tokyo-night.json"
+if (Test-Path -LiteralPath $themeSrc) {
+    & $Install -Source $themeSrc `
+               -Destination (Join-Path $cfg "omarchy\omarchy-tokyo-night.json") | Out-Null
+    Write-Host "  theme: ./scripts/omarchy/omarchy-raycast-theme.ps1" -ForegroundColor DarkGray
+}
+
 # --- komorebi application-specific config ------------------------------------
 # This is the community-maintained ruleset that teaches komorebi how Electron
 # apps, installers and dialogs behave. komorebic check nags without it, and

@@ -78,6 +78,55 @@ theo dõi mọi workspace và tự áp offset bất kể vào bằng đường n
 — chạy `Layout → Scrolling` từ Raycast cho ra offset `L0/R228`, đúng như khi bấm
 `SUPER+CTRL+S`.
 
+## Theme
+
+Raycast **style được**, và repo có sẵn theme khớp với phần còn lại của desktop.
+
+```powershell
+./scripts/omarchy/omarchy-raycast-theme.ps1            # import vào Raycast
+./scripts/omarchy/omarchy-raycast-theme.ps1 -ShowUrl   # chỉ in link ra
+```
+
+Hai điều cần biết trước:
+
+- **Theme là tính năng trả phí của Raycast.** Changelog bản Windows nói nguyên
+  văn: *"This feature is part of our paid offering but during the Beta period,
+  we're excited to offer you full access for free."* Tức là đang free trong
+  thời gian beta — một sự ưu ái của giai đoạn beta, không phải cam kết.
+- **Raycast không import theme từ file.** Theme đi bằng deep link. Script trên
+  dựng link `raycast://theme?...` từ
+  `configs/raycast/omarchy-tokyo-night.json`, đúng format mà themes.ray.so dùng
+  (`lib/url.ts` trong `raycast/theme-explorer`): mọi field trừ `colors` thành
+  query param, rồi 12 màu nối bằng dấu phẩy **theo đúng thứ tự** — chúng là
+  positional. Raycast sẽ hỏi xác nhận trước khi thêm.
+
+File JSON là nguồn duy nhất; script sinh link từ nó nên link không thể lệch.
+
+### Màu lấy từ đâu
+
+11 trong 12 màu lấy thẳng từ config đang chạy, không phải bịa:
+
+| Raycast | Hex | Có trong |
+|---|---|---|
+| `background` | `#1a1b26` | komorebi, yasb, alacritty |
+| `backgroundSecondary` | `#24283b` | yasb |
+| `text` | `#c0caf5` | komorebi, yasb, alacritty |
+| `selection` | `#292e42` | yasb, alacritty |
+| `loader` / `blue` | `#7aa2f7` | komorebi (border focus), yasb, alacritty |
+| `red` | `#f7768e` | komorebi (locked), yasb, alacritty |
+| `orange` | `#ff9e64` | yasb, alacritty |
+| `yellow` | `#e0af68` | komorebi (floating), yasb, alacritty |
+| `green` | `#9ece6a` | komorebi (monocle), yasb, alacritty |
+| `magenta` | `#bb9af7` | komorebi (stack), yasb, alacritty |
+| `purple` | `#9d7cd8` | **không có trong repo** — lấy từ Tokyo Night gốc |
+
+`purple` là ngoại lệ duy nhất: schema của Raycast cần `purple` và `magenta`
+riêng, mà repo chỉ dùng `#bb9af7`, nên `purple` lấy giá trị chuẩn của Tokyo
+Night.
+
+Nói cách khác: viền komorebi khi focus, chữ trên yasb, và nền Alacritty dùng
+đúng những hex này — nên Raycast mở ra sẽ cùng tông thay vì lệch một nhịp.
+
 ## Kiểm tra
 
 `doctor.ps1` và CI đều validate metadata header, vì header sai **không báo lỗi**
