@@ -224,7 +224,12 @@ jobs:
           # syntax (?., ??, ternary) is a parse error on 5.1, which kills the
           # script before it prints anything.
           $ps51 = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
-          $must = Get-ChildItem scripts -Recurse -Filter *.ps1
+          # install.ps1 lives at the root and is the first thing a fresh machine runs,
+          # where 5.1 is all there is - so it matters more than anything under scripts/.
+          $must = @(Get-ChildItem . -Filter *.ps1) +
+                  @(Get-ChildItem scripts -Recurse -Filter *.ps1) +
+                  @(Get-ChildItem raycast -Filter *.ps1)
+          $must = $must | Sort-Object FullName -Unique
           $bad = 0
           foreach ($f in $must) {
             $out = & $ps51 -NoProfile -Command "
