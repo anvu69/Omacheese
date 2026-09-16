@@ -1,13 +1,29 @@
 # Omarchy menu, ported to Windows.
 #
 # Omarchy funnels almost everything through one nested menu on SUPER+SPACE so
-# you never have to remember where a setting lives. This is the same idea
-# driven by fzf: pick a section, pick an action, it runs.
+# you never have to remember where a setting lives.
 #
 #   SUPER+SPACE   -> root menu
 #   SUPER+ESC     -> straight to the system section
 #
-# Add your own entries by editing $Menus below.
+# WHY THIS IS A WINDOW AND NOT A TERMINAL
+#
+# The first version drove fzf inside a small Alacritty window. It worked, but it
+# read as "a terminal happened to open", which is exactly what Omarchy's does
+# not: over there the menu is walker in dmenu mode, an overlay that belongs to
+# the desktop. The Windows equivalent is a plain WPF window - already on every
+# Windows 11 install, no extra package, and it can be centred, styled and driven
+# with the mouse.
+#
+# So this is a real window: centred on the monitor the pointer is on, rows big
+# enough to click, wheel scrolling, type-to-filter, and it closes when it loses
+# focus the way a launcher should.
+#
+# Actions still shell out to the same helpers. The few that genuinely need a
+# console - anything that prints a list, or asks a question - open a terminal on
+# purpose; everything else runs silently.
+#
+# Add your own entries in Get-Menu below.
 
 [CmdletBinding()]
 param(
@@ -16,13 +32,31 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$cfg  = Join-Path $env:USERPROFILE ".config"
-$bin  = Join-Path $cfg "omarchy\bin"
+# The console window belongs to whatever launched us. Hide it before anything is
+# drawn, so the menu does not arrive with a black rectangle behind it.
+try {
+    Add-Type -Namespace Omarchy -Name Native -MemberDefinition @"
+[System.Runtime.InteropServices.DllImport("kernel32.dll")]
+public static extern System.IntPtr GetConsoleWindow();
+[System.Runtime.InteropServices.DllImport("user32.dll")]
+public static extern bool ShowWindow(System.IntPtr hWnd, int nCmdShow);
+"@ -ErrorAction Stop
+    $console = [Omarchy.Native]::GetConsoleWindow()
+    if ($console -ne [IntPtr]::Zero) { [void][Omarchy.Native]::ShowWindow($console, 0) }
+} catch { }
 
-# Resolve binaries instead of trusting PATH. This menu is launched from the
-# bar, and a GUI process inherits the PATH of whatever started it - so bare
+Add-Type -AssemblyName PresentationFramework
+Add-Type -AssemblyName PresentationCore
+Add-Type -AssemblyName WindowsBase
+Add-Type -AssemblyName System.Windows.Forms
+
+$cfg = Join-Path $env:USERPROFILE ".config"
+$bin = Join-Path $cfg "omarchy\bin"
+
+# Resolve binaries instead of trusting PATH. This menu is launched from the bar,
+# and a GUI process inherits the PATH of whatever started it - so a bare
 # "alacritty" or "nvim" silently did nothing, which is why picking an action
-# just closed the window.
+# used to just close the window.
 function Resolve-Bin {
     param([string]$Name, [string[]]$Fallbacks = @())
     $c = Get-Command $Name -ErrorAction SilentlyContinue
@@ -44,221 +78,522 @@ function Start-InTerminal {
     if ($term) {
         Start-Process -FilePath $term -ArgumentList (@("-e") + $Command)
     } else {
-        # No Alacritty: fall back to a console window rather than doing nothing.
         Start-Process -FilePath $Command[0] -ArgumentList ($Command[1..($Command.Count - 1)])
     }
 }
 
-function Show-Problem {
-    param([string]$Message)
-    Write-Host ""
-    Write-Host "  $Message" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "  Press Enter to close" -ForegroundColor DarkGray
-    [void](Read-Host)
+# Run one of our own helpers in a terminal, for the handful that print something
+# worth reading.
+function Start-HelperInTerminal {
+    param([string]$Script, [string[]]$Arguments = @())
+    $ps = Resolve-Bin "pwsh" @("%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe")
+    Start-InTerminal (@($ps, "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $Script) + $Arguments)
 }
 
-# Each entry is: Label = command to run (string = shell, scriptblock = inline).
-$Menus = [ordered]@{
+function Start-Helper {
+    param([string]$Script, [string[]]$Arguments = @())
+    $ps = Resolve-Bin "pwsh" @("%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe")
+    Start-Process -FilePath $ps -WindowStyle Hidden `
+        -ArgumentList (@("-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $Script) + $Arguments)
+}
 
-    root = [ordered]@{
-        "Apps            launch an application"      = { Show-Menu "apps" }
-        "Agents          coding agents"              = { Show-Menu "agents" }
-        "Windows         layout and tiling"          = { Show-Menu "windows" }
-        "Workspaces      jump to a workspace"        = { Show-Menu "workspaces" }
-        "Capture         screenshot and recording"   = { Show-Menu "capture" }
-        "Toggle          flip a desktop setting"     = { Show-Menu "toggle" }
-        "Setup           edit a config file"         = { Show-Menu "setup" }
-        "Learn           keybindings and docs"       = { Show-Menu "learn" }
-        "System          lock, sleep, restart"       = { Show-Menu "system" }
-    }
+function Show-Problem {
+    param([string]$Message)
+    [void][System.Windows.MessageBox]::Show($Message, "omarchy",
+        [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+}
 
-    apps = [ordered]@{
-        # No -e: let Alacritty start its configured shell (pwsh).
-        "Terminal"                = {
-            if ($term) { Start-Process -FilePath $term }
-            else { Show-Problem "Alacritty is not installed." }
-        }
-        "Terminal (WSL + tmux)"   = { Start-InTerminal @("wsl.exe","-d","AlmaLinux-9","--","tmux","new-session","-A","-s","main") }
-        "Neovim (WSL)"            = { Start-InTerminal @("wsl.exe","-d","AlmaLinux-9","--","nvim") }
-        "Browser"                 = { $p = Resolve-Bin "brave"; if ($p) { Start-Process $p } else { Show-Problem "brave is not installed." } }
-        "Browser (private)"       = { $p = Resolve-Bin "brave"; if ($p) { Start-Process $p -ArgumentList "--incognito" } else { Show-Problem "brave is not installed." } }
-        "File manager"            = { $p = Resolve-Bin "explorer"; if ($p) { Start-Process $p } else { Show-Problem "explorer is not installed." } }
-        "Everything (search)"     = { $p = Resolve-Bin "everything"; if ($p) { Start-Process $p } else { Show-Problem "everything is not installed." } }
-        "electerm (SSH)"          = { $p = Resolve-Bin "electerm"; if ($p) { Start-Process $p } else { Show-Problem "electerm is not installed." } }
-        "DBeaver"                 = { $p = Resolve-Bin "dbeaver"; if ($p) { Start-Process $p } else { Show-Problem "dbeaver is not installed." } }
-        "Bitwarden"               = { $p = Resolve-Bin "bitwarden"; if ($p) { Start-Process $p } else { Show-Problem "bitwarden is not installed." } }
-        "btop"                    = { Start-InTerminal @("btop") }
-        "lazygit"                 = { Start-InTerminal @("lazygit") }
-    }
-
-    agents = [ordered]@{
-        "Launch default agent"       = { & (Join-Path $bin "omarchy-agent.ps1") }
-        "Launch default agent (WSL)" = { & (Join-Path $bin "omarchy-agent.ps1") -Wsl }
-        "Launch with a prompt"       = {
-            $p = Read-Host "Prompt"
-            if ($p) { & (Join-Path $bin "omarchy-agent.ps1") -Prompt $p }
-        }
-        "Launch unattended (-Yolo)"  = {
-            Write-Host "This skips every permission prompt. The agent can run any" -ForegroundColor Yellow
-            Write-Host "command, including against your SSH agent and work trees." -ForegroundColor Yellow
-            if ((Read-Host "Type yes to continue") -eq "yes") {
-                & (Join-Path $bin "omarchy-agent.ps1") -Yolo
-            }
-        }
-        "Pick / change default"      = { & (Join-Path $bin "omarchy-agent.ps1") -Pick }
-        "List agents"                = {
-            & (Join-Path $bin "omarchy-default-agent.ps1") -List
-            Read-Host "`nEnter to close"
-        }
-    }
-
-    windows = [ordered]@{
-        "Scrolling mode (toggle)" = { & (Join-Path $bin "omarchy-scrolling.ps1") }
-        "Scrolling: 2 columns"    = {
-            komorebic change-layout scrolling
-            komorebic scrolling-layout-columns 2
-        }
-        "Next layout"             = { komorebic cycle-layout next }
-        "Previous layout"         = { komorebic cycle-layout previous }
-        "BSP"                     = { komorebic change-layout bsp }
-        "Columns"                 = { komorebic change-layout columns }
-        "Rows"                    = { komorebic change-layout rows }
-        "Grid"                    = { komorebic change-layout grid }
-        "Ultrawide vertical stack"= { komorebic change-layout ultrawide-vertical-stack }
-        "Scrolling"               = { komorebic change-layout scrolling }
-        "Flip horizontal"         = { komorebic flip-layout horizontal }
-        "Flip vertical"           = { komorebic flip-layout vertical }
-        "Promote window"          = { komorebic promote }
-        "Retile"                  = { komorebic retile }
-        "Reload configuration"    = { komorebic reload-configuration }
-    }
-
-    capture = [ordered]@{
-        "Region to clipboard"     = { Start-Process "ms-screenclip:" }
-        "Snipping Tool"           = { Start-Process "snippingtool:" }
-        "Screen recording (Xbox)" = { Start-Process "ms-gamebar:" }
-        "Open Screenshots folder" = { Start-Process "explorer" -ArgumentList (Join-Path $env:USERPROFILE "Pictures\Screenshots") }
-    }
-
-    toggle = [ordered]@{
-        "Status bar"              = { & (Join-Path $bin "omarchy-toggle-bar.ps1") }
-        "Pause tiling"            = { komorebic toggle-pause }
-        "Tiling on this workspace"= { komorebic toggle-tiling }
-        "Float this window"       = { komorebic toggle-float }
-        "Float override"          = { komorebic toggle-float-override }
-        "Monocle"                 = { komorebic toggle-monocle }
-        "Transparency"            = { komorebic toggle-transparency }
-        "Title bars"              = { komorebic toggle-title-bars }
-        "Mouse follows focus"     = { komorebic toggle-mouse-follows-focus }
-        "Workspace layer"         = { komorebic toggle-workspace-layer }
-    }
-
-    setup = [ordered]@{
-        "whkd keybindings"        = { Edit-Config (Join-Path $cfg "whkdrc") }
-        "komorebi"                = { Edit-Config (Join-Path $cfg "komorebi\komorebi.json") }
-        "yasb config"             = { Edit-Config (Join-Path $cfg "yasb\config.yaml") }
-        "yasb styles"             = { Edit-Config (Join-Path $cfg "yasb\styles.css") }
-        "Alacritty"               = { Edit-Config (Join-Path $env:APPDATA "alacritty\alacritty.toml") }
-        "PowerShell profile"      = { Edit-Config $PROFILE.CurrentUserCurrentHost }
-        "SSH config"              = { Edit-Config (Join-Path $env:USERPROFILE ".ssh\config") }
-        "Git config"              = { Edit-Config (Join-Path $env:USERPROFILE ".gitconfig") }
-        "WSL config"              = { Edit-Config (Join-Path $env:USERPROFILE ".wslconfig") }
-        "Restart desktop"         = { & (Join-Path $bin "omarchy-restart-desktop.ps1") }
-    }
-
-    learn = [ordered]@{
-        "Keybindings"             = { & (Join-Path $bin "omarchy-keybindings.ps1") }
-        "komorebi docs"           = { Start-Process "https://lgug2z.github.io/komorebi/" }
-        "yasb docs"               = { Start-Process "https://github.com/amnweb/yasb/wiki" }
-        "Omarchy (the original)"  = { Start-Process "https://omarchy.org" }
-    }
-
-    system = [ordered]@{
-        "Lock"                    = { rundll32.exe user32.dll,LockWorkStation }
-        "Sleep"                   = { rundll32.exe powrprof.dll,SetSuspendState 0,1,0 }
-        "Sign out"                = { shutdown.exe /l }
-        "Restart"                 = { shutdown.exe /r /t 0 }
-        "Shut down"               = { shutdown.exe /s /t 0 }
-        "Restart desktop stack"   = { & (Join-Path $bin "omarchy-restart-desktop.ps1") }
-        "Stop komorebi"           = { komorebic stop --whkd }
-        "WSL shutdown"            = { wsl.exe --shutdown }
-    }
+function Start-App {
+    param([string]$Name, [string[]]$Arguments = @(), [string[]]$Fallbacks = @())
+    $p = Resolve-Bin $Name $Fallbacks
+    if (-not $p) { Show-Problem "$Name is not installed."; return }
+    if ($Arguments.Count) { Start-Process -FilePath $p -ArgumentList $Arguments }
+    else { Start-Process -FilePath $p }
 }
 
 function Edit-Config {
     param([string]$Path)
 
-    if (-not (Test-Path -LiteralPath $Path)) {
-        Show-Problem "Not found: $Path"
-        return
-    }
+    if (-not (Test-Path -LiteralPath $Path)) { Show-Problem "Not found: $Path"; return }
 
     $editor = Resolve-Bin "nvim"
     if (-not $editor) { $editor = Resolve-Bin "code" }
     if (-not $editor) { $editor = Resolve-Bin "notepad" @("%SystemRoot%\System32\notepad.exe") }
-
-    if (-not $editor) {
-        Show-Problem "No editor found (looked for nvim, code, notepad)."
-        return
-    }
+    if (-not $editor) { Show-Problem "No editor found (looked for nvim, code, notepad)."; return }
 
     # notepad is a GUI app - putting it inside a terminal gives you an empty
     # terminal and a detached notepad, so only terminal editors go via -e.
-    if ($editor -match 'nvim|vim') {
-        Start-InTerminal @($editor, $Path)
-    } else {
-        Start-Process -FilePath $editor -ArgumentList $Path
+    if ($editor -match 'nvim|vim') { Start-InTerminal @($editor, $Path) }
+    else { Start-Process -FilePath $editor -ArgumentList $Path }
+}
+
+function New-Entry {
+    param([string]$Label, [string]$Desc = "", [string]$Sub = "",
+          [scriptblock]$Action = $null, [scriptblock]$Prompt = $null)
+    [pscustomobject]@{
+        Label   = $Label
+        Desc    = $Desc
+        Sub     = $Sub
+        Action  = $Action
+        Prompt  = $Prompt
+        Chevron = $(if ($Sub) { [string][char]0x203A } else { "" })
     }
 }
 
-function Show-Menu {
+function Get-Menu {
     param([string]$Name)
 
-    $entries = $Menus[$Name]
-    if (-not $entries) {
-        Write-Host "No such menu: $Name" -ForegroundColor Red
-        return
+    switch ($Name) {
+
+        "root" { @(
+            (New-Entry "Apps"       "Launch an application"    -Sub "apps")
+            (New-Entry "Agents"     "Coding agents"            -Sub "agents")
+            (New-Entry "Windows"    "Layout and tiling"        -Sub "windows")
+            (New-Entry "Workspaces" "Jump to a workspace"      -Sub "workspaces")
+            (New-Entry "Capture"    "Screenshot and recording" -Sub "capture")
+            (New-Entry "Toggle"     "Flip a desktop setting"   -Sub "toggle")
+            (New-Entry "Setup"      "Edit a config file"       -Sub "setup")
+            (New-Entry "Learn"      "Keybindings and docs"     -Sub "learn")
+            (New-Entry "System"     "Lock, sleep, restart"     -Sub "system")
+        ) }
+
+        "apps" { @(
+            # No -e: let Alacritty start its configured shell (pwsh).
+            (New-Entry "Terminal" "Alacritty with PowerShell" -Action {
+                if ($term) { Start-Process -FilePath $term } else { Show-Problem "Alacritty is not installed." } })
+            (New-Entry "Terminal (WSL + tmux)" "AlmaLinux, attached to the main session" -Action {
+                Start-InTerminal @("wsl.exe","-d","AlmaLinux-9","--","tmux","new-session","-A","-s","main") })
+            (New-Entry "Neovim (WSL)" "Editor in AlmaLinux" -Action {
+                Start-InTerminal @("wsl.exe","-d","AlmaLinux-9","--","nvim") })
+            (New-Entry "Browser" "Brave" -Action { Start-App "brave" })
+            (New-Entry "Browser (private)" "Brave, incognito window" -Action { Start-App "brave" @("--incognito") })
+            (New-Entry "File manager" "Explorer" -Action { Start-App "explorer" })
+            (New-Entry "Everything" "Instant file search" -Action { Start-App "everything" })
+            (New-Entry "electerm" "SSH client" -Action { Start-App "electerm" })
+            (New-Entry "DBeaver" "Database client" -Action { Start-App "dbeaver" })
+            (New-Entry "Bitwarden" "Password manager and SSH agent" -Action { Start-App "bitwarden" })
+            (New-Entry "btop" "Process and resource monitor" -Action { Start-InTerminal @("btop") })
+            (New-Entry "lazygit" "Git TUI" -Action { Start-InTerminal @("lazygit") })
+        ) }
+
+        "agents" { @(
+            (New-Entry "Launch default agent" "In a new terminal" -Action {
+                Start-HelperInTerminal (Join-Path $bin "omarchy-agent.ps1") })
+            (New-Entry "Launch default agent (WSL)" "Inside AlmaLinux" -Action {
+                Start-HelperInTerminal (Join-Path $bin "omarchy-agent.ps1") @("-Wsl") })
+            (New-Entry "Launch with a prompt" "Type the prompt, then Enter" -Prompt {
+                param($text)
+                if ($text) { Start-HelperInTerminal (Join-Path $bin "omarchy-agent.ps1") @("-Prompt", $text) } })
+            (New-Entry "Launch unattended" "Skips every permission prompt" -Sub "agents-yolo")
+            (New-Entry "Pick / change default" "Choose which agent SUPER+A runs" -Action {
+                Start-HelperInTerminal (Join-Path $bin "omarchy-agent.ps1") @("-Pick") })
+            (New-Entry "List agents" "Show what is installed" -Action {
+                Start-HelperInTerminal (Join-Path $bin "omarchy-default-agent.ps1") @("-List") })
+        ) }
+
+        "agents-yolo" { @(
+            (New-Entry "Cancel" "Go back without running anything" -Sub "agents")
+            (New-Entry "Yes, run unattended" "The agent can run any command, including against your SSH agent and work trees" -Action {
+                Start-HelperInTerminal (Join-Path $bin "omarchy-agent.ps1") @("-Yolo") })
+        ) }
+
+        "windows" { @(
+            (New-Entry "Scrolling mode" "Toggle the horizontal strip" -Action {
+                Start-Helper (Join-Path $bin "omarchy-scrolling.ps1") })
+            (New-Entry "Scrolling: 2 columns" "Two windows side by side in the strip" -Action {
+                komorebic change-layout scrolling; komorebic scrolling-layout-columns 2 })
+            (New-Entry "Next layout" "Cycle forward" -Action { komorebic cycle-layout next })
+            (New-Entry "Previous layout" "Cycle back" -Action { komorebic cycle-layout previous })
+            (New-Entry "BSP" "Binary space partitioning" -Action { komorebic change-layout bsp })
+            (New-Entry "Columns" "Equal vertical columns" -Action { komorebic change-layout columns })
+            (New-Entry "Rows" "Equal horizontal rows" -Action { komorebic change-layout rows })
+            (New-Entry "Grid" "Even grid" -Action { komorebic change-layout grid })
+            (New-Entry "Ultrawide vertical stack" "Main window centred" -Action { komorebic change-layout ultrawide-vertical-stack })
+            (New-Entry "Scrolling" "Horizontal strip" -Action { komorebic change-layout scrolling })
+            (New-Entry "Flip horizontal" "Mirror the layout left to right" -Action { komorebic flip-layout horizontal })
+            (New-Entry "Flip vertical" "Mirror the layout top to bottom" -Action { komorebic flip-layout vertical })
+            (New-Entry "Promote window" "Make this the main window" -Action { komorebic promote })
+            (New-Entry "Retile" "Re-apply the layout" -Action { komorebic retile })
+            (New-Entry "Reload configuration" "Re-read komorebi.json" -Action { komorebic reload-configuration })
+        ) }
+
+        "capture" { @(
+            (New-Entry "Region to clipboard" "Snip part of the screen" -Action { Start-Process "ms-screenclip:" })
+            (New-Entry "Snipping Tool" "Full capture app" -Action { Start-Process "snippingtool:" })
+            (New-Entry "Screen recording" "Xbox Game Bar" -Action { Start-Process "ms-gamebar:" })
+            (New-Entry "Open Screenshots folder" "Pictures\Screenshots" -Action {
+                Start-Process "explorer" -ArgumentList (Join-Path $env:USERPROFILE "Pictures\Screenshots") })
+        ) }
+
+        "toggle" { @(
+            (New-Entry "Status bar" "Show or hide yasb" -Action { Start-Helper (Join-Path $bin "omarchy-toggle-bar.ps1") })
+            (New-Entry "Pause tiling" "Stop managing windows" -Action { komorebic toggle-pause })
+            (New-Entry "Tiling on this workspace" "Manage or leave windows alone" -Action { komorebic toggle-tiling })
+            (New-Entry "Float this window" "Take it out of the layout" -Action { komorebic toggle-float })
+            (New-Entry "Float override" "Float everything new" -Action { komorebic toggle-float-override })
+            (New-Entry "Monocle" "Focused window fills the screen" -Action { komorebic toggle-monocle })
+            (New-Entry "Transparency" "Dim unfocused windows" -Action { komorebic toggle-transparency })
+            (New-Entry "Title bars" "Show or hide window title bars" -Action { komorebic toggle-title-bars })
+            (New-Entry "Mouse follows focus" "Warp the pointer on focus" -Action { komorebic toggle-mouse-follows-focus })
+            (New-Entry "Workspace layer" "Switch the workspace layer" -Action { komorebic toggle-workspace-layer })
+        ) }
+
+        "setup" { @(
+            (New-Entry "whkd keybindings" "~/.config/whkdrc" -Action { Edit-Config (Join-Path $cfg "whkdrc") })
+            (New-Entry "komorebi" "Window manager config" -Action { Edit-Config (Join-Path $cfg "komorebi\komorebi.json") })
+            (New-Entry "yasb config" "Status bar widgets" -Action { Edit-Config (Join-Path $cfg "yasb\config.yaml") })
+            (New-Entry "yasb styles" "Status bar CSS" -Action { Edit-Config (Join-Path $cfg "yasb\styles.css") })
+            (New-Entry "Alacritty" "Terminal config" -Action { Edit-Config (Join-Path $env:APPDATA "alacritty\alacritty.toml") })
+            (New-Entry "PowerShell profile" "Shell startup" -Action { Edit-Config $PROFILE.CurrentUserCurrentHost })
+            (New-Entry "SSH config" "~/.ssh/config" -Action { Edit-Config (Join-Path $env:USERPROFILE ".ssh\config") })
+            (New-Entry "Git config" "~/.gitconfig" -Action { Edit-Config (Join-Path $env:USERPROFILE ".gitconfig") })
+            (New-Entry "WSL config" "~/.wslconfig" -Action { Edit-Config (Join-Path $env:USERPROFILE ".wslconfig") })
+            (New-Entry "Restart desktop" "komorebi, whkd, yasb" -Action { Start-Helper (Join-Path $bin "omarchy-restart-desktop.ps1") })
+        ) }
+
+        "learn" { @(
+            (New-Entry "Keybindings" "Every chord, searchable" -Action {
+                Start-HelperInTerminal (Join-Path $bin "omarchy-keybindings.ps1") })
+            (New-Entry "komorebi docs" "lgug2z.github.io/komorebi" -Action { Start-Process "https://lgug2z.github.io/komorebi/" })
+            (New-Entry "yasb docs" "github.com/amnweb/yasb/wiki" -Action { Start-Process "https://github.com/amnweb/yasb/wiki" })
+            (New-Entry "Omarchy (the original)" "omarchy.org" -Action { Start-Process "https://omarchy.org" })
+        ) }
+
+        "system" { @(
+            (New-Entry "Lock" "Lock the session" -Action { rundll32.exe user32.dll,LockWorkStation })
+            (New-Entry "Sleep" "Suspend to RAM" -Action { rundll32.exe powrprof.dll,SetSuspendState 0,1,0 })
+            (New-Entry "Sign out" "End the session" -Action { shutdown.exe /l })
+            (New-Entry "Restart" "Reboot now" -Action { shutdown.exe /r /t 0 })
+            (New-Entry "Shut down" "Power off now" -Action { shutdown.exe /s /t 0 })
+            (New-Entry "Restart desktop stack" "komorebi, whkd, yasb" -Action { Start-Helper (Join-Path $bin "omarchy-restart-desktop.ps1") })
+            (New-Entry "Stop komorebi" "Leave windows unmanaged" -Action { komorebic stop --whkd })
+            (New-Entry "WSL shutdown" "Stop every distribution" -Action { wsl.exe --shutdown })
+        ) }
+
+        "workspaces" {
+            # Built from the live state so the names match komorebi.json rather
+            # than a second copy of the list that can drift out of date.
+            $items = @()
+            try {
+                $state = komorebic state 2>$null | ConvertFrom-Json
+                $mon = $state.monitors.elements[$state.monitors.focused]
+                for ($i = 0; $i -lt $mon.workspaces.elements.Count; $i++) {
+                    $ws = $mon.workspaces.elements[$i]
+                    $nm = if ($ws.name) { $ws.name } else { "workspace $($i + 1)" }
+                    $n  = $ws.containers.elements.Count
+                    $d  = if ($n -eq 0) { "empty" } elseif ($n -eq 1) { "1 window" } else { "$n windows" }
+                    $items += (New-Entry "$($i + 1)  $nm" $d -Action ([scriptblock]::Create("komorebic focus-workspace $i")))
+                }
+            } catch {
+                $items += (New-Entry "komorebi is not running" "Start it with start-desktop.ps1" -Action { })
+            }
+            $items
+        }
+
+        default { @() }
     }
-
-    # Resolve rather than trust PATH. Toggling the bar off and on restarts
-    # yasb from this script's own environment, and the menu then inherited a
-    # PATH without fzf - so a perfectly installed fzf reported as missing.
-    $fzfPath = Resolve-Bin "fzf" @(
-        "%LOCALAPPDATA%\Microsoft\WinGet\Links\fzf.exe",
-        "%ProgramFiles%\fzf\fzf.exe",
-        "%USERPROFILE%\scoop\shims\fzf.exe",
-        "%ChocolateyInstall%\bin\fzf.exe"
-    )
-
-    if (-not $fzfPath) {
-        Write-Host ""
-        Write-Host "  fzf is required for the menu." -ForegroundColor Yellow
-        Write-Host "  winget install --id junegunn.fzf -e" -ForegroundColor Cyan
-        Write-Host ""
-        Read-Host "  Enter to close" | Out-Null
-        return
-    }
-
-    $prompt = if ($Name -eq "root") { "omarchy > " } else { "$Name > " }
-
-    $choice = $entries.Keys |
-        & $fzfPath `
-            --prompt $prompt `
-            --header "  ENTER to run      ESC to cancel" `
-            --header-first `
-            --layout reverse `
-            --info inline `
-            --no-mouse `
-            --border rounded
-
-    if (-not $choice) { return }
-
-    # Entries are always scriptblocks. Keeping it that way (rather than
-    # accepting command strings) avoids an Invoke-Expression on menu labels.
-    $action = $entries[$choice]
-    if ($action -is [scriptblock]) { & $action }
-    else { Write-Host "Menu entry '$choice' is not runnable." -ForegroundColor Red }
 }
 
-Show-Menu $Menu
+# --- window -----------------------------------------------------------------
+
+[xml]$xamlDoc = @'
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="omarchy" WindowStyle="None" AllowsTransparency="True"
+        Background="Transparent" ShowInTaskbar="False" Topmost="True"
+        ResizeMode="NoResize" Width="780" Height="620"
+        FontFamily="Segoe UI Variable Text, Segoe UI">
+  <Border Background="#FF1A1B26" CornerRadius="14" BorderBrush="#FF414868" BorderThickness="1">
+    <Grid>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
+
+      <Border Grid.Row="0" Padding="24,18,24,16" BorderBrush="#FF2A2E42" BorderThickness="0,0,0,1">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+          <TextBlock x:Name="Crumb" Grid.Column="0" Text="omarchy" Foreground="#FF7AA2F7"
+                     FontSize="21" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0"/>
+          <TextBox x:Name="Search" Grid.Column="1" Background="Transparent" Foreground="#FFC0CAF5"
+                   BorderThickness="0" FontSize="21" CaretBrush="#FF7AA2F7"
+                   VerticalContentAlignment="Center" Padding="0"/>
+        </Grid>
+      </Border>
+
+      <ListBox x:Name="List" Grid.Row="1" Background="Transparent" BorderThickness="0"
+               Foreground="#FFC0CAF5" Padding="8,10,8,10"
+               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+               ScrollViewer.VerticalScrollBarVisibility="Auto">
+        <ListBox.Resources>
+          <!-- The stock scrollbar is light grey chrome and looks pasted on. -->
+          <Style TargetType="ScrollBar">
+            <Setter Property="Width" Value="9"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+              <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                  <Grid Background="Transparent">
+                    <Track x:Name="PART_Track" IsDirectionReversed="True">
+                      <Track.Thumb>
+                        <Thumb>
+                          <Thumb.Template>
+                            <ControlTemplate TargetType="Thumb">
+                              <Border Background="#FF3B4261" CornerRadius="4" Margin="2,0"/>
+                            </ControlTemplate>
+                          </Thumb.Template>
+                        </Thumb>
+                      </Track.Thumb>
+                      <Track.IncreaseRepeatButton>
+                        <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="False"/>
+                      </Track.IncreaseRepeatButton>
+                      <Track.DecreaseRepeatButton>
+                        <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="False"/>
+                      </Track.DecreaseRepeatButton>
+                    </Track>
+                  </Grid>
+                </ControlTemplate>
+              </Setter.Value>
+            </Setter>
+          </Style>
+        </ListBox.Resources>
+        <ListBox.ItemContainerStyle>
+          <Style TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="18,13"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+              <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                  <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                          Padding="{TemplateBinding Padding}" CornerRadius="9" Margin="12,2">
+                    <ContentPresenter/>
+                  </Border>
+                  <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                      <Setter TargetName="Bd" Property="Background" Value="#FF20243A"/>
+                    </Trigger>
+                    <Trigger Property="IsSelected" Value="True">
+                      <Setter TargetName="Bd" Property="Background" Value="#FF283457"/>
+                    </Trigger>
+                  </ControlTemplate.Triggers>
+                </ControlTemplate>
+              </Setter.Value>
+            </Setter>
+          </Style>
+        </ListBox.ItemContainerStyle>
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0">
+                <TextBlock Text="{Binding Label}" FontSize="17" Foreground="#FFC0CAF5"
+                           TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding Desc}" FontSize="12.5" Foreground="#FF6B7394"
+                           Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
+              </StackPanel>
+              <TextBlock Grid.Column="1" Text="{Binding Chevron}" FontSize="19" Foreground="#FF565F89"
+                         VerticalAlignment="Center" Margin="14,0,4,0"/>
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+
+      <Border Grid.Row="2" Padding="24,12,24,14" BorderBrush="#FF2A2E42" BorderThickness="0,1,0,0">
+        <TextBlock x:Name="Hint" Foreground="#FF565F89" FontSize="12.5"
+                   Text="Type to filter    Enter run    Esc back    click or scroll with the mouse"/>
+      </Border>
+    </Grid>
+  </Border>
+</Window>
+'@
+
+$reader = New-Object System.Xml.XmlNodeReader $xamlDoc
+$win    = [Windows.Markup.XamlReader]::Load($reader)
+
+$crumb  = $win.FindName("Crumb")
+$search = $win.FindName("Search")
+$list   = $win.FindName("List")
+$hint   = $win.FindName("Hint")
+
+$script:Stack      = New-Object System.Collections.Generic.List[string]
+$script:Current    = $Menu
+$script:AllItems   = @()
+$script:Pending    = $null
+$script:PromptItem = $null
+$script:DefaultHint = "Type to filter    Enter run    Esc back    click or scroll with the mouse"
+
+function Set-Filter {
+    if ($script:PromptItem) { return }
+    $q = $search.Text
+    if ([string]::IsNullOrWhiteSpace($q)) {
+        $list.ItemsSource = $script:AllItems
+    } else {
+        $list.ItemsSource = @($script:AllItems | Where-Object {
+            $_.Label -like "*$q*" -or $_.Desc -like "*$q*"
+        })
+    }
+    if ($list.Items.Count -gt 0) { $list.SelectedIndex = 0 }
+}
+
+function Show-MenuPage {
+    param([string]$Name)
+    $script:Current    = $Name
+    $script:PromptItem = $null
+    $script:AllItems   = @(Get-Menu $Name)
+    $crumb.Text        = $(if ($Name -eq "root") { "omarchy" } else { $Name })
+    $hint.Text         = $script:DefaultHint
+    $search.Text       = ""
+    Set-Filter
+}
+
+function Enter-PromptMode {
+    param($Item)
+    $script:PromptItem = $Item
+    $crumb.Text        = $Item.Label
+    $list.ItemsSource  = @()
+    $hint.Text         = "$($Item.Desc)    Enter to run    Esc to go back"
+    $search.Text       = ""
+}
+
+function Invoke-Entry {
+    param($Item)
+    if (-not $Item) { return }
+
+    if ($Item.Sub) {
+        $script:Stack.Add($script:Current)
+        Show-MenuPage $Item.Sub
+        return
+    }
+    if ($Item.Prompt) {
+        Enter-PromptMode $Item
+        return
+    }
+    if ($Item.Action) {
+        # Close first, then run. The window is topmost and holds focus, so
+        # anything launched underneath it would come up behind the menu.
+        $script:Pending = $Item.Action
+        $win.Close()
+    }
+}
+
+function Step-Selection {
+    param([int]$Delta)
+    if ($list.Items.Count -eq 0) { return }
+    $i = $list.SelectedIndex + $Delta
+    if ($i -lt 0) { $i = $list.Items.Count - 1 }
+    if ($i -ge $list.Items.Count) { $i = 0 }
+    $list.SelectedIndex = $i
+    $list.ScrollIntoView($list.SelectedItem)
+}
+
+function Step-Back {
+    if ($script:PromptItem) { Show-MenuPage $script:Current; return }
+    if ($script:Stack.Count -gt 0) {
+        $prev = $script:Stack[$script:Stack.Count - 1]
+        $script:Stack.RemoveAt($script:Stack.Count - 1)
+        Show-MenuPage $prev
+    } else {
+        $win.Close()
+    }
+}
+
+$win.Add_PreviewKeyDown({
+    # WPF hands the handler (sender, args) positionally. Taking the second off
+    # $args avoids declaring a $sender parameter that is never used - and
+    # $sender is an automatic variable, so binding it is asking for trouble.
+    $e = $args[1]
+    switch ([string]$e.Key) {
+        "Escape" { Step-Back; $e.Handled = $true }
+        "Return" {
+            if ($script:PromptItem) {
+                $text = $search.Text
+                $block = $script:PromptItem.Prompt
+                $script:Pending = { & $block $text }.GetNewClosure()
+                $win.Close()
+            } else {
+                Invoke-Entry $list.SelectedItem
+            }
+            $e.Handled = $true
+        }
+        "Down" { Step-Selection 1;  $e.Handled = $true }
+        "Up"   { Step-Selection -1; $e.Handled = $true }
+        "Tab"  { Step-Selection 1;  $e.Handled = $true }
+        "Back" {
+            # Backspace on an empty box is "go up a level", the way a file
+            # manager treats it. With text in the box it edits normally.
+            if ([string]::IsNullOrEmpty($search.Text)) { Step-Back; $e.Handled = $true }
+        }
+        "Right" {
+            $sel = $list.SelectedItem
+            if ($sel -and $sel.Sub -and [string]::IsNullOrEmpty($search.Text)) {
+                Invoke-Entry $sel; $e.Handled = $true
+            }
+        }
+        "Left" {
+            if ([string]::IsNullOrEmpty($search.Text)) { Step-Back; $e.Handled = $true }
+        }
+    }
+})
+
+$search.Add_TextChanged({ Set-Filter })
+
+# Single click runs, the way a launcher behaves. Resolve the row under the
+# pointer rather than trusting SelectedItem, which has not updated yet at
+# preview time.
+$list.Add_PreviewMouseLeftButtonUp({
+    $e = $args[1]
+    $src = $e.OriginalSource
+    while ($src -and -not ($src -is [System.Windows.Controls.ListBoxItem])) {
+        $src = [System.Windows.Media.VisualTreeHelper]::GetParent($src)
+    }
+    if ($src) {
+        $list.SelectedItem = $src.DataContext
+        $e.Handled = $true
+        Invoke-Entry $src.DataContext
+    }
+})
+
+# A launcher that stays open behind the window you just clicked is a bug, not a
+# feature.
+$win.Add_Deactivated({ $win.Close() })
+
+$win.Add_Loaded({
+    # Centre on the monitor the pointer is on, not on the primary one. WPF works
+    # in device-independent units while Screen reports physical pixels, so the
+    # DPI scale has to come out of it or the window lands off-centre on a scaled
+    # display.
+    try {
+        $mouse  = [System.Windows.Forms.Cursor]::Position
+        $screen = [System.Windows.Forms.Screen]::FromPoint($mouse)
+        $wa     = $screen.WorkingArea
+        $sx = 1.0; $sy = 1.0
+        $src = [System.Windows.PresentationSource]::FromVisual($win)
+        if ($src -and $src.CompositionTarget) {
+            $sx = $src.CompositionTarget.TransformToDevice.M11
+            $sy = $src.CompositionTarget.TransformToDevice.M22
+        }
+        if ($sx -le 0) { $sx = 1.0 }
+        if ($sy -le 0) { $sy = 1.0 }
+        $win.Left = ($wa.X / $sx) + ((($wa.Width  / $sx) - $win.Width)  / 2)
+        $win.Top  = ($wa.Y / $sy) + ((($wa.Height / $sy) - $win.Height) / 2)
+    } catch {
+        $win.WindowStartupLocation = "CenterScreen"
+    }
+    [void]$win.Activate()
+    [void]$search.Focus()
+})
+
+Show-MenuPage $script:Current
+[void]$win.ShowDialog()
+
+# Actions run after the window is gone, so whatever they launch comes up in
+# front instead of behind a topmost menu.
+if ($script:Pending) { & $script:Pending }

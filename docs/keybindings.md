@@ -235,6 +235,28 @@ Omarchy's three-magnitude resize on the `-` / `=` keys.
 | `SUPER + PRTSC` | Screen clip |
 | `SUPER + SHIFT + ALT + P` | Pause **all** hotkeys (games, RDP) |
 
+### The menu
+
+`SUPER + SPACE` opens a real window, not a terminal. Omarchy's menu is walker in
+dmenu mode - an overlay that belongs to the desktop - and the first port of it
+here drove fzf inside a small Alacritty window, which read as "a terminal
+happened to open".
+
+It is now a WPF window, which needs nothing installed: WPF ships with Windows.
+
+- centred on the monitor the **pointer** is on, not always the primary one
+- rows big enough to click, with a description under each label
+- mouse click to run, wheel to scroll
+- type to filter, arrows to move, `Enter` to run
+- `Esc` / `Backspace` / `Left` go up a level, and closes at the top
+- closes when it loses focus, the way a launcher should
+
+Sections nest in place rather than opening a second window, so `Workspaces` is
+built from komorebi's live state and shows how many windows each one holds.
+
+The keybinding cheatsheet on `SUPER + /` is still fzf in a terminal - it is a
+reference table rather than a launcher, so a terminal suits it.
+
 ---
 
 ## Where this deviates from Omarchy, and why
