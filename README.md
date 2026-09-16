@@ -155,8 +155,8 @@ The full list, and the places this differs from Omarchy on purpose, are in
 
 ## Theming
 
-One palette drives komorebi's borders, the yasb bar, Alacritty, the menu and
-Raycast:
+One palette drives komorebi's borders, the yasb bar, Alacritty, the menu,
+Raycast, and herdr when it is installed:
 
 ```powershell
 ./scripts/omacheese/omacheese-theme.ps1 -List
@@ -232,12 +232,15 @@ scripts/
   debloat-windows.ps1    Win11Debloat wrapper
   install-wsl.ps1        WSL2 + AlmaLinux
   install-localllm.ps1   Ollama or vLLM, by hardware
+  install-herdr.ps1      herdr agent multiplexer (optional, not winget)
+  install-agents-wsl.sh  coding agents inside AlmaLinux (optional)
   lib/                   tui, hardware detection, modules, shared helpers
   omacheese/             menu, scroll daemon, theme, agents, scratchpad
 configs/
   theme/                 palettes (tokyo-night, catppuccin)
   komorebi/ yasb/ whkd/  window manager, bar, hotkeys (+ .tmpl for theming)
   alacritty/ powershell/ oh-my-posh/ zsh/ tmux/ lazyvim/
+  herdr/                 mirrors tmux.conf, for the agent panes
   wsl/ ssh/ git/ ai/ windows/ winget/
 raycast/                 Raycast script commands (optional)
 docs/

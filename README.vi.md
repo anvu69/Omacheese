@@ -152,7 +152,8 @@ Danh sách đầy đủ và những chỗ cố tình lệch khỏi Omarchy nằm
 
 ## Theme
 
-Một palette chi phối viền komorebi, thanh yasb, Alacritty, menu và Raycast:
+Một palette chi phối viền komorebi, thanh yasb, Alacritty, menu, Raycast, và
+cả herdr nếu có cài:
 
 ```powershell
 ./scripts/omacheese/omacheese-theme.ps1 -List
@@ -228,12 +229,15 @@ scripts/
   debloat-windows.ps1    wrapper Win11Debloat
   install-wsl.ps1        WSL2 + AlmaLinux
   install-localllm.ps1   Ollama hoặc vLLM theo phần cứng
+  install-herdr.ps1      herdr agent multiplexer (tuỳ chọn, không qua winget)
+  install-agents-wsl.sh  cài agent bên trong AlmaLinux (tuỳ chọn)
   lib/                   tui, dò phần cứng, module, helper chung
   omacheese/             menu, scroll daemon, theme, agents, scratchpad
 configs/
   theme/                 palette (tokyo-night, catppuccin)
   komorebi/ yasb/ whkd/  window manager, bar, hotkey (+ .tmpl cho theme)
   alacritty/ powershell/ oh-my-posh/ zsh/ tmux/ lazyvim/
+  herdr/                 soi theo tmux.conf, cho pane agent
   wsl/ ssh/ git/ ai/ windows/ winget/
 raycast/                 Raycast script commands (tuỳ chọn)
 docs/

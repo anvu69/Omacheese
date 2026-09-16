@@ -253,6 +253,44 @@ jobs:
           Write-Host "$($script:Agents.Count) agents checked"
           if ($bad) { exit 1 }
 
+      - name: README repo-layout trees name real paths
+        shell: pwsh
+        run: |
+          # A tree in the README is documentation that silently goes stale.
+          # Same class as a bad winget id or a bad whkd key name: a name that
+          # refers to nothing, with nothing to notice it.
+          $bad = 0
+          foreach ($readme in "README.md", "README.vi.md") {
+            $lines = Get-Content -LiteralPath $readme
+            $start = -1; $end = -1
+            for ($i = 0; $i -lt $lines.Count; $i++) {
+              if ($start -lt 0 -and $lines[$i].Trim() -eq '```text' -and
+                  $i + 1 -lt $lines.Count -and $lines[$i + 1] -like "install.ps1*") { $start = $i + 1; continue }
+              if ($start -ge 0 -and $lines[$i].Trim() -eq '```') { $end = $i - 1; break }
+            }
+            if ($start -lt 0 -or $end -lt $start) {
+              Write-Host "FAIL ${readme}: no repo-layout block"; $bad++; continue
+            }
+            $prefix = ""
+            $fileBad = 0
+            foreach ($line in $lines[$start..$end]) {
+              if (-not $line.Trim()) { continue }
+              $name = $line.Trim().Split(' ')[0]
+              if ($line.StartsWith("  ")) {
+                $target = "$prefix$name"
+              } else {
+                $prefix = if ($name.EndsWith("/")) { $name } else { "" }
+                $target = $name
+              }
+              $path = $target.TrimEnd("/")
+              if (-not (Test-Path -LiteralPath $path)) {
+                Write-Host "FAIL ${readme}: $path does not exist"; $bad++; $fileBad++
+              }
+            }
+            if (-not $fileBad) { Write-Host "ok   $readme" }
+          }
+          if ($bad) { exit 1 }
+
       - name: Module actions reference a real context member
         shell: pwsh
         run: |
