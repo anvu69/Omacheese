@@ -96,7 +96,20 @@ if ($Modules) {
     foreach ($m in $allModules) { $m.Selected = ($chosen.Modules -contains $m.Key) -and $m.Available }
 
     # Custom, or a profile the user wants to adjust: show the checklist.
-    if ($Preset -eq "custom" -or -not $Yes) {
+    #
+    # -DryRun never shows it. It is documented for CI and remote sessions,
+    # where there is no console: the checklist ends at
+    # $Host.UI.RawUI.ReadKey, which blocks forever rather than failing.
+    if ($Preset -eq "custom" -and $DryRun) {
+        # Nothing to pick from in a non-interactive run, and "custom" has no
+        # default set, so say that rather than printing an empty plan.
+        Clear-Tui
+        Write-Host ""
+        Write-Host ("  {0}-Preset custom needs the checklist, which -DryRun cannot show.{1}" -f $T.Yellow, $T.Reset)
+        Write-Host ("  {0}Use -Modules a,b,c to spell out a custom set non-interactively.{1}" -f $T.Dim, $T.Reset)
+        return
+    }
+    if ($Preset -eq "custom" -or (-not $Yes -and -not $DryRun)) {
         $checkHeader = $header + $warnings + @(
             "",
             ("{0}[-]{1} means the machine cannot run it; the reason is shown underneath." -f $T.Dim, $T.Reset)

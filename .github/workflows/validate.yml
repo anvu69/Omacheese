@@ -410,10 +410,12 @@ jobs:
           $ps51 = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
           # install.ps1 lives at the root and is the first thing a fresh machine runs,
           # where 5.1 is all there is - so it matters more than anything under scripts/.
-          $must = @(Get-ChildItem . -Filter *.ps1) +
-                  @(Get-ChildItem scripts -Recurse -Filter *.ps1) +
-                  @(Get-ChildItem raycast -Filter *.ps1)
-          $must = $must | Sort-Object FullName -Unique
+          # Every .ps1 in the repo, discovered. The old three-directory list
+          # missed configs/, and a list that has to be maintained by hand has
+          # already gone stale three times here.
+          $must = Get-ChildItem . -Recurse -Filter *.ps1 |
+                  Where-Object { $_.FullName -notlike "*$([char]92).git$([char]92)*" } |
+                  Sort-Object FullName -Unique
           $bad = 0
           foreach ($f in $must) {
             $out = & $ps51 -NoProfile -Command "
@@ -424,6 +426,90 @@ jobs:
             else { Write-Host "ok   $($f.Name)" }
           }
           if ($bad) { exit 1 }
+
+      - name: Run the install path under Windows PowerShell 5.1
+        shell: pwsh
+        run: |
+          # Parsing is not running. A fresh Windows 11 has only 5.1, install.ps1
+          # runs there, it calls setup.ps1 with '&' in the same process, and
+          # setup.ps1 spawns every sub-script with (Get-Process -Id $PID).Path -
+          # so the whole scripts/ tree executes under 5.1, not just parses.
+          #
+          # The timeout is the point. -DryRun is documented for CI and remote
+          # sessions, and it used to end at $Host.UI.RawUI.ReadKey, which blocks
+          # forever when there is no console instead of failing.
+          $ps51 = Join-Path $env:SystemRoot ('System32' + [char]92 + 'WindowsPowerShell' + [char]92 + 'v1.0' + [char]92 + 'powershell.exe')
+          if (-not (Test-Path -LiteralPath $ps51)) { Write-Host 'no 5.1 on this runner'; exit 1 }
+
+          $cases = @(
+            @{ n = 'setup.ps1 -Preset everything -DryRun'; a = @('scripts/setup.ps1','-Preset','everything','-DryRun'); expect = 'Dry run' }
+            @{ n = 'setup.ps1 -Modules core,cli -DryRun';  a = @('scripts/setup.ps1','-Modules','core,cli','-DryRun'); expect = 'Dry run' }
+            @{ n = 'setup.ps1 -Preset custom -DryRun';     a = @('scripts/setup.ps1','-Preset','custom','-DryRun');    expect = '-Modules' }
+            @{ n = 'doctor.ps1 -Repo -Quick';              a = @('scripts/doctor.ps1','-Repo','-Quick');               expect = 'passed' }
+          )
+
+          $bad = 0
+          foreach ($c in $cases) {
+            $job = Start-Job -ScriptBlock {
+              param($exe, $argv)
+              & $exe -NoProfile -ExecutionPolicy Bypass -File @argv 2>&1 | Out-String
+            } -ArgumentList $ps51, $c.a
+            if (Wait-Job $job -Timeout 180) {
+              $out = (Receive-Job $job) -join ''
+              if ($out -match [regex]::Escape($c.expect)) { Write-Host "ok   $($c.n)" }
+              else {
+                Write-Host "FAIL $($c.n): expected text '$($c.expect)' not found"
+                Write-Host ($out -split "$BT" + "n" | Select-Object -Last 15 | Out-String)
+                $bad++
+              }
+            } else {
+              Write-Host "FAIL $($c.n): still running after 180s - it is waiting for a key"
+              Stop-Job $job; $bad++
+            }
+            Remove-Job $job -Force
+          }
+          if ($bad) { exit 1 }
+
+      - name: No PowerShell 7-only cmdlets in the 5.1 path
+        shell: pwsh
+        run: |
+          # These parse fine on 5.1 and then fail at runtime, so the parse step
+          # above cannot see them. Comment lines are skipped: link-configs.ps1
+          # explains this very trap in prose and would otherwise flag itself.
+          $patterns = @(
+            @{ rx = 'ConvertFrom-Json[^|]*-AsHashtable'; why = '6+ only' }
+            @{ rx = 'ConvertFrom-Json[^|]*-Depth';       why = '6.2+ only' }
+            @{ rx = '-Encoding +utf8(NoBOM|BOM)';        why = '6+ only' }
+            @{ rx = '-AsByteStream';                     why = '6+; 5.1 uses -Encoding Byte' }
+            @{ rx = '-LeafBase';                         why = '6+ only' }
+            @{ rx = 'ForEach-Object[^|]*-Parallel';      why = '7+ only' }
+            @{ rx = 'Start-ThreadJob';                   why = 'not shipped with 5.1' }
+            @{ rx = 'Get-Error';                         why = '7+ only' }
+            @{ rx = 'PSStyle';                           why = '7.2+ only' }
+            @{ rx = 'Join-String';                       why = '6.2+ only' }
+            @{ rx = 'Test-Json';                         why = '6+ only' }
+            @{ rx = 'Sort-Object[^|]*-Stable';           why = '6.2+ only' }
+            @{ rx = '-SkipHttpErrorCheck';               why = '7+ only' }
+            @{ rx = 'IsWindows|IsLinux|IsMacOS';         why = '6+; silently false on 5.1' }
+            @{ rx = 'ValidateNotNullOrWhiteSpace';       why = '7.3+ only' }
+            @{ rx = 'System.Text.Json';                  why = 'not in .NET Framework' }
+          )
+          $bad = 0
+          foreach ($f in Get-ChildItem . -Recurse -Filter *.ps1 | Where-Object { $_.FullName -notlike "*$([char]92).git$([char]92)*" }) {
+            $n = 0
+            foreach ($line in Get-Content -LiteralPath $f.FullName) {
+              $n++
+              if ($line.TrimStart().StartsWith('#')) { continue }
+              foreach ($p in $patterns) {
+                if ($line -match $p.rx) {
+                  Write-Host "FAIL $($f.Name):${n} uses $($Matches[0]) - $($p.why)"
+                  $bad++
+                }
+              }
+            }
+          }
+          if ($bad) { exit 1 }
+          Write-Host 'ok   no PowerShell 7-only constructs'
 
       - name: Parse every script
         shell: pwsh
