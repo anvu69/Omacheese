@@ -283,6 +283,16 @@ function Invoke-Step {
         -RedirectStandardInput $NullIn `
         -RedirectStandardOutput $log -RedirectStandardError "$log.err"
 
+    # Touching .Handle is not decoration. On Windows PowerShell 5.1 - the host
+    # this runs in on a fresh machine - Start-Process -PassThru WITHOUT -Wait
+    # hands back a Process whose ExitCode reads back EMPTY once it has exited,
+    # because nothing kept the process handle open. Every step then looked like
+    # it succeeded, including the ones that failed. Reading .Handle caches the
+    # SafeHandle on the object, and the exit code survives. Measured on 5.1:
+    # without it, exit 3010 came back as nothing; with it, 3010. pwsh 7 happens
+    # to be fine either way, which is exactly how this would have shipped.
+    $null = $p.Handle
+
     # Poll instead of -Wait so the board can keep reporting.
     while (-not $p.HasExited) {
         Start-Sleep -Milliseconds 400
@@ -514,6 +524,11 @@ if (Test-Path -LiteralPath $marker) {
 }
 
 $resume = Join-Path $RepoRoot "scripts\setup.ps1"
+# Write-TuiLine pads but cannot truncate (it would cut ANSI codes mid-sequence),
+# so a full path under the profile pushes the box border off screen.
+if ($env:USERPROFILE -and $resume.StartsWith($env:USERPROFILE, [StringComparison]::OrdinalIgnoreCase)) {
+    $resume = "~" + $resume.Substring($env:USERPROFILE.Length)
+}
 
 if ($script:RebootRequired) {
     $footer += ""
