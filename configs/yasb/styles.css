@@ -59,12 +59,16 @@
    but changes nothing about the clipping - tested with 30px of padding and the
    CPU, RAM, speaker and bluetooth glyphs were still sheared.
 
-   min-width enlarges the content rect itself, which is what actually gives the
-   ink room. 22px covers the 14px icons here; raise it alongside font-size. */
+   min-width enlarges the content rect. Note that Qt treats it as the MINIMUM
+   WIDGET width, so the usable content is min-width MINUS padding. Measured ink
+   at this font size tops out at 17px (the speaker at 100% volume), and 22px
+   minus 8px of padding left only 14px - which is why the outermost sound wave
+   and the edge of the bluetooth rune were still being shaved off.
+   30px leaves ~22px of content and clears every glyph on the bar. */
 .widget .icon {
     font-size: 14px;
     color: #7aa2f7;
-    min-width: 22px;
+    min-width: 30px;
     padding-left: 2px;
     padding-right: 6px;
 }
@@ -73,7 +77,7 @@
 .bluetooth-widget .icon,
 .wifi-widget .icon,
 .omarchy-menu-widget .icon {
-    min-width: 22px;
+    min-width: 28px;
     padding-left: 3px;
     padding-right: 3px;
 }
@@ -162,7 +166,7 @@
     color: #bb9af7;
     /* Lone icon rendered as .label, so it needs min-width too - see the note
        on icon clipping above. Scaled to the larger font-size. */
-    min-width: 26px;
+    min-width: 32px;
     padding: 0 4px;
 }
 
@@ -212,36 +216,175 @@
 .bluetooth-widget .label { color: #7aa2f7; }
 .battery-widget .label   { color: #9ece6a; }
 
-/* The bluetooth and volume flyouts */
-.bluetooth-menu,
+/* --------------------------------------------------------------------------
+   Bluetooth popup
+   --------------------------------------------------------------------------
+   Class names taken from src/core/widgets/services/bluetooth/bluetooth_widgets.py,
+   not guessed: .bluetooth-menu .bluetooth-list .bluetooth-item .section
+   .section-title .header .footer .name .status .icon .battery .power-button
+   .scan-icon .settings-button .controls-container .details-container.
+   An earlier version styled ".device", which does not exist here - so the
+   popup fell back to Qt defaults and looked cramped and unstyled.
+
+   yasb's popup device icons are Segoe Fluent Icons, not Nerd Font (its own
+   docs say so), and the global JetBrainsMono rule above was overriding them.
+   -------------------------------------------------------------------------- */
+
+.bluetooth-menu {
+    background-color: #1a1b26;
+    border: 1px solid #292e42;
+    border-radius: 12px;
+    min-width: 340px;
+}
+
+.bluetooth-menu .header {
+    color: #c0caf5;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 14px 16px 10px 16px;
+}
+
+.bluetooth-menu .title {
+    color: #c0caf5;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* This is what gives the list its sections instead of one flat run. */
+.bluetooth-menu .section {
+    padding: 6px 0;
+}
+
+.bluetooth-menu .section-title {
+    color: #7aa2f7;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 10px 16px 6px 16px;
+}
+
+.bluetooth-menu .bluetooth-list {
+    background-color: transparent;
+    padding: 0 8px 8px 8px;
+    min-height: 180px;
+}
+
+.bluetooth-menu .bluetooth-item {
+    background-color: transparent;
+    border-radius: 8px;
+    padding: 9px 10px;
+    min-height: 34px;
+}
+
+.bluetooth-menu .bluetooth-item:hover {
+    background-color: #292e42;
+}
+
+.bluetooth-menu .name {
+    color: #c0caf5;
+    font-size: 13px;
+}
+
+.bluetooth-menu .status {
+    color: #565f89;
+    font-size: 11px;
+}
+
+.bluetooth-menu .icon,
+.bluetooth-menu .battery-icon,
+.bluetooth-menu .scan-icon {
+    font-family: "Segoe Fluent Icons", "Segoe MDL2 Assets", "JetBrainsMono NF";
+    font-size: 17px;
+    color: #7aa2f7;
+    min-width: 28px;
+    padding: 0 6px 0 2px;
+}
+
+.bluetooth-menu .battery {
+    color: #9ece6a;
+    font-size: 11px;
+}
+
+.bluetooth-menu .connect,
+.bluetooth-menu .settings-button {
+    background-color: #24283b;
+    color: #c0caf5;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-size: 12px;
+}
+
+.bluetooth-menu .connect:hover,
+.bluetooth-menu .settings-button:hover {
+    background-color: #292e42;
+}
+
+.bluetooth-menu .power-button {
+    background-color: #24283b;
+    color: #c0caf5;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+}
+
+.bluetooth-menu .power-button:hover {
+    background-color: #292e42;
+}
+
+.bluetooth-menu .footer {
+    border-top: 1px solid #292e42;
+    padding: 10px 16px;
+}
+
+.bluetooth-menu .error-message {
+    color: #f7768e;
+    font-size: 12px;
+    padding: 8px 16px;
+}
+
+.bluetooth-menu .controls-container,
+.bluetooth-menu .details-container {
+    background-color: transparent;
+}
+
+/* --------------------------------------------------------------------------
+   Volume popup
+   -------------------------------------------------------------------------- */
+
 .audio-menu {
     background-color: #1a1b26;
     border: 1px solid #292e42;
     border-radius: 12px;
+    min-width: 300px;
 }
 
-.bluetooth-menu .header,
 .audio-menu .header {
     color: #c0caf5;
+    font-size: 14px;
     font-weight: 600;
-    padding: 8px 12px;
+    padding: 14px 16px 10px 16px;
 }
 
-.bluetooth-menu .device,
 .audio-menu .device {
     color: #a9b1d6;
-    padding: 8px 12px;
+    background-color: transparent;
+    border: none;
     border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 13px;
 }
 
-.bluetooth-menu .device:hover,
 .audio-menu .device:hover {
     background-color: #292e42;
     color: #c0caf5;
 }
 
-.bluetooth-menu .device.connected {
+.audio-menu .device.selected {
     color: #9ece6a;
+}
+
+.audio-menu .volume-slider {
+    padding: 8px 16px 14px 16px;
 }
 
 /* Last widget on the bar: needs room on BOTH sides, the right one so the bar
@@ -253,7 +396,7 @@
 .power-menu-widget .label {
     color: #f7768e;
     font-size: 15px;
-    min-width: 24px;
+    min-width: 28px;
     padding-left: 2px;
     padding-right: 2px;
 }
@@ -262,35 +405,77 @@
     color: #ff7a93;
 }
 
-/* The power menu overlay */
+/* --------------------------------------------------------------------------
+   Power menu popup
+   --------------------------------------------------------------------------
+   Real classes from src/core/widgets/yasb/power_menu.py:
+   .power-menu-overlay (the dimmed backdrop), .power-menu-popup, .buttons
+   (the frame), .button plus a per-action class (.button.lock, .button.signout,
+   ...), .button .icon, .button .label, .uptime.
+   The overlay and .buttons were missing before, which is why the popup came
+   out small and unstyled.
+   -------------------------------------------------------------------------- */
+
+.power-menu-overlay {
+    background-color: rgba(13, 14, 20, 0.6);
+}
+
 .power-menu-popup {
     background-color: #1a1b26;
     border: 1px solid #292e42;
-    border-radius: 12px;
+    border-radius: 16px;
+    padding: 8px;
+}
+
+.power-menu-popup .buttons {
+    background-color: transparent;
+    padding: 10px;
 }
 
 .power-menu-popup .button {
     background-color: #24283b;
-    color: #a9b1d6;
-    border: none;
-    border-radius: 8px;
-    padding: 12px;
-    margin: 6px;
+    border: 1px solid #292e42;
+    border-radius: 12px;
+    padding: 18px 10px;
+    margin: 7px;
+    min-width: 140px;
+    min-height: 120px;
 }
 
 .power-menu-popup .button:hover {
     background-color: #292e42;
-    color: #c0caf5;
-}
-
-.power-menu-popup .button .label {
-    color: #a9b1d6;
-    font-size: 12px;
+    border: 1px solid #7aa2f7;
 }
 
 .power-menu-popup .button .icon {
-    font-size: 30px;
+    font-size: 40px;
     color: #7aa2f7;
+    min-width: 56px;
+    padding: 0;
+    margin-bottom: 8px;
+}
+
+.power-menu-popup .button .label {
+    color: #c0caf5;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 0;
+}
+
+/* Colour the destructive actions so they are not one undifferentiated grid. */
+.power-menu-popup .button.shutdown .icon { color: #f7768e; }
+.power-menu-popup .button.restart .icon  { color: #ff9e64; }
+.power-menu-popup .button.lock .icon     { color: #9ece6a; }
+.power-menu-popup .button.sleep .icon    { color: #bb9af7; }
+.power-menu-popup .button.cancel .icon   { color: #565f89; }
+
+.power-menu-popup .button.shutdown:hover { border: 1px solid #f7768e; }
+.power-menu-popup .button.restart:hover  { border: 1px solid #ff9e64; }
+
+.power-menu-popup .uptime {
+    color: #565f89;
+    font-size: 12px;
+    padding: 6px 0 12px 0;
 }
 
 /* --------------------------------------------------------------------------

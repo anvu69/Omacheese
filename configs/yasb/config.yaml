@@ -73,11 +73,14 @@ widgets:
       label: "<span></span>"
       label_alt: "<span></span>"
       class_name: "omarchy-menu-widget"
-      # Goes through omarchy-run.cmd, like whkdrc does, so the bar still works
-      # on a machine where PowerShell 7 was never installed.
+      # MUST go through cmd.exe. yasb runs callbacks with subprocess.Popen and
+      # no shell, so %USERPROFILE% is never expanded and "alacritty" is looked
+      # up in whatever PATH yasb inherited - which, for a bar started by a
+      # stale session, may not contain it. omarchy-term.cmd expands the path
+      # and locates the terminal itself.
       callbacks:
-        on_left: "exec alacritty --class omarchy-menu,omarchy-menu -e %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-run.cmd %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-menu.ps1"
-        on_right: "exec alacritty --class omarchy-menu,omarchy-menu -e %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-run.cmd %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-keybindings.ps1"
+        on_left: "exec cmd.exe /c %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-term.cmd %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-menu.ps1"
+        on_right: "exec cmd.exe /c %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-term.cmd %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-keybindings.ps1"
 
   komorebi_workspaces:
     type: "komorebi.workspaces.WorkspaceWidget"

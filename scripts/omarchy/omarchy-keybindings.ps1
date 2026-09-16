@@ -62,11 +62,15 @@ for ($i = 0; $i -lt $lines.Count; $i++) {
         $command = $Matches[2]
 
         # Make the command column readable instead of literal.
-        # Order matters: unwrap the launcher shells before shortening what
-        # they were launching, or the outer pattern stops matching.
+        # Order matters: unwrap the launcher shells before shortening what they
+        # were launching, or the outer pattern stops matching. The launchers
+        # are matched by basename so the list keeps reading as actions rather
+        # than as %USERPROFILE% paths.
         $desc = $command `
-            -replace '^start "" alacritty --class omarchy-menu,omarchy-menu -e\s*', '' `
-            -replace 'pwsh -NoProfile -ExecutionPolicy Bypass -File "[^"]*\\([a-z-]+)\.ps1"', '$1' `
+            -replace '^start "" alacritty --class [a-z-]+,[a-z-]+ -e\s*', '' `
+            -replace '"[^"]*\\omarchy-(run|term)\.cmd"\s*', '' `
+            -replace '"[^"]*\\([a-z-]+)\.ps1"',   '$1' `
+            -replace 'pwsh -NoProfile -ExecutionPolicy Bypass -File\s*', '' `
             -replace '^start ""\s*',            'launch ' `
             -replace '^komorebic\s+',           '' `
             -replace '\s+&&\s+komorebic\s+',    ' + ' `
