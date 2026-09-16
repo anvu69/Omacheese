@@ -1,4 +1,4 @@
-# Omarchy menu, ported to Windows.
+# Omacheese menu, ported to Windows.
 #
 # Omarchy funnels almost everything through one nested menu on SUPER+SPACE so
 # you never have to remember where a setting lives.
@@ -37,8 +37,8 @@ $ErrorActionPreference = "Stop"
 # The menu is slow to build - ~300ms of that is XAML parsing - and it sits on a
 # keystroke. -Serve builds the window once, keeps it hidden, and shows it when
 # a signal file appears, which turns 770ms into roughly the poll interval.
-$SignalFile = Join-Path $env:USERPROFILE ".config\omarchy\menu.show"
-$ServerPid  = Join-Path $env:USERPROFILE ".config\omarchy\menu-server.pid"
+$SignalFile = Join-Path $env:USERPROFILE ".config\omacheese\menu.show"
+$ServerPid  = Join-Path $env:USERPROFILE ".config\omacheese\menu-server.pid"
 
 if ($Stop) {
     try {
@@ -55,7 +55,7 @@ if ($Serve) {
     # One server. A second would sit on the same signal file and both would pop
     # a window for every request.
     $mutex = $null
-    try { $mutex = New-Object System.Threading.Mutex($false, "Local\omarchy-menu-server") } catch { $mutex = $null }
+    try { $mutex = New-Object System.Threading.Mutex($false, "Local\omacheese-menu-server") } catch { $mutex = $null }
     if ($mutex -and -not $mutex.WaitOne(0)) { exit 0 }
     try { $PID | Set-Content -LiteralPath $ServerPid -Encoding ASCII } catch { }
     Remove-Item -LiteralPath $SignalFile -Force -ErrorAction SilentlyContinue
@@ -69,10 +69,10 @@ Add-Type -AssemblyName System.Windows.Forms
 # No Add-Type -MemberDefinition anywhere in here. It compiles C# at runtime and
 # cost 288ms of the ~930ms it took this menu to appear - by far the largest
 # single item. It was only being used to hide a console window that
-# omarchy-menu.cmd already starts hidden.
+# omacheese-menu.cmd already starts hidden.
 
 $cfg = Join-Path $env:USERPROFILE ".config"
-$bin = Join-Path $cfg "omarchy\bin"
+$bin = Join-Path $cfg "omacheese\bin"
 
 # CLI tools: PATH is the right answer, plus a couple of known install spots.
 function Resolve-Bin {
@@ -200,7 +200,7 @@ function Start-Helper {
 
 function Show-Problem {
     param([string]$Message)
-    [void][System.Windows.MessageBox]::Show($Message, "omarchy",
+    [void][System.Windows.MessageBox]::Show($Message, "omacheese",
         [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
 }
 
@@ -284,28 +284,28 @@ function Get-Menu {
 
         "agents" { @(
             (New-Entry "Launch default agent" "In a new terminal" -Action {
-                Start-HelperInTerminal (Join-Path $bin "omarchy-agent.ps1") })
+                Start-HelperInTerminal (Join-Path $bin "omacheese-agent.ps1") })
             (New-Entry "Launch default agent (WSL)" "Inside AlmaLinux" -Action {
-                Start-HelperInTerminal (Join-Path $bin "omarchy-agent.ps1") @("-Wsl") })
+                Start-HelperInTerminal (Join-Path $bin "omacheese-agent.ps1") @("-Wsl") })
             (New-Entry "Launch with a prompt" "Type the prompt, then Enter" -Prompt {
                 param($text)
-                if ($text) { Start-HelperInTerminal (Join-Path $bin "omarchy-agent.ps1") @("-Prompt", $text) } })
+                if ($text) { Start-HelperInTerminal (Join-Path $bin "omacheese-agent.ps1") @("-Prompt", $text) } })
             (New-Entry "Launch unattended" "Skips every permission prompt" -Sub "agents-yolo")
             (New-Entry "Pick / change default" "Choose which agent SUPER+A runs" -Action {
-                Start-HelperInTerminal (Join-Path $bin "omarchy-agent.ps1") @("-Pick") })
+                Start-HelperInTerminal (Join-Path $bin "omacheese-agent.ps1") @("-Pick") })
             (New-Entry "List agents" "Show what is installed" -Action {
-                Start-HelperInTerminal (Join-Path $bin "omarchy-default-agent.ps1") @("-List") })
+                Start-HelperInTerminal (Join-Path $bin "omacheese-default-agent.ps1") @("-List") })
         ) }
 
         "agents-yolo" { @(
             (New-Entry "Cancel" "Go back without running anything" -Sub "agents")
             (New-Entry "Yes, run unattended" "The agent can run any command, including against your SSH agent and work trees" -Action {
-                Start-HelperInTerminal (Join-Path $bin "omarchy-agent.ps1") @("-Yolo") })
+                Start-HelperInTerminal (Join-Path $bin "omacheese-agent.ps1") @("-Yolo") })
         ) }
 
         "windows" { @(
             (New-Entry "Scrolling mode" "Toggle the horizontal strip" -Action {
-                Start-Helper (Join-Path $bin "omarchy-scrolling.ps1") })
+                Start-Helper (Join-Path $bin "omacheese-scrolling.ps1") })
             (New-Entry "Scrolling: 2 columns" "Two windows side by side in the strip" -Action {
                 komorebic change-layout scrolling; komorebic scrolling-layout-columns 2 })
             (New-Entry "Next layout" "Cycle forward" -Action { komorebic cycle-layout next })
@@ -332,7 +332,7 @@ function Get-Menu {
         ) }
 
         "toggle" { @(
-            (New-Entry "Status bar" "Show or hide yasb" -Action { Start-Helper (Join-Path $bin "omarchy-toggle-bar.ps1") })
+            (New-Entry "Status bar" "Show or hide yasb" -Action { Start-Helper (Join-Path $bin "omacheese-toggle-bar.ps1") })
             (New-Entry "Pause tiling" "Stop managing windows" -Action { komorebic toggle-pause })
             (New-Entry "Tiling on this workspace" "Manage or leave windows alone" -Action { komorebic toggle-tiling })
             (New-Entry "Float this window" "Take it out of the layout" -Action { komorebic toggle-float })
@@ -354,7 +354,7 @@ function Get-Menu {
             (New-Entry "SSH config" "~/.ssh/config" -Action { Edit-Config (Join-Path $env:USERPROFILE ".ssh\config") })
             (New-Entry "Git config" "~/.gitconfig" -Action { Edit-Config (Join-Path $env:USERPROFILE ".gitconfig") })
             (New-Entry "WSL config" "~/.wslconfig" -Action { Edit-Config (Join-Path $env:USERPROFILE ".wslconfig") })
-            (New-Entry "Restart desktop" "komorebi, whkd, yasb" -Action { Start-Helper (Join-Path $bin "omarchy-restart-desktop.ps1") })
+            (New-Entry "Restart desktop" "komorebi, whkd, yasb" -Action { Start-Helper (Join-Path $bin "omacheese-restart-desktop.ps1") })
         ) }
 
         "learn" { @(
@@ -370,7 +370,7 @@ function Get-Menu {
             (New-Entry "Sign out" "End the session" -Action { shutdown.exe /l })
             (New-Entry "Restart" "Reboot now" -Action { shutdown.exe /r /t 0 })
             (New-Entry "Shut down" "Power off now" -Action { shutdown.exe /s /t 0 })
-            (New-Entry "Restart desktop stack" "komorebi, whkd, yasb" -Action { Start-Helper (Join-Path $bin "omarchy-restart-desktop.ps1") })
+            (New-Entry "Restart desktop stack" "komorebi, whkd, yasb" -Action { Start-Helper (Join-Path $bin "omacheese-restart-desktop.ps1") })
             (New-Entry "Stop komorebi" "Leave windows unmanaged" -Action { komorebic stop --whkd })
             (New-Entry "WSL shutdown" "Stop every distribution" -Action { wsl.exe --shutdown })
         ) }
@@ -442,7 +442,7 @@ function Get-Menu {
                         $desc  = $Matches[2]
                         # Read as actions, not as literal command lines.
                         $desc = $desc -replace "^start ""[^""]*"" alacritty --class [a-z-]+,[a-z-]+ -e\s*", ""
-                        $desc = $desc -replace """[^""]*\\omarchy-(run|term)\.cmd""\s*", ""
+                        $desc = $desc -replace """[^""]*\\omacheese-(run|term)\.cmd""\s*", ""
                         $desc = $desc -replace """[^""]*\\([a-z-]+)\.ps1""", '$1'
                         $desc = $desc -replace """[^""]*\\([a-z-]+)\.cmd""", '$1'
                         $desc = $desc -replace "pwsh -NoProfile -ExecutionPolicy Bypass -File\s*", ""
@@ -467,7 +467,7 @@ function Get-Menu {
 $xamlSource = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="omarchy" WindowStyle="None" AllowsTransparency="True"
+        Title="omacheese" WindowStyle="None" AllowsTransparency="True"
         Background="Transparent" ShowInTaskbar="False" Topmost="True"
         ResizeMode="NoResize" Width="780" Height="620"
         FontFamily="Segoe UI Variable Text, Segoe UI">
@@ -485,7 +485,7 @@ $xamlSource = @'
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
           </Grid.ColumnDefinitions>
-          <TextBlock x:Name="Crumb" Grid.Column="0" Text="omarchy" Foreground="{{accent}}"
+          <TextBlock x:Name="Crumb" Grid.Column="0" Text="omacheese" Foreground="{{accent}}"
                      FontSize="21" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0"/>
           <TextBox x:Name="Search" Grid.Column="1" Background="Transparent" Foreground="{{bright_foreground}}"
                    BorderThickness="0" FontSize="21" CaretBrush="{{accent}}"
@@ -584,7 +584,7 @@ $xamlSource = @'
 '@
 
 # Colours come from the active palette, not from literals in here - the whole
-# desktop is themed from one file (see omarchy-theme.ps1). Falls back to Tokyo
+# desktop is themed from one file (see omacheese-theme.ps1). Falls back to Tokyo
 # Night so the menu still renders on a machine that has never set a theme.
 $fallback = @{
     background = "#1a1b26"; lighter_background = "#24283b"; selection = "#292e42"
@@ -593,7 +593,7 @@ $fallback = @{
 }
 $palette = $fallback.Clone()
 try {
-    $themeHome = Join-Path $cfg "omarchy\theme"
+    $themeHome = Join-Path $cfg "omacheese\theme"
     $active = "tokyo-night"
     $activeFile = Join-Path $themeHome "active"
     if (Test-Path -LiteralPath $activeFile) {
@@ -650,7 +650,7 @@ function Show-MenuPage {
     $script:Current    = $Name
     $script:PromptItem = $null
     $script:AllItems   = @(Get-Menu $Name)
-    $crumb.Text        = $(if ($Name -eq "root") { "omarchy" } else { $Name })
+    $crumb.Text        = $(if ($Name -eq "root") { "omacheese" } else { $Name })
     $hint.Text         = $script:DefaultHint
     $search.Text       = ""
     Set-Filter

@@ -7,7 +7,7 @@
 # Optional parameters:
 # @raycast.icon ⚙️
 # @raycast.needsConfirmation true
-# @raycast.argument1 { "type": "dropdown", "placeholder": "action", "data": [{"title": "Restart desktop stack", "value": "restart"}, {"title": "Keybindings cheatsheet", "value": "keys"}, {"title": "Omarchy menu", "value": "menu"}, {"title": "Stop komorebi", "value": "stop"}, {"title": "WSL shutdown", "value": "wsl"}] }
+# @raycast.argument1 { "type": "dropdown", "placeholder": "action", "data": [{"title": "Restart desktop stack", "value": "restart"}, {"title": "Keybindings cheatsheet", "value": "keys"}, {"title": "Omacheese menu", "value": "menu"}, {"title": "Stop komorebi", "value": "stop"}, {"title": "WSL shutdown", "value": "wsl"}] }
 #
 # Documentation:
 # @raycast.description Restart, inspect or stop the komorebi / whkd / yasb stack
@@ -20,12 +20,12 @@
 
 param([string]$Choice)
 
-. (Join-Path $PSScriptRoot "_omarchy-lib.ps1")
+. (Join-Path $PSScriptRoot "_omacheese-lib.ps1")
 
 switch ($Choice) {
-    "restart" { Start-Helper "omarchy-restart-desktop.ps1"; "Restarting the desktop" }
-    "keys"    { Start-HelperInTerminal "omarchy-keybindings.ps1"; "Keybindings" }
-    "menu"    { Start-Helper "omarchy-menu.ps1"; "Menu" }
+    "restart" { Start-Helper "omacheese-restart-desktop.ps1"; "Restarting the desktop" }
+    "keys"    { Start-HelperInTerminal "omacheese-keybindings.ps1"; "Keybindings" }
+    "menu"    { Start-Helper "omacheese-menu.ps1"; "Menu" }
     "stop"    { Invoke-Komorebic stop --whkd; "komorebi stopped" }
     "wsl"     {
         $wsl = Resolve-Bin "wsl" @("%SystemRoot%\System32\wsl.exe")

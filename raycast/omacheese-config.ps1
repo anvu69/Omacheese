@@ -15,7 +15,7 @@
 
 param([string]$Choice)
 
-. (Join-Path $PSScriptRoot "_omarchy-lib.ps1")
+. (Join-Path $PSScriptRoot "_omacheese-lib.ps1")
 
 $paths = @{
     "whkdrc"    = Join-Path $OmarchyConfig "whkdrc"
@@ -27,7 +27,7 @@ $paths = @{
     "ssh"       = Join-Path $env:USERPROFILE ".ssh\config"
     "git"       = Join-Path $env:USERPROFILE ".gitconfig"
     "wsl"       = Join-Path $env:USERPROFILE ".wslconfig"
-    "scrolling" = Join-Path $OmarchyConfig "omarchy\scrolling.json"
+    "scrolling" = Join-Path $OmarchyConfig "omacheese\scrolling.json"
 }
 
 $path = $paths[$Choice]

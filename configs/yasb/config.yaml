@@ -49,7 +49,7 @@ bars:
       right: 14
     widgets:
       left:
-        - "omarchy_menu"
+        - "omacheese_menu"
         - "komorebi_workspaces"
         - "komorebi_active_layout"
         - "active_window"
@@ -66,13 +66,13 @@ bars:
 
 widgets:
 
-  # The Omarchy logo slot: one click opens the same menu as SUPER+SPACE.
-  omarchy_menu:
+  # The Omacheese logo slot: one click opens the same menu as SUPER+SPACE.
+  omacheese_menu:
     type: "yasb.custom.CustomWidget"
     options:
       label: "<span></span>"
       label_alt: "<span></span>"
-      class_name: "omarchy-menu-widget"
+      class_name: "omacheese-menu-widget"
       # MUST go through cmd.exe. yasb runs callbacks with subprocess.Popen and
       # no shell, so %USERPROFILE% is never expanded and a bare binary name is
       # looked up in whatever PATH yasb inherited - which, for a bar started
@@ -82,8 +82,8 @@ widgets:
       # on_left opens the menu as a real window (WPF, no terminal); on_right
       # still opens the keybinding cheatsheet in a terminal, because it is fzf.
       callbacks:
-        on_left: "exec cmd.exe /c %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-menu.cmd"
-        on_right: "exec cmd.exe /c %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-menu.cmd keys"
+        on_left: "exec cmd.exe /c %USERPROFILE%\\.config\\omacheese\\bin\\omacheese-menu.cmd"
+        on_right: "exec cmd.exe /c %USERPROFILE%\\.config\\omacheese\\bin\\omacheese-menu.cmd keys"
 
   komorebi_workspaces:
     type: "komorebi.workspaces.WorkspaceWidget"

@@ -59,7 +59,7 @@ Once that clicks you can guess bindings you have never used.
 workspace"; it is the alt-tab of workspaces and ends up carrying most of a day.
 
 The scratchpad is workspace 10. Hyprland has a real special workspace and
-komorebi does not, so `omarchy-scratchpad.ps1` reads `komorebic state` and
+komorebi does not, so `omacheese-scratchpad.ps1` reads `komorebic state` and
 toggles between workspace 10 and wherever you were.
 
 ## Monitors
@@ -119,7 +119,7 @@ off the edge, so you scroll sideways instead of splitting the screen smaller
 and smaller.
 
 komorebi has this natively as the `scrolling` layout, pinned to one column.
-What the Omarchy side adds is the sliver of the neighbours at the edges, and
+What the Omacheese side adds is the sliver of the neighbours at the edges, and
 where the focused window sits in it.
 
 ### The geometry
@@ -170,7 +170,7 @@ Two things that were wrong before, and why the sliver used to be invisible:
 
 ### Who applies it
 
-`omarchy-scroll-daemon.ps1`, started by `start-desktop.ps1`. It has to be a
+`omacheese-scroll-daemon.ps1`, started by `start-desktop.ps1`. It has to be a
 daemon for two reasons: the alignment follows focus, and the layout can be
 entered without going through `SUPER+CTRL+S` at all - `SUPER+SHIFT+L` cycles
 onto Scrolling and used to leave the strip at stock padding with a 1px sliver.
@@ -184,10 +184,10 @@ and hands any actual work to a detached `-Once` process.
 ### Tuning
 
 ```powershell
-omarchy-scrolling.ps1 -WindowPercent 88     # narrower window, wider peek
+omacheese-scrolling.ps1 -WindowPercent 88     # narrower window, wider peek
 ```
 
-The value is remembered in `~/.config/omarchy/scrolling.json`, so the daemon and
+The value is remembered in `~/.config/omacheese/scrolling.json`, so the daemon and
 the toggle stay in agreement. A 90% window leaves 10% of the screen over, and
 that is the whole budget: at the ends you see all of it, in the middle half of
 it per side.
@@ -227,7 +227,7 @@ Omarchy's three-magnitude resize on the `-` / `=` keys.
 | Keys | Action |
 |---|---|
 | `SUPER + /` | **Keybindings** (searchable, in the menu window) |
-| `SUPER + SPACE` | Omarchy menu |
+| `SUPER + SPACE` | Omacheese menu |
 | `SUPER + ESC` | System menu |
 | `SUPER + CTRL + L` | Lock |
 | `SUPER + CTRL + B` | Toggle the bar |
@@ -269,7 +269,7 @@ then explicit fallbacks. That also picks the real `dbeaver.exe` rather than the
 `dbeaver-cli.exe` a directory scan finds first.
 
 `SUPER + /` shows the keybindings in the same window, parsed out of the live
-whkdrc rather than kept as a second list that drifts. `omarchy-keybindings.ps1`
+whkdrc rather than kept as a second list that drifts. `omacheese-keybindings.ps1`
 still exists for the terminal, but nothing is bound to it any more.
 
 ---

@@ -14,8 +14,8 @@ mặc định, rồi một phím mở nó.
 
 ```powershell
 ./scripts/install-windows.ps1 -Groups agents      # Claude Code, Codex, fnm, uv
-omarchy-default-agent.ps1 -List               # xem có gì
-omarchy-default-agent.ps1 claude              # đặt mặc định
+omacheese-default-agent.ps1 -List               # xem có gì
+omacheese-default-agent.ps1 claude              # đặt mặc định
 ```
 
 | Phím | Việc |
@@ -27,7 +27,7 @@ omarchy-default-agent.ps1 claude              # đặt mặc định
 
 Agent hỗ trợ: `claude`, `codex`, `gemini`, `opencode`, `copilot`, `cursor`,
 `crush`. Thêm agent mới bằng cách sửa `$script:Agents` trong
-`scripts/omarchy/omarchy-default-agent.ps1`.
+`scripts/omacheese/omacheese-default-agent.ps1`.
 
 ### Một chỗ cố tình khác Omarchy
 

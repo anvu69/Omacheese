@@ -3,7 +3,7 @@
 
 $ErrorActionPreference = "SilentlyContinue"
 
-$start = Join-Path $env:USERPROFILE ".config\omarchy\bin\start-desktop.ps1"
+$start = Join-Path $env:USERPROFILE ".config\omacheese\bin\start-desktop.ps1"
 
 if (-not (Test-Path -LiteralPath $start)) {
     Write-Host "start-desktop.ps1 not installed at $start" -ForegroundColor Red

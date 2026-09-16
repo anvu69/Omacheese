@@ -1,10 +1,10 @@
 # Apply the active palette to Raycast.
 #
-#   omarchy-raycast-theme.ps1              import it into Raycast
-#   omarchy-raycast-theme.ps1 -ShowUrl     print the link instead
+#   omacheese-raycast-theme.ps1              import it into Raycast
+#   omacheese-raycast-theme.ps1 -ShowUrl     print the link instead
 #
 # Raycast has no "import theme from file" - a theme travels as a deep link, so
-# this builds one from the theme omarchy-theme.ps1 rendered. Nothing here
+# this builds one from the theme omacheese-theme.ps1 rendered. Nothing here
 # hardcodes a colour, so Raycast follows whatever the rest of the desktop is
 # wearing rather than being a second place to change.
 #
@@ -23,12 +23,12 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# omarchy-theme.ps1 writes this whenever a theme is set.
-$themeFile = Join-Path $env:USERPROFILE ".config\omarchy\raycast-theme.json"
+# omacheese-theme.ps1 writes this whenever a theme is set.
+$themeFile = Join-Path $env:USERPROFILE ".config\omacheese\raycast-theme.json"
 if (-not (Test-Path -LiteralPath $themeFile)) {
     Write-Host "No rendered theme yet. Pick one first:" -ForegroundColor Red
-    Write-Host "  ./scripts/omarchy/omarchy-theme.ps1 -List" -ForegroundColor Cyan
-    Write-Host "  ./scripts/omarchy/omarchy-theme.ps1 -Set tokyo-night" -ForegroundColor Cyan
+    Write-Host "  ./scripts/omacheese/omacheese-theme.ps1 -List" -ForegroundColor Cyan
+    Write-Host "  ./scripts/omacheese/omacheese-theme.ps1 -Set tokyo-night" -ForegroundColor Cyan
     exit 1
 }
 

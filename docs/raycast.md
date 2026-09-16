@@ -33,14 +33,14 @@ Vài điểm cần biết trước khi quyết định:
 `link-configs.ps1` cài các script vào:
 
 ```
-~/.config/omarchy/raycast/
+~/.config/omacheese/raycast/
 ```
 
 Bước cuối phải làm bằng tay, vì Raycast giữ cấu hình trong store riêng của nó
 chứ không phải file trên đĩa:
 
 **Raycast → Settings → Extensions → Script Commands → Add Script Directory**
-→ chọn `~/.config/omarchy/raycast`
+→ chọn `~/.config/omacheese/raycast`
 
 ## Có gì
 
@@ -68,12 +68,12 @@ Ba thứ cố tình **không** đưa vào:
   xác nhận.
 - **Workspace đọc từ state sống.** Metadata của Raycast là tĩnh nên dropdown
   workspace phải hardcode. Nếu đổi tên workspace trong `komorebi.json` thì sửa
-  cả `omarchy-workspace.ps1`. Menu `SUPER+SPACE` thì đọc trực tiếp từ komorebi
+  cả `omacheese-workspace.ps1`. Menu `SUPER+SPACE` thì đọc trực tiếp từ komorebi
   nên không lệch được.
 
 ## Scrolling mode
 
-Vào Scrolling qua Raycast vẫn có phần hé bình thường: `omarchy-scroll-daemon`
+Vào Scrolling qua Raycast vẫn có phần hé bình thường: `omacheese-scroll-daemon`
 theo dõi mọi workspace và tự áp offset bất kể vào bằng đường nào. Đã kiểm chứng
 — chạy `Layout → Scrolling` từ Raycast cho ra offset `L0/R228`, đúng như khi bấm
 `SUPER+CTRL+S`.
@@ -84,12 +84,12 @@ Raycast **style được**, và nó dùng chung palette với cả desktop — k
 một chỗ chỉnh màu riêng.
 
 ```powershell
-./scripts/omarchy/omarchy-theme.ps1 -Set catppuccin     # đổi cả desktop
-./scripts/omarchy/omarchy-raycast-theme.ps1             # đẩy sang Raycast
+./scripts/omacheese/omacheese-theme.ps1 -Set catppuccin     # đổi cả desktop
+./scripts/omacheese/omacheese-raycast-theme.ps1             # đẩy sang Raycast
 ```
 
-`omarchy-theme.ps1` render ra `~/.config/omarchy/raycast-theme.json` mỗi lần đổi
-theme; `omarchy-raycast-theme.ps1` dựng deep link từ file đó. Nên Raycast luôn
+`omacheese-theme.ps1` render ra `~/.config/omacheese/raycast-theme.json` mỗi lần đổi
+theme; `omacheese-raycast-theme.ps1` dựng deep link từ file đó. Nên Raycast luôn
 theo đúng màu mà komorebi, yasb và Alacritty đang dùng. Chi tiết palette:
 [`theming.md`](theming.md).
 

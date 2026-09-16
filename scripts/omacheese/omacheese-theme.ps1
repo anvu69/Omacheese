@@ -1,8 +1,8 @@
 # One palette, applied everywhere.
 #
-#   omarchy-theme.ps1 -List
-#   omarchy-theme.ps1 -Current
-#   omarchy-theme.ps1 -Set catppuccin
+#   omacheese-theme.ps1 -List
+#   omacheese-theme.ps1 -Current
+#   omacheese-theme.ps1 -Set catppuccin
 #
 # The colours used to live as hex literals in four different files, which meant
 # "change the theme" was a find-and-replace across komorebi, yasb, Alacritty and
@@ -35,7 +35,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $cfg       = Join-Path $env:USERPROFILE ".config"
-$themeHome = Join-Path $cfg "omarchy\theme"
+$themeHome = Join-Path $cfg "omacheese\theme"
 $palDir    = Join-Path $themeHome "palettes"
 $tmplDir   = Join-Path $themeHome "templates"
 $activeFile = Join-Path $themeHome "active"
@@ -89,7 +89,7 @@ function Expand-Template {
 }
 
 # Raycast has its own schema and wants exactly twelve colours, so it is built
-# rather than templated. See omarchy-raycast-theme.ps1 for how it gets imported.
+# rather than templated. See omacheese-raycast-theme.ps1 for how it gets imported.
 function Write-RaycastTheme {
     param([hashtable]$P, [string]$Name, [string]$Destination)
     $appearance = "dark"
@@ -98,7 +98,7 @@ function Write-RaycastTheme {
         author         = "windows11-dev-poweruser"
         authorUsername = "anvu69"
         version        = "1"
-        name           = "Omarchy $Name"
+        name           = "Omacheese $Name"
         appearance     = $appearance
         colors         = [ordered]@{
             background          = $P["background"]
@@ -138,7 +138,7 @@ if ($List) {
 if ($Current) { Get-ActiveTheme; exit 0 }
 
 if (-not $Set) {
-    Write-Host "Usage: omarchy-theme.ps1 -Set <name> | -List | -Current" -ForegroundColor Yellow
+    Write-Host "Usage: omacheese-theme.ps1 -Set <name> | -List | -Current" -ForegroundColor Yellow
     exit 1
 }
 
@@ -187,7 +187,7 @@ foreach ($t in $targets) {
     $written++
 }
 
-$rcTheme = Join-Path $cfg "omarchy\raycast-theme.json"
+$rcTheme = Join-Path $cfg "omacheese\raycast-theme.json"
 $rcDir = Split-Path $rcTheme -Parent
 if (-not (Test-Path -LiteralPath $rcDir)) { New-Item -ItemType Directory -Path $rcDir -Force | Out-Null }
 Write-RaycastTheme -P $palette -Name $Set -Destination $rcTheme
@@ -213,4 +213,4 @@ if (Get-Command komorebic -ErrorAction SilentlyContinue) {
     Write-Host "  komorebi reloaded" -ForegroundColor DarkGray
 }
 Write-Host "  Alacritty picks it up on the next window" -ForegroundColor DarkGray
-Write-Host "  Raycast: ./scripts/omarchy/omarchy-raycast-theme.ps1" -ForegroundColor DarkGray
+Write-Host "  Raycast: ./scripts/omacheese/omacheese-raycast-theme.ps1" -ForegroundColor DarkGray

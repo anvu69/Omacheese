@@ -68,7 +68,7 @@ for ($i = 0; $i -lt $lines.Count; $i++) {
         # than as %USERPROFILE% paths.
         $desc = $command `
             -replace '^start "" alacritty --class [a-z-]+,[a-z-]+ -e\s*', '' `
-            -replace '"[^"]*\\omarchy-(run|term)\.cmd"\s*', '' `
+            -replace '"[^"]*\\omacheese-(run|term)\.cmd"\s*', '' `
             -replace '"[^"]*\\([a-z-]+)\.ps1"',   '$1' `
             -replace 'pwsh -NoProfile -ExecutionPolicy Bypass -File\s*', '' `
             -replace '^start ""\s*',            'launch ' `

@@ -76,7 +76,7 @@ function Get-SetupModules {
     # that wants an account, which is a poor fit for provisioning a machine
     # unattended - but it is an excellent launcher, and the repo ships script
     # commands for it, so it is one checkbox away.
-    $mods.Add((New-Mod -Key "raycast" -Description "Raycast launcher + the Omarchy script commands" `
+    $mods.Add((New-Mod -Key "raycast" -Description "Raycast launcher + the Omacheese script commands" `
         -Default $false `
         -Available $wingetOk -Note "Microsoft Store package; sign-in may be required" `
         -Est "2-4 min" `

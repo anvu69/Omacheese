@@ -20,7 +20,7 @@
 
 param([string]$Index, [string]$Action = "focus")
 
-. (Join-Path $PSScriptRoot "_omarchy-lib.ps1")
+. (Join-Path $PSScriptRoot "_omacheese-lib.ps1")
 
 if ([string]::IsNullOrWhiteSpace($Action)) { $Action = "focus" }
 

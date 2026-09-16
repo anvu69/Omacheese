@@ -48,7 +48,7 @@ Profile gồm:
 | `reload-profile` | nạp lại profile |
 | `desktop` | start-desktop.ps1 |
 | `keys` | bảng keybinding (như `SUPER + /`) |
-| `omenu` | Omarchy menu (như `SUPER + SPACE`) |
+| `omenu` | Omacheese menu (như `SUPER + SPACE`) |
 
 ## WSL2 AlmaLinux: Zsh
 

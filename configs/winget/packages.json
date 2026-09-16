@@ -44,7 +44,7 @@
       ]
     },
     "cli": {
-      "description": "CLI productivity tools used by the shell profile and the Omarchy menu.",
+      "description": "CLI productivity tools used by the shell profile and the Omacheese menu.",
       "packages": [
         {
           "id": "junegunn.fzf",
@@ -97,7 +97,7 @@
       ]
     },
     "agents": {
-      "description": "Coding agents and the runtimes they need. Managed by scripts/omarchy/omarchy-default-agent.ps1.",
+      "description": "Coding agents and the runtimes they need. Managed by scripts/omacheese/omacheese-default-agent.ps1.",
       "packages": [
         {
           "id": "Anthropic.ClaudeCode",
@@ -152,7 +152,7 @@
         {
           "id": "9PFXXSHC64H3",
           "source": "msstore",
-          "note": "Raycast - launcher + Omarchy script commands"
+          "note": "Raycast - launcher + Omacheese script commands"
         }
       ]
     }

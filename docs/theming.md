@@ -3,9 +3,9 @@
 Một palette, áp cho tất cả.
 
 ```powershell
-./scripts/omarchy/omarchy-theme.ps1 -List
-./scripts/omarchy/omarchy-theme.ps1 -Set catppuccin
-./scripts/omarchy/omarchy-theme.ps1 -Current
+./scripts/omacheese/omacheese-theme.ps1 -List
+./scripts/omacheese/omacheese-theme.ps1 -Set catppuccin
+./scripts/omacheese/omacheese-theme.ps1 -Current
 ```
 
 Trước đây màu nằm rải rác thành hex literal ở bốn file khác nhau — đổi theme
@@ -33,7 +33,7 @@ Repo ship sẵn `tokyo-night` và `catppuccin`. Thêm theme khác:
 ```powershell
 curl -o configs/theme/gruvbox.toml `
   https://raw.githubusercontent.com/omacom/omarchy/quattro/themes/gruvbox/colors.toml
-./scripts/omarchy/omarchy-theme.ps1 -Set gruvbox
+./scripts/omacheese/omacheese-theme.ps1 -Set gruvbox
 ```
 
 ## Template

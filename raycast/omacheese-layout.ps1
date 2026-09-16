@@ -15,7 +15,7 @@
 
 param([string]$Choice)
 
-. (Join-Path $PSScriptRoot "_omarchy-lib.ps1")
+. (Join-Path $PSScriptRoot "_omacheese-lib.ps1")
 
 switch ($Choice) {
     "next"     { Invoke-Komorebic cycle-layout next;     "Next layout" }
@@ -26,7 +26,7 @@ switch ($Choice) {
     "retile"   { Invoke-Komorebic retile;                "Retiled" }
     "reload"   { Invoke-Komorebic reload-configuration;  "Reloaded komorebi.json" }
     "scrolling" {
-        # Just set the layout. omarchy-scroll-daemon watches for Scrolling on
+        # Just set the layout. omacheese-scroll-daemon watches for Scrolling on
         # any workspace and applies the offsets itself, so this route gets the
         # peek without going through the toggle - which would turn the strip
         # OFF if it happened to be on already.

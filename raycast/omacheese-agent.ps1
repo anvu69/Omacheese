@@ -21,19 +21,19 @@
 
 param([string]$Choice, [string]$Prompt = "")
 
-. (Join-Path $PSScriptRoot "_omarchy-lib.ps1")
+. (Join-Path $PSScriptRoot "_omacheese-lib.ps1")
 
 switch ($Choice) {
-    "list" { Start-HelperInTerminal "omarchy-default-agent.ps1" @("-List"); "Listing agents" }
-    "pick" { Start-HelperInTerminal "omarchy-agent.ps1" @("-Pick");         "Pick an agent" }
+    "list" { Start-HelperInTerminal "omacheese-default-agent.ps1" @("-List"); "Listing agents" }
+    "pick" { Start-HelperInTerminal "omacheese-agent.ps1" @("-Pick");         "Pick an agent" }
     "wsl"  {
-        if ($Prompt) { Start-HelperInTerminal "omarchy-agent.ps1" @("-Wsl", "-Prompt", $Prompt) }
-        else         { Start-HelperInTerminal "omarchy-agent.ps1" @("-Wsl") }
+        if ($Prompt) { Start-HelperInTerminal "omacheese-agent.ps1" @("-Wsl", "-Prompt", $Prompt) }
+        else         { Start-HelperInTerminal "omacheese-agent.ps1" @("-Wsl") }
         "Agent (WSL)"
     }
     default {
-        if ($Prompt) { Start-HelperInTerminal "omarchy-agent.ps1" @("-Prompt", $Prompt) }
-        else         { Start-HelperInTerminal "omarchy-agent.ps1" }
+        if ($Prompt) { Start-HelperInTerminal "omacheese-agent.ps1" @("-Prompt", $Prompt) }
+        else         { Start-HelperInTerminal "omacheese-agent.ps1" }
         "Agent"
     }
 }

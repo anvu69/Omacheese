@@ -1,14 +1,14 @@
 @echo off
-:: Launcher for the omarchy helper scripts, used by whkdrc.
+:: Launcher for the omacheese helper scripts, used by whkdrc.
 ::
 :: whkd used to call `pwsh` directly, which means 11 bindings do nothing on a
 :: machine where the `core` group was skipped and PowerShell 7 is not
 :: installed - silently, because whkd has nowhere to report it.
 ::
-:: Every helper in scripts/omarchy is verified to parse under Windows
+:: Every helper in scripts/omacheese is verified to parse under Windows
 :: PowerShell 5.1 (doctor.ps1 and CI both check), so falling back is safe.
 ::
-:: Usage:  omarchy-run.cmd <script.ps1> [args...]
+:: Usage:  omacheese-run.cmd <script.ps1> [args...]
 
 setlocal
 set "SCRIPT=%~1"

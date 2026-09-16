@@ -284,14 +284,14 @@ Test-Whkdrc $whkdrcPath
 
 # whkd shells out to the helper launcher; if that is missing, 11 bindings do
 # nothing and whkd has no way to say so.
-$runner = Join-Path $cfg "omarchy\bin\omarchy-run.cmd"
-if ((Get-Content -LiteralPath $whkdrcPath -ErrorAction SilentlyContinue | Select-String -Quiet "omarchy-run.cmd")) {
+$runner = Join-Path $cfg "omacheese\bin\omacheese-run.cmd"
+if ((Get-Content -LiteralPath $whkdrcPath -ErrorAction SilentlyContinue | Select-String -Quiet "omacheese-run.cmd")) {
     if ($Repo) {
         Ok "whkdrc uses the shell-agnostic launcher"
     } elseif (Test-Path -LiteralPath $runner) {
-        Ok "omarchy-run.cmd installed"
+        Ok "omacheese-run.cmd installed"
     } else {
-        Bad "whkdrc calls omarchy-run.cmd but it is missing ($runner) - run link-configs.ps1"
+        Bad "whkdrc calls omacheese-run.cmd but it is missing ($runner) - run link-configs.ps1"
     }
 }
 
@@ -332,9 +332,9 @@ if ($Repo) {
         ".gitconfig"         = Join-Path $env:USERPROFILE ".gitconfig"
         ".wslconfig"         = Join-Path $env:USERPROFILE ".wslconfig"
         "ssh-agent-bridge"   = Join-Path $cfg "wsl\ssh-agent-bridge.sh"
-        "omarchy-menu"       = Join-Path $cfg "omarchy\bin\omarchy-menu.ps1"
-        "omarchy-keybindings"= Join-Path $cfg "omarchy\bin\omarchy-keybindings.ps1"
-        "start-desktop"      = Join-Path $cfg "omarchy\bin\start-desktop.ps1"
+        "omacheese-menu"       = Join-Path $cfg "omacheese\bin\omacheese-menu.ps1"
+        "omacheese-keybindings"= Join-Path $cfg "omacheese\bin\omacheese-keybindings.ps1"
+        "start-desktop"      = Join-Path $cfg "omacheese\bin\start-desktop.ps1"
     }
     foreach ($name in $expected.Keys | Sort-Object) {
         if (Test-Path -LiteralPath $expected[$name]) { Ok $name } else { Bad "$name missing ($($expected[$name]))" }
@@ -368,7 +368,7 @@ if (Get-Command npiperelay.exe -ErrorAction SilentlyContinue) {
 }
 
 Section "coding agents"
-$agentState = Join-Path $cfg "omarchy\defaults\agent"
+$agentState = Join-Path $cfg "omacheese\defaults\agent"
 $knownAgents = @{ claude = "claude"; codex = "codex"; gemini = "gemini"; opencode = "opencode"
                   copilot = "copilot"; cursor = "cursor-agent"; crush = "crush" }
 $installedAgents = @()
@@ -381,7 +381,7 @@ else { Warn "no coding agent installed (./scripts/install-windows.ps1 -Groups ag
 if (Test-Path -LiteralPath $agentState) {
     Ok "default agent: $((Get-Content -LiteralPath $agentState -Raw).Trim())"
 } else {
-    Warn "no default agent set (SUPER+SHIFT+CTRL+A, or omarchy-default-agent.ps1 claude)"
+    Warn "no default agent set (SUPER+SHIFT+CTRL+A, or omacheese-default-agent.ps1 claude)"
 }
 
 Section "windows tuning"
@@ -459,7 +459,7 @@ if (Get-Command wsl -ErrorAction SilentlyContinue) {
 Section "theme"
 # A leftover {{token}} in a rendered config means the palette is missing a key -
 # komorebi refuses the file outright, yasb just draws the element black.
-$themeHome = Join-Path $env:USERPROFILE ".config\omarchy\theme"
+$themeHome = Join-Path $env:USERPROFILE ".config\omacheese\theme"
 $activeName = "tokyo-night"
 $activeFile = Join-Path $themeHome "active"
 if (Test-Path -LiteralPath $activeFile) {
@@ -493,7 +493,7 @@ if (-not (Test-Path -LiteralPath $palFile)) {
 Section "raycast script commands"
 # These are inert without Raycast, but a malformed metadata header means the
 # command silently never appears - so validate the header rather than the app.
-$rcDir = Join-Path $env:USERPROFILE ".config\omarchy\raycast"
+$rcDir = Join-Path $env:USERPROFILE ".config\omacheese\raycast"
 if (-not (Test-Path -LiteralPath $rcDir)) {
     Warn "not installed - run ./scripts/link-configs.ps1"
 } else {
@@ -533,7 +533,7 @@ foreach ($p in @("komorebi","whkd","yasb")) {
 # Without it the Scrolling layout still works, it just loses the neighbour peek
 # and the alignment at the ends of the strip - a silent degradation worth
 # reporting rather than leaving to be noticed.
-$scrollPid = Join-Path $env:USERPROFILE ".config\omarchy\scroll-daemon.pid"
+$scrollPid = Join-Path $env:USERPROFILE ".config\omacheese\scroll-daemon.pid"
 $scrollUp = $false
 if (Test-Path -LiteralPath $scrollPid) {
     try {
@@ -546,7 +546,7 @@ else { Warn "scroll daemon not running - scrolling mode loses its peek (./script
 
 # Also a pwsh process, so also invisible to an image-name check. Without it the
 # menu still opens, it just takes ~770ms instead of ~170ms.
-$menuPid = Join-Path $env:USERPROFILE ".config\omarchy\menu-server.pid"
+$menuPid = Join-Path $env:USERPROFILE ".config\omacheese\menu-server.pid"
 $menuUp = $false
 if (Test-Path -LiteralPath $menuPid) {
     try {

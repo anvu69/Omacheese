@@ -60,7 +60,7 @@ if (-not $SkipModules) {
 
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Green
-Write-Host "  1. ./scripts/link-configs.ps1        install configs + Omarchy helpers"
+Write-Host "  1. ./scripts/link-configs.ps1        install configs + Omacheese helpers"
 Write-Host "  2. ./scripts/doctor.ps1              verify everything landed"
 Write-Host "  3. ./scripts/start-desktop.ps1       start komorebi + whkd + yasb"
 Write-Host ""

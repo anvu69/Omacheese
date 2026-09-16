@@ -1,7 +1,7 @@
 # Toggle PaperWM-style horizontal scrolling on the focused workspace.
 #
 #   SUPER+CTRL+S
-#   omarchy-scrolling.ps1 -WindowPercent 88     wider peek, narrower window
+#   omacheese-scrolling.ps1 -WindowPercent 88     wider peek, narrower window
 #
 # Omarchy (via hyprscroller) has a mode where windows sit in one horizontal
 # strip: the focused window takes almost the whole screen and the neighbours
@@ -10,7 +10,7 @@
 #
 # This script only flips the layout. The geometry - how wide the window is,
 # where it sits, and how much of the neighbours shows - belongs to
-# omarchy-scroll-daemon.ps1, because it has to follow focus and has to survive
+# omacheese-scroll-daemon.ps1, because it has to follow focus and has to survive
 # the layout being entered some other way (SUPER+SHIFT+L cycles onto Scrolling
 # without coming through here). See that file for the arithmetic.
 #
@@ -66,7 +66,7 @@ if ($current -match "Scrolling") {
 # Apply the geometry for the state we just moved to. The daemon would do this
 # on its own a moment later, but doing it here keeps the toggle instant, and
 # keeps it working on a machine where the daemon is not up.
-$daemon = Join-Path $PSScriptRoot "omarchy-scroll-daemon.ps1"
+$daemon = Join-Path $PSScriptRoot "omacheese-scroll-daemon.ps1"
 if (Test-Path -LiteralPath $daemon) {
     if ($WindowPercent -gt 0) {
         & $daemon -Once -WindowPercent $WindowPercent

@@ -33,7 +33,7 @@ function Put {
 }
 
 $cfg       = Join-Path $env:USERPROFILE ".config"
-$omarchy   = Join-Path $cfg "omarchy\bin"
+$omacheese   = Join-Path $cfg "omacheese\bin"
 
 Write-Host "Installing configs ($(if ($Copy) { 'copy' } else { 'symlink' }) mode)" -ForegroundColor Green
 
@@ -45,7 +45,7 @@ foreach ($d in @(
     (Join-Path $cfg "yasb"),
     (Join-Path $cfg "oh-my-posh"),
     (Join-Path $cfg "wsl"),
-    $omarchy
+    $omacheese
 )) { Ensure-Dir $d }
 
 Write-Host "`n[env]" -ForegroundColor Magenta
@@ -110,12 +110,12 @@ Write-Host "`n[ssh]" -ForegroundColor Magenta
 Install-ConfigFile -Source (Join-Path $Repo "configs\ssh\config.example") `
                    -Destination (Join-Path $env:USERPROFILE ".ssh\config.example") | Out-Null
 
-Write-Host "`n[omarchy helpers]" -ForegroundColor Magenta
-foreach ($s in Get-ChildItem (Join-Path $Repo "scripts\omarchy") | Where-Object { $_.Extension -in @(".ps1", ".cmd") }) {
-    & $Install -Source $s.FullName -Destination (Join-Path $omarchy $s.Name) | Out-Null
+Write-Host "`n[omacheese helpers]" -ForegroundColor Magenta
+foreach ($s in Get-ChildItem (Join-Path $Repo "scripts\omacheese") | Where-Object { $_.Extension -in @(".ps1", ".cmd") }) {
+    & $Install -Source $s.FullName -Destination (Join-Path $omacheese $s.Name) | Out-Null
 }
 & $Install -Source (Join-Path $Repo "scripts\start-desktop.ps1") `
-           -Destination (Join-Path $omarchy "start-desktop.ps1") | Out-Null
+           -Destination (Join-Path $omacheese "start-desktop.ps1") | Out-Null
 
 # --- Raycast script commands -------------------------------------------------
 # Installed whether or not Raycast is present: they are inert .ps1 files, and
@@ -124,7 +124,7 @@ foreach ($s in Get-ChildItem (Join-Path $Repo "scripts\omarchy") | Where-Object 
 # Settings -> Extensions -> Script Commands -> Add Script Directory - because
 # that lives in its own store, not on disk where we could write it.
 Write-Host "`n[raycast script commands]" -ForegroundColor Magenta
-$raycastDir = Join-Path $cfg "omarchy\raycast"
+$raycastDir = Join-Path $cfg "omacheese\raycast"
 Ensure-Dir $raycastDir
 $raycastSrc = Join-Path $Repo "raycast"
 if (Test-Path -LiteralPath $raycastSrc) {
@@ -140,7 +140,7 @@ if (Test-Path -LiteralPath $raycastSrc) {
 # their colours for whichever theme is active, so the copies act as defaults and
 # the palette has the last word.
 Write-Host "`n[theme]" -ForegroundColor Magenta
-$themeHome = Join-Path $cfg "omarchy\theme"
+$themeHome = Join-Path $cfg "omacheese\theme"
 $palDest   = Join-Path $themeHome "palettes"
 $tmplDest  = Join-Path $themeHome "templates"
 Ensure-Dir $palDest
@@ -166,11 +166,11 @@ if (Test-Path -LiteralPath $activeFile) {
     if ($n) { $activeTheme = $n }
 }
 
-$themeScript = Join-Path $Repo "scripts\omarchy\omarchy-theme.ps1"
+$themeScript = Join-Path $Repo "scripts\omacheese\omacheese-theme.ps1"
 if (Test-Path -LiteralPath $themeScript) {
     & $themeScript -Set $activeTheme -NoRestart
 } else {
-    Write-Host "  omarchy-theme.ps1 missing - colours left as shipped" -ForegroundColor Yellow
+    Write-Host "  omacheese-theme.ps1 missing - colours left as shipped" -ForegroundColor Yellow
 }
 
 # --- komorebi application-specific config ------------------------------------
@@ -212,8 +212,8 @@ if (-not $NoAutostart) {
         $shell = New-Object -ComObject WScript.Shell
         $sc = $shell.CreateShortcut($lnk)
         $sc.TargetPath   = $target
-        $sc.Arguments    = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$(Join-Path $omarchy 'start-desktop.ps1')`""
-        $sc.WorkingDirectory = $omarchy
+        $sc.Arguments    = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$(Join-Path $omacheese 'start-desktop.ps1')`""
+        $sc.WorkingDirectory = $omacheese
         $sc.Description  = "Start komorebi, whkd and yasb"
         $sc.Save()
         Write-Host "  + $lnk" -ForegroundColor Green

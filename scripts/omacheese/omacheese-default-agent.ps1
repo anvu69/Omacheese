@@ -1,8 +1,8 @@
 # Get or set the default coding agent.
 #
-#   omarchy-default-agent.ps1              print the current default
-#   omarchy-default-agent.ps1 claude       set it
-#   omarchy-default-agent.ps1 -List        show every agent and whether it is installed
+#   omacheese-default-agent.ps1              print the current default
+#   omacheese-default-agent.ps1 claude       set it
+#   omacheese-default-agent.ps1 -List        show every agent and whether it is installed
 #
 # Ported from Omarchy's bin/omarchy-default-agent. Like the original, there is
 # no built-in default: nothing is chosen until you choose it, so the menu shows
@@ -17,12 +17,12 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$StateFile = Join-Path $env:USERPROFILE ".config\omarchy\defaults\agent"
+$StateFile = Join-Path $env:USERPROFILE ".config\omacheese\defaults\agent"
 
 # The registry of agents this setup knows how to launch.
 #
 # `Yolo` is the flag that makes the agent stop asking for permission. It is
-# only used when you pass -Yolo to omarchy-agent.ps1 - unlike Omarchy, which
+# only used when you pass -Yolo to omacheese-agent.ps1 - unlike Omarchy, which
 # applies it on every launch from the keybinding. That default is reasonable on
 # a single-purpose Arch box; on a machine that also holds your SSH agent and
 # your work tree, opting in each time is the better trade.
@@ -109,7 +109,7 @@ function Set-DefaultAgent {
 
 # --- entry -------------------------------------------------------------------
 
-# Dot-sourced, this file is just a registry - omarchy-agent.ps1 loads it to
+# Dot-sourced, this file is just a registry - omacheese-agent.ps1 loads it to
 # reuse the agent table. Without this guard the entry section ran too and
 # printed the current default into the caller output.
 #

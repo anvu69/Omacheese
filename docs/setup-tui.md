@@ -202,7 +202,7 @@ Repo chạy trên cả hai, và chúng **không giống nhau** ở những chỗ
 | | Windows PowerShell 5.1 | PowerShell 7 |
 |---|---|---|
 | Có sẵn trên máy sạch | có | không (winget cài qua `core`) |
-| Dùng cho | `setup.ps1` và mọi script cài | profile hằng ngày, helper Omarchy |
+| Dùng cho | `setup.ps1` và mọi script cài | profile hằng ngày, helper Omacheese |
 | Module path | `Documents\WindowsPowerShell\Modules` | `Documents\PowerShell\Modules` |
 
 ### Cú pháp PS 7 gây parse error trên 5.1
@@ -248,9 +248,9 @@ prompt tương tác — sẽ treo installer).
 ./scripts/doctor.ps1     # mục "powershell 7 modules"
 ```
 
-### Helper Omarchy không phụ thuộc pwsh
+### Helper Omacheese không phụ thuộc pwsh
 
-whkdrc gọi `omarchy-run.cmd`, chọn pwsh nếu có, không thì `powershell.exe`.
+whkdrc gọi `omacheese-run.cmd`, chọn pwsh nếu có, không thì `powershell.exe`.
 Trước đây 11 binding hardcode `pwsh` và im lặng không làm gì khi bỏ qua `core`.
 
 ---

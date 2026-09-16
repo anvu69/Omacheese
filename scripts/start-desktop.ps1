@@ -5,7 +5,7 @@
 #   ./scripts/start-desktop.ps1 -Stop
 #
 # link-configs.ps1 installs a copy of this at
-# ~/.config/omarchy/bin/start-desktop.ps1 and points a Startup shortcut at it,
+# ~/.config/omacheese/bin/start-desktop.ps1 and points a Startup shortcut at it,
 # so the desktop comes back on its own after a reboot.
 
 [CmdletBinding()]
@@ -28,8 +28,8 @@ function Stop-Proc { param([string]$n) Get-Process $n -ErrorAction SilentlyConti
 [Environment]::SetEnvironmentVariable("KOMOREBI_CONFIG_HOME", $KomorebiConfigHome, "User")
 $env:KOMOREBI_CONFIG_HOME = $KomorebiConfigHome
 
-$ScrollDaemon = Join-Path $cfg "omarchy\bin\omarchy-scroll-daemon.ps1"
-$MenuScript   = Join-Path $cfg "omarchy\bin\omarchy-menu.ps1"
+$ScrollDaemon = Join-Path $cfg "omacheese\bin\omacheese-scroll-daemon.ps1"
+$MenuScript   = Join-Path $cfg "omacheese\bin\omacheese-menu.ps1"
 
 if ($Stop -or $Restart) {
     Write-Host "Stopping komorebi / whkd / yasb..." -ForegroundColor Yellow
@@ -133,12 +133,12 @@ if (Test-Path -LiteralPath $ScrollDaemon) {
         -WindowStyle Hidden -ErrorAction SilentlyContinue
     Write-Host "scroll daemon is up." -ForegroundColor Green
 } else {
-    Write-Host "omarchy-scroll-daemon.ps1 missing - run ./scripts/link-configs.ps1" -ForegroundColor Yellow
+    Write-Host "omacheese-scroll-daemon.ps1 missing - run ./scripts/link-configs.ps1" -ForegroundColor Yellow
 }
 
 # The menu costs ~770ms to build, almost all of it XAML parsing and PowerShell
 # startup, and it sits on SUPER+SPACE. Kept warm it opens in ~170ms. Everything
-# still works without it - omarchy-menu.cmd falls back to building one.
+# still works without it - omacheese-menu.cmd falls back to building one.
 if (Test-Path -LiteralPath $MenuScript) {
     $menuPwsh = (Get-Command pwsh -ErrorAction SilentlyContinue).Source
     if (-not $menuPwsh) { $menuPwsh = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" }

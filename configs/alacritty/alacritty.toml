@@ -65,7 +65,7 @@ bindings = [
   { key = "Key0", mods = "Control", action = "ResetFontSize" },
 ]
 
-# --- Omarchy Tokyo Night --------------------------------------------------
+# --- Tokyo Night --------------------------------------------------
 
 [colors.primary]
 background = "#1a1b26"

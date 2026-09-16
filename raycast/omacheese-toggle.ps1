@@ -15,11 +15,11 @@
 
 param([string]$Choice)
 
-. (Join-Path $PSScriptRoot "_omarchy-lib.ps1")
+. (Join-Path $PSScriptRoot "_omacheese-lib.ps1")
 
 switch ($Choice) {
-    "scrolling" { Start-Helper "omarchy-scrolling.ps1";  "Scrolling mode toggled" }
-    "bar"       { Start-Helper "omarchy-toggle-bar.ps1"; "Status bar toggled" }
+    "scrolling" { Start-Helper "omacheese-scrolling.ps1";  "Scrolling mode toggled" }
+    "bar"       { Start-Helper "omacheese-toggle-bar.ps1"; "Status bar toggled" }
     default {
         Invoke-Komorebic "toggle-$Choice"
         "Toggled $($Choice -replace '-', ' ')"

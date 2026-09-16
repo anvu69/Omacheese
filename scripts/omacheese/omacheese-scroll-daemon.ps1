@@ -1,9 +1,9 @@
 # Keeps the Scrolling layout looking like the Omarchy horizontal strip.
 #
-#   omarchy-scroll-daemon.ps1                 watch komorebi and keep it right
-#   omarchy-scroll-daemon.ps1 -Once           apply once and exit
-#   omarchy-scroll-daemon.ps1 -Stop           stop a running daemon
-#   omarchy-scroll-daemon.ps1 -WindowPercent 88
+#   omacheese-scroll-daemon.ps1                 watch komorebi and keep it right
+#   omacheese-scroll-daemon.ps1 -Once           apply once and exit
+#   omacheese-scroll-daemon.ps1 -Stop           stop a running daemon
+#   omacheese-scroll-daemon.ps1 -WindowPercent 88
 #
 # WHY THIS IS A DAEMON AND NOT PART OF THE TOGGLE
 #
@@ -84,10 +84,10 @@ param(
 
 $ErrorActionPreference = "SilentlyContinue"
 
-$ConfigHome     = Join-Path $env:USERPROFILE ".config\omarchy"
+$ConfigHome     = Join-Path $env:USERPROFILE ".config\omacheese"
 $SettingsFile   = Join-Path $ConfigHome "scrolling.json"
 $PidFile        = Join-Path $ConfigHome "scroll-daemon.pid"
-$PipeName       = "omarchy-scroll"
+$PipeName       = "omacheese-scroll"
 $DefaultPercent = 90
 
 $env:KOMOREBI_CONFIG_HOME = Join-Path $env:USERPROFILE ".config\komorebi"
@@ -273,7 +273,7 @@ if ($Once) { Sync-Strip; exit 0 }
 # rather than Global\ - the global namespace can throw depending on how the
 # process was launched, and a guard that throws is a guard that is not there.
 $mutex = $null
-try { $mutex = New-Object System.Threading.Mutex($false, "Local\omarchy-scroll-daemon") } catch { $mutex = $null }
+try { $mutex = New-Object System.Threading.Mutex($false, "Local\omacheese-scroll-daemon") } catch { $mutex = $null }
 if ($mutex) {
     if (-not $mutex.WaitOne(0)) { exit 0 }
 } else {

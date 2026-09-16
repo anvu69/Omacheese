@@ -169,6 +169,6 @@ function sst {
 }
 
 # --- Desktop ----------------------------------------------------------------
-function desktop { & (Join-Path $env:USERPROFILE ".config\omarchy\bin\start-desktop.ps1") @args }
-function keys    { & (Join-Path $env:USERPROFILE ".config\omarchy\bin\omarchy-keybindings.ps1") }
-function omenu   { & (Join-Path $env:USERPROFILE ".config\omarchy\bin\omarchy-menu.ps1") @args }
+function desktop { & (Join-Path $env:USERPROFILE ".config\omacheese\bin\start-desktop.ps1") @args }
+function keys    { & (Join-Path $env:USERPROFILE ".config\omacheese\bin\omacheese-keybindings.ps1") }
+function omenu   { & (Join-Path $env:USERPROFILE ".config\omacheese\bin\omacheese-menu.ps1") @args }

@@ -1,10 +1,10 @@
 # Launch the default coding agent in a terminal.
 #
-#   omarchy-agent.ps1                 launch the default agent
-#   omarchy-agent.ps1 -Pick           choose one first
-#   omarchy-agent.ps1 -Prompt "..."   launch with an opening prompt
-#   omarchy-agent.ps1 -Yolo           skip permission prompts (see below)
-#   omarchy-agent.ps1 -Wsl            run it inside AlmaLinux instead
+#   omacheese-agent.ps1                 launch the default agent
+#   omacheese-agent.ps1 -Pick           choose one first
+#   omacheese-agent.ps1 -Prompt "..."   launch with an opening prompt
+#   omacheese-agent.ps1 -Yolo           skip permission prompts (see below)
+#   omacheese-agent.ps1 -Wsl            run it inside AlmaLinux instead
 #
 # Ported from Omarchy's bin/omarchy-agent, bound to SUPER+SHIFT+CTRL+A.
 #
@@ -27,7 +27,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $here      = Split-Path -Parent $MyInvocation.MyCommand.Path
-$defaults  = Join-Path $here "omarchy-default-agent.ps1"
+$defaults  = Join-Path $here "omacheese-default-agent.ps1"
 if (-not (Test-Path -LiteralPath $defaults)) { throw "Missing $defaults" }
 
 # Dot-source to reuse the registry rather than duplicating it.
@@ -39,7 +39,7 @@ if ($Pick -or -not $agentKey) {
     $fzf = Get-Command fzf -ErrorAction SilentlyContinue
     if (-not $fzf) {
         Write-Host "No default agent set and fzf is not installed." -ForegroundColor Yellow
-        Write-Host "Set one with: omarchy-default-agent.ps1 claude" -ForegroundColor Cyan
+        Write-Host "Set one with: omacheese-default-agent.ps1 claude" -ForegroundColor Cyan
         Read-Host "`nEnter to close"
         return
     }
@@ -60,7 +60,7 @@ if ($Pick -or -not $agentKey) {
     Set-DefaultAgent $agentKey | Out-Null
 }
 
-# NOT $agent. omarchy-default-agent.ps1 declares param([string]$Agent), and
+# NOT $agent. omacheese-default-agent.ps1 declares param([string]$Agent), and
 # dot-sourcing it puts that variable - complete with its [string] type
 # constraint - into this scope. Assigning the hashtable to it silently
 # coerced it to the string "System.Collections.Hashtable", so every launch

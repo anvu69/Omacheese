@@ -57,9 +57,9 @@ win + shift + t              : start "" alacritty -e btop
 # SUPER+A launches whichever agent is set as default; SUPER+SHIFT+CTRL+A (the
 # chord Omarchy uses) opens the picker. Neither passes a skip-permissions flag
 # by default - add -Yolo in the picker menu when you want that.
-win + a                      : start "" alacritty --class omarchy-agent,omarchy-agent -e "%USERPROFILE%\.config\omarchy\bin\omarchy-run.cmd" "%USERPROFILE%\.config\omarchy\bin\omarchy-agent.ps1"
-win + shift + control + a    : start "" alacritty --class omarchy-agent,omarchy-agent -e "%USERPROFILE%\.config\omarchy\bin\omarchy-run.cmd" "%USERPROFILE%\.config\omarchy\bin\omarchy-agent.ps1" -Pick
-win + alt + a                : start "" alacritty --class omarchy-agent,omarchy-agent -e "%USERPROFILE%\.config\omarchy\bin\omarchy-run.cmd" "%USERPROFILE%\.config\omarchy\bin\omarchy-agent.ps1" -Wsl
+win + a                      : start "" alacritty --class omacheese-agent,omacheese-agent -e "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-agent.ps1"
+win + shift + control + a    : start "" alacritty --class omacheese-agent,omacheese-agent -e "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-agent.ps1" -Pick
+win + alt + a                : start "" alacritty --class omacheese-agent,omacheese-agent -e "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-agent.ps1" -Wsl
 
 # ----------------------------------------------------------------------------
 # Menus and discovery
@@ -67,9 +67,9 @@ win + alt + a                : start "" alacritty --class omarchy-agent,omarchy-
 # SUPER+/ prints every binding below into a searchable fzf window. This is the
 # one binding worth memorising; it teaches you the rest.
 # (Omarchy puts this on SUPER+K. SUPER+/ reads as "help" and leaves K free.)
-win + oem_2                  : "%USERPROFILE%\.config\omarchy\bin\omarchy-menu.cmd" keys
-win + space                  : "%USERPROFILE%\.config\omarchy\bin\omarchy-menu.cmd"
-win + escape                 : "%USERPROFILE%\.config\omarchy\bin\omarchy-menu.cmd" -Menu system
+win + oem_2                  : "%USERPROFILE%\.config\omacheese\bin\omacheese-menu.cmd" keys
+win + space                  : "%USERPROFILE%\.config\omacheese\bin\omacheese-menu.cmd"
+win + escape                 : "%USERPROFILE%\.config\omacheese\bin\omacheese-menu.cmd" -Menu system
 
 # ----------------------------------------------------------------------------
 # Window lifecycle
@@ -156,8 +156,8 @@ win + control + tab          : komorebic focus-last-workspace
 win + control + shift + tab  : komorebic cycle-empty-workspace next
 
 # Scratchpad on workspace 10: press to visit, press again to fall back.
-win + s                      : "%USERPROFILE%\.config\omarchy\bin\omarchy-run.cmd" "%USERPROFILE%\.config\omarchy\bin\omarchy-scratchpad.ps1"
-win + oem_3                  : "%USERPROFILE%\.config\omarchy\bin\omarchy-run.cmd" "%USERPROFILE%\.config\omarchy\bin\omarchy-scratchpad.ps1"
+win + s                      : "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-scratchpad.ps1"
+win + oem_3                  : "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-scratchpad.ps1"
 win + alt + s                : komorebic send-to-workspace 9
 win + shift + oem_3          : komorebic send-to-workspace 9
 
@@ -176,7 +176,7 @@ win + shift + alt + right    : komorebic cycle-move-workspace-to-monitor next
 # ----------------------------------------------------------------------------
 # Stacking = Omarchy window grouping (SUPER+G)
 # ----------------------------------------------------------------------------
-win + g                      : "%USERPROFILE%\.config\omarchy\bin\omarchy-run.cmd" "%USERPROFILE%\.config\omarchy\bin\omarchy-stack-toggle.ps1"
+win + g                      : "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-stack-toggle.ps1"
 win + alt + g                : komorebic unstack
 
 win + alt + left             : komorebic stack left
@@ -215,7 +215,7 @@ win + shift + space          : komorebic toggle-workspace-layer
 # rest wait just off the edge, so you scroll sideways instead of splitting
 # the screen smaller. komorebi's `scrolling` layout with 1 column, plus
 # enough workspace padding that the neighbour peeks in. Press again for BSP.
-win + control + s            : "%USERPROFILE%\.config\omarchy\bin\omarchy-run.cmd" "%USERPROFILE%\.config\omarchy\bin\omarchy-scrolling.ps1"
+win + control + s            : "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-scrolling.ps1"
 
 # ----------------------------------------------------------------------------
 # Resize                                  SUPER + minus/equals, three sizes
@@ -240,8 +240,8 @@ win + control + oem_minus    : komorebic resize-delta 300 && komorebic resize-ax
 # System
 # ----------------------------------------------------------------------------
 win + control + l            : rundll32.exe user32.dll,LockWorkStation
-win + control + b            : "%USERPROFILE%\.config\omarchy\bin\omarchy-run.cmd" "%USERPROFILE%\.config\omarchy\bin\omarchy-toggle-bar.ps1"
-win + control + r            : "%USERPROFILE%\.config\omarchy\bin\omarchy-run.cmd" "%USERPROFILE%\.config\omarchy\bin\omarchy-restart-desktop.ps1"
+win + control + b            : "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-toggle-bar.ps1"
+win + control + r            : "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-restart-desktop.ps1"
 win + snapshot               : start "" ms-screenclip:
 win + shift + snapshot       : start "" snippingtool:
 

@@ -162,11 +162,11 @@
     },
     {
       "kind": "Title",
-      "id": "omarchy",
+      "id": "omacheese",
       "matching_strategy": "Equals"
     }
   ],
-  "_comment_floating_menu": "The menu window is matched by TITLE, not Class. It is a WPF window that sets its title to 'omarchy' and stays out of the taskbar, which is usually enough on its own - this rule is the belt to that pair of braces. Class cannot be used: komorebi reports the class of every Alacritty window as the literal string 'Window Class', and --class is an X11 concept that does nothing on Windows anyway.",
+  "_comment_floating_menu": "The menu window is matched by TITLE, not Class. It is a WPF window that sets its title to 'omacheese' and stays out of the taskbar, which is usually enough on its own - this rule is the belt to that pair of braces. Class cannot be used: komorebi reports the class of every Alacritty window as the literal string 'Window Class', and --class is an X11 concept that does nothing on Windows anyway.",
   "ignore_rules": [
     {
       "kind": "Exe",

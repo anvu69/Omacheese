@@ -1,8 +1,8 @@
 @echo off
-:: Open the omarchy menu.
+:: Open the omacheese menu.
 ::
-::   omarchy-menu.cmd [section]
-::   omarchy-menu.cmd -Menu system
+::   omacheese-menu.cmd [section]
+::   omacheese-menu.cmd -Menu system
 ::
 :: Fast path: if the menu server is running, drop a signal file and get out. The
 :: server already has the window built, so it only has to show it. Building one
@@ -27,8 +27,8 @@ set "SECTION=%~1"
 if /I "%SECTION%"=="-Menu" set "SECTION=%~2"
 if "%SECTION%"=="" set "SECTION=root"
 
-set "SIGNAL=%USERPROFILE%\.config\omarchy\menu.show"
-set "SERVERPID=%USERPROFILE%\.config\omarchy\menu-server.pid"
+set "SIGNAL=%USERPROFILE%\.config\omacheese\menu.show"
+set "SERVERPID=%USERPROFILE%\.config\omacheese\menu-server.pid"
 
 if not exist "%SERVERPID%" goto oneshot
 
@@ -59,7 +59,7 @@ if not defined PS for /f "delims=" %%I in ('"%SystemRoot%\System32\where.exe" pw
 if not defined PS set "PS=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 
 start "" /b "%PS%" -NoLogo -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden ^
-    -File "%~dp0omarchy-menu.ps1" -Menu "%SECTION%"
+    -File "%~dp0omacheese-menu.ps1" -Menu "%SECTION%"
 
 endlocal
 exit /b

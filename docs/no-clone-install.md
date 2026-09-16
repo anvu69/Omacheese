@@ -17,7 +17,7 @@ trải nghiệm giống hệt nhau.
 
 Trước đây script này liệt kê từng file cần tải. Danh sách đó lạc hậu ngay khi có
 file mới: đến lúc thay thì nó đã **thiếu 25 file**, trong đó có
-`omarchy-menu.cmd` (thứ mà `SUPER+SPACE` thực sự chạy), scroll daemon, toàn bộ
+`omacheese-menu.cmd` (thứ mà `SUPER+SPACE` thực sự chạy), scroll daemon, toàn bộ
 theme system và mọi lệnh Raycast. Cài xong trông như đã cài, mà không phải.
 Giờ không còn danh sách nào để lạc hậu.
 

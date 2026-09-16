@@ -5,12 +5,12 @@
 #
 # Every command dot-sources this:
 #
-#   . (Join-Path $PSScriptRoot "_omarchy-lib.ps1")
+#   . (Join-Path $PSScriptRoot "_omacheese-lib.ps1")
 
 $ErrorActionPreference = "Stop"
 
 $OmarchyConfig = Join-Path $env:USERPROFILE ".config"
-$OmarchyBin    = Join-Path $OmarchyConfig "omarchy\bin"
+$OmarchyBin    = Join-Path $OmarchyConfig "omacheese\bin"
 
 # komorebic reads its config from here, and Raycast does not run a login shell,
 # so the variable has to be set rather than inherited.
@@ -68,7 +68,7 @@ function Get-PowerShellExe {
     return Resolve-Bin "pwsh" @("%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe")
 }
 
-# Run one of the omarchy helpers without showing a console.
+# Run one of the omacheese helpers without showing a console.
 function Start-Helper {
     param([string]$Name, [string[]]$Arguments = @())
     $script = Join-Path $OmarchyBin $Name
@@ -77,7 +77,7 @@ function Start-Helper {
         -ArgumentList (@("-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $script) + $Arguments)
 }
 
-# Run an omarchy helper in a terminal, for the ones that print something.
+# Run an omacheese helper in a terminal, for the ones that print something.
 function Start-HelperInTerminal {
     param([string]$Name, [string[]]$Arguments = @())
     $script = Join-Path $OmarchyBin $Name
