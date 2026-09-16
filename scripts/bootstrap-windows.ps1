@@ -60,14 +60,19 @@ Write-Host "  irm $installUrl | iex" -ForegroundColor Cyan
 Write-Host ""
 
 # Prefer the copy next to us when running from a clone, otherwise fetch it.
-$local = Join-Path (Split-Path (Split-Path $PSCommandPath -Parent) -Parent) "install.ps1"
+# $PSCommandPath is empty under `irm | iex` - there is no file - so this has
+# to be computed inside the guard, not before it.
+$local = $null
+if ($PSCommandPath) {
+    $local = Join-Path (Split-Path (Split-Path $PSCommandPath -Parent) -Parent) "install.ps1"
+}
 $forward = @{ Repo = $Repo; Branch = $Branch }
 if ($Preset)  { $forward["Preset"]  = $Preset }
 if ($Modules) { $forward["Modules"] = $Modules }
 if ($Yes)     { $forward["Yes"]     = $true }
 if ($DryRun)  { $forward["DryRun"]  = $true }
 
-if ($PSCommandPath -and (Test-Path -LiteralPath $local)) {
+if ($local -and (Test-Path -LiteralPath $local)) {
     & $local @forward
 } else {
     $tmp = Join-Path $env:TEMP "windows11-dev-poweruser-install.ps1"
