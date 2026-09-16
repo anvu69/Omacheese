@@ -27,6 +27,18 @@ setlocal EnableDelayedExpansion
 set "SCRIPT=%~1"
 set "ARGS=%~2 %~3 %~4 %~5"
 
+:: Single instance. The bar button is easy to click twice, and without this
+:: every click stacked another terminal. If one is already up, raise it and
+:: stop. tasklist's WINDOWTITLE filter does see GUI windows, and the title is
+:: set below.
+tasklist /FI "IMAGENAME eq alacritty.exe" /FI "WINDOWTITLE eq omarchy" 2>nul | find /I "alacritty.exe" >nul
+if not errorlevel 1 (
+    powershell.exe -NoProfile -WindowStyle Hidden -Command ^
+      "$w=New-Object -ComObject WScript.Shell; Get-Process alacritty -EA SilentlyContinue | Where-Object MainWindowTitle -eq 'omarchy' | Select-Object -First 1 | ForEach-Object { $w.AppActivate($_.Id) } | Out-Null"
+    endlocal
+    exit /b
+)
+
 :: Prefer PowerShell 7; fall back to Windows PowerShell.
 set "PS="
 for /f "delims=" %%I in ('where pwsh.exe 2^>nul') do if not defined PS set "PS=%%I"

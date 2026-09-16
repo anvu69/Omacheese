@@ -221,18 +221,29 @@ function Show-Menu {
         return
     }
 
-    $fzf = Get-Command fzf -ErrorAction SilentlyContinue
-    if (-not $fzf) {
-        Write-Host "fzf is required for the menu. Install it with:" -ForegroundColor Yellow
+    # Resolve rather than trust PATH. Toggling the bar off and on restarts
+    # yasb from this script's own environment, and the menu then inherited a
+    # PATH without fzf - so a perfectly installed fzf reported as missing.
+    $fzfPath = Resolve-Bin "fzf" @(
+        "%LOCALAPPDATA%\Microsoft\WinGet\Links\fzf.exe",
+        "%ProgramFiles%\fzf\fzf.exe",
+        "%USERPROFILE%\scoop\shims\fzf.exe",
+        "%ChocolateyInstall%\bin\fzf.exe"
+    )
+
+    if (-not $fzfPath) {
+        Write-Host ""
+        Write-Host "  fzf is required for the menu." -ForegroundColor Yellow
         Write-Host "  winget install --id junegunn.fzf -e" -ForegroundColor Cyan
-        Read-Host "`nEnter to close"
+        Write-Host ""
+        Read-Host "  Enter to close" | Out-Null
         return
     }
 
     $prompt = if ($Name -eq "root") { "omarchy > " } else { "$Name > " }
 
     $choice = $entries.Keys |
-        & $fzf.Source `
+        & $fzfPath `
             --prompt $prompt `
             --header "  ENTER to run      ESC to cancel" `
             --header-first `

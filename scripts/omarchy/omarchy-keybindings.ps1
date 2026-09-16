@@ -80,7 +80,26 @@ for ($i = 0; $i -lt $lines.Count; $i++) {
     }
 }
 
+# Resolve rather than trust PATH: this is launched from the bar, which may
+# have been restarted from an environment that has no fzf on PATH.
 $fzf = Get-Command fzf -ErrorAction SilentlyContinue
+if (-not $fzf) {
+    foreach ($cand in @(
+        "%LOCALAPPDATA%\Microsoft\WinGet\Links\fzf.exe",
+        "%ProgramFiles%\fzf\fzf.exe",
+        "%USERPROFILE%\scoop\shims\fzf.exe",
+        "%ChocolateyInstall%\bin\fzf.exe",
+        "%ProgramFiles%\fzf\fzf.exe",
+        "%USERPROFILE%\scoop\shims\fzf.exe",
+        "%ChocolateyInstall%\bin\fzf.exe"
+    ))  {
+        $expanded = [Environment]::ExpandEnvironmentVariables($cand)
+        if (Test-Path -LiteralPath $expanded) {
+            $fzf = [pscustomobject]@{ Source = $expanded }
+            break
+        }
+    }
+}
 
 $header = "  SUPER = Windows key      {0} bindings      ESC to close" -f $rows.Count
 
