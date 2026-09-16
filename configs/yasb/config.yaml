@@ -184,11 +184,14 @@ widgets:
       label_alt: "{icon} {level}"
       # `volume_icons` as a list was deprecated in 2.0.x. The dict form keys
       # on the upper bound of each volume band.
+      # Three audible bands is plenty, and none of them is a slashed
+      # speaker: a slash reads as 'no sound', which is wrong at 1-10%
+      # where the sound is simply quiet. The crossed speaker is kept
+      # for `muted` only, which is the one state that means silence.
       icons:
         muted: "󰝟"
-        "10": "󰖁"
-        "30": "󰕿"
-        "60": "󰖀"
+        "33": "󰕿"
+        "66": "󰖀"
         "100": "󰕾"
       callbacks:
         on_left: "toggle_volume_menu"

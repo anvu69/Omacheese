@@ -265,6 +265,10 @@
 .bluetooth-menu .bluetooth-list {
     background-color: transparent;
     padding: 0 8px 8px 8px;
+    /* ~3.5 rows: a row is 10px padding + ~20px content + 10px padding + 4px
+       margin = 44px, so 154px shows three and a half and makes it obvious the
+       list continues. */
+    min-height: 154px;
 }
 
 /* No min-height here. Setting one on rows inside a Qt layout that is already
@@ -291,9 +295,9 @@
     font-size: 11px;
 }
 
+/* Device and battery glyphs are labels inside a row. */
 .bluetooth-menu .icon,
-.bluetooth-menu .battery-icon,
-.bluetooth-menu .scan-icon {
+.bluetooth-menu .battery-icon {
     font-family: "Segoe Fluent Icons", "Segoe MDL2 Assets", "JetBrainsMono NF";
     font-size: 17px;
     color: #7aa2f7;
@@ -315,16 +319,34 @@
     color: #c0caf5;
     border: 1px solid #292e42;
     border-radius: 6px;
-    padding: 6px 14px;
-    margin: 0 2px;
+    padding: 0 14px;
+    margin: 0;
     font-size: 12px;
     min-width: 88px;
-    min-height: 26px;
+    min-height: 30px;
+}
+
+/* The refresh control is a QPushButton too, not a label - it was picking up
+   the label-icon rule and rendering as a bare glyph beside a full pill. Same
+   height as the settings button, square, so the footer reads as a pair. */
+.bluetooth-menu .scan-icon {
+    font-family: "Segoe Fluent Icons", "Segoe MDL2 Assets", "JetBrainsMono NF";
+    font-size: 15px;
+    color: #7aa2f7;
+    background-color: #24283b;
+    border: 1px solid #292e42;
+    border-radius: 6px;
+    padding: 0;
+    margin: 0;
+    min-width: 30px;
+    max-width: 30px;
+    min-height: 30px;
 }
 
 .bluetooth-menu .connect:hover,
 .bluetooth-menu .settings-button:hover,
-.bluetooth-menu .power-button:hover {
+.bluetooth-menu .power-button:hover,
+.bluetooth-menu .scan-icon:hover {
     background-color: #292e42;
     border: 1px solid #7aa2f7;
 }
