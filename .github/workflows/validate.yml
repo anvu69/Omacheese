@@ -93,10 +93,15 @@ jobs:
           #                          internal helpers (Ensure-Dir) are not cmdlets
           #   GlobalVars           - bootstrap must read $global:repo, because
           #                          `irm ... | iex` is how it is invoked
+          #   EmptyCatchBlock      - these scripts probe for optional things
+          #                          (a config file, nvidia-smi, a registry key)
+          #                          and fall back to a default that is already
+          #                          assigned before the try. There is nothing
+          #                          to report and nothing to recover.
           $results = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error,Warning `
             -ExcludeRule PSAvoidUsingWriteHost,PSUseShouldProcessForStateChangingFunctions,
                          PSAvoidUsingPositionalParameters,PSAvoidUsingInvokeExpression,
-                         PSUseApprovedVerbs,PSAvoidGlobalVars
+                         PSUseApprovedVerbs,PSAvoidGlobalVars,PSAvoidUsingEmptyCatchBlock
           if ($results) {
             $results | Format-Table -AutoSize | Out-String -Width 200 | Write-Host
             if ($results | Where-Object Severity -eq 'Error') { exit 1 }

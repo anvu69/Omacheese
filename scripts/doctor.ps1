@@ -462,6 +462,21 @@ foreach ($p in @("komorebi","whkd","yasb")) {
     else { Warn "$p not running (./scripts/start-desktop.ps1)" }
 }
 
+# The scroll daemon is a pwsh process, so it cannot be found by image name.
+# Without it the Scrolling layout still works, it just loses the neighbour peek
+# and the alignment at the ends of the strip - a silent degradation worth
+# reporting rather than leaving to be noticed.
+$scrollPid = Join-Path $env:USERPROFILE ".config\omarchy\scroll-daemon.pid"
+$scrollUp = $false
+if (Test-Path -LiteralPath $scrollPid) {
+    try {
+        $sp = [int](Get-Content -LiteralPath $scrollPid -Raw).Trim()
+        if (Get-Process -Id $sp -ErrorAction SilentlyContinue) { $scrollUp = $true }
+    } catch { }
+}
+if ($scrollUp) { Ok "scroll daemon running" }
+else { Warn "scroll daemon not running - scrolling mode loses its peek (./scripts/start-desktop.ps1)" }
+
 Write-Host ""
 Write-Host ("=" * 52)
 Write-Host ("  {0} passed   {1} warnings   {2} failures" -f $script:Pass, $script:Warn, $script:Fail) -ForegroundColor $(

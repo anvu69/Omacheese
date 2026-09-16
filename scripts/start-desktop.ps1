@@ -28,8 +28,13 @@ function Stop-Proc { param([string]$n) Get-Process $n -ErrorAction SilentlyConti
 [Environment]::SetEnvironmentVariable("KOMOREBI_CONFIG_HOME", $KomorebiConfigHome, "User")
 $env:KOMOREBI_CONFIG_HOME = $KomorebiConfigHome
 
+$ScrollDaemon = Join-Path $cfg "omarchy\bin\omarchy-scroll-daemon.ps1"
+
 if ($Stop -or $Restart) {
     Write-Host "Stopping komorebi / whkd / yasb..." -ForegroundColor Yellow
+    if (Test-Path -LiteralPath $ScrollDaemon) {
+        & $ScrollDaemon -Stop 2>$null | Out-Null
+    }
     if (Have "komorebic") { komorebic stop --whkd 2>$null | Out-Null }
     Stop-Proc "komorebi"; Stop-Proc "whkd"; Stop-Proc "yasb"
     if ($Stop) { Write-Host "Stopped." -ForegroundColor Green; return }
@@ -110,6 +115,21 @@ if (Have "yasb") {
     }
 } else {
     Write-Host "yasb.exe not found: winget install --id AmN.yasb -e" -ForegroundColor Yellow
+}
+
+# The scrolling strip needs someone watching focus - see the daemon's header.
+# It is cheap (it sleeps on a named pipe) and it is what keeps SUPER+CTRL+S and
+# SUPER+SHIFT+L agreeing about what the layout should look like.
+if (Test-Path -LiteralPath $ScrollDaemon) {
+    $pwshExe = (Get-Command pwsh -ErrorAction SilentlyContinue).Source
+    if (-not $pwshExe) { $pwshExe = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" }
+    & $ScrollDaemon -Stop 2>$null | Out-Null
+    Start-Process -FilePath $pwshExe `
+        -ArgumentList "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$ScrollDaemon`"" `
+        -WindowStyle Hidden -ErrorAction SilentlyContinue
+    Write-Host "scroll daemon is up." -ForegroundColor Green
+} else {
+    Write-Host "omarchy-scroll-daemon.ps1 missing - run ./scripts/link-configs.ps1" -ForegroundColor Yellow
 }
 
 Write-Host ""

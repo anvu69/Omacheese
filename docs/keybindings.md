@@ -119,40 +119,67 @@ off the edge, so you scroll sideways instead of splitting the screen smaller
 and smaller.
 
 komorebi has this natively as the `scrolling` layout, pinned to one column.
-What `omarchy-scrolling.ps1` adds is the padding that lets the neighbour peek
-in at the edge:
+What the Omarchy side adds is the sliver of the neighbours at the edges, and
+where the focused window sits in it.
+
+### The geometry
+
+komorebi centres the focused window inside the work area and parks the
+neighbours immediately outside it, so whatever the work area leaves over on each
+side is exactly what you see of them. The window keeps one width; only its
+position moves:
 
 ```
-inset  = workspace_padding + container_padding
-window = monitor_width - 2 * inset
-peek   = inset - 2 * container_padding
+slack = monitor_width * (100 - window_percent) / 100    total, both sides
+
+focused is FIRST    left 0        nothing left, all the slack on the right
+focused is MIDDLE   left slack/2  centred, half the slack each side
+focused is LAST     left slack    all the slack on the left, nothing right
 ```
 
-Two consequences, both of which the script now handles:
+So the ends of the strip do not waste their outer margin on empty screen - the
+first window sits flush left and shows more of what comes next, the last sits
+flush right. Measured on a 2560px monitor at the default 90%, window 2302px in
+every position:
 
-- **`container_padding` is the gap between windows, and it comes off the peek
-  twice.** Scrolling mode sets it to 0, so the whole inset shows as peek
-  instead of half of it disappearing into the space between neighbours.
+| Focused | Offset | Window at | Neighbour peek |
+|---|---|---|---|
+| first | `L0 / R256` | x=1 | 255 px right |
+| middle | `L128 / R256` | x=129 | 127 px each side |
+| last | `L256 / R256` | x=257 | 255 px left |
+
+Two things that were wrong before, and why the sliver used to be invisible:
+
+- **`container_padding` is the gap between windows and comes off the peek
+  twice.** Scrolling mode sets it to 0, along with workspace padding - which is
+  symmetric and would only re-centre what the offset just biased.
 - **A fixed padding is a different fraction of every screen.** 40px is 3% of a
-  1366px laptop but 1.6% of a 2560px monitor, which is why the sliver only
-  registered on the small one. The inset is computed from the monitor's work
-  area, so it looks the same on every machine.
+  1366px laptop but 1.6% of a 2560px monitor. The slack is computed from the
+  monitor's work area instead, so it looks the same on every machine.
 
-The window width is the knob; the peek follows from it. Measured on a 2560px
-monitor:
+### Who applies it
 
-| `-WindowPercent` | Window width | Neighbour peek |
-|---|---|---|
-| **95** (default) | **2444 px (95.5%)** | **70 px** |
-| 92 | 2368 px (92.5%) | 108 px |
-| 90 | 2316 px (90.5%) | 134 px |
+`omarchy-scroll-daemon.ps1`, started by `start-desktop.ps1`. It has to be a
+daemon for two reasons: the alignment follows focus, and the layout can be
+entered without going through `SUPER+CTRL+S` at all - `SUPER+SHIFT+L` cycles
+onto Scrolling and used to leave the strip at stock padding with a 1px sliver.
 
-A 95% window leaves 5% of the screen over, so the peek can never exceed 2.5%
-per side. For a wider sliver, give up some width:
+It watches komorebi's event pipe and never calls `komorebic` itself. That is not
+a style choice: the pipe accepts one reader and komorebi *blocks* writing to it,
+so a reader that stops to run `komorebic state` deadlocks the window manager
+until the write times out. The watcher reads the state out of the event payload
+and hands any actual work to a detached `-Once` process.
+
+### Tuning
 
 ```powershell
-omarchy-scrolling.ps1 -WindowPercent 92
+omarchy-scrolling.ps1 -WindowPercent 88     # narrower window, wider peek
 ```
+
+The value is remembered in `~/.config/omarchy/scrolling.json`, so the daemon and
+the toggle stay in agreement. A 90% window leaves 10% of the screen over, and
+that is the whole budget: at the ends you see all of it, in the middle half of
+it per side.
 
 Press the binding again to return to BSP. `SUPER + SPACE` -> Windows has a
 two-column variant.
