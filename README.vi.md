@@ -1,41 +1,48 @@
-# Omacheese — Windows 11 developer power-user setup
+# Omacheese
+
+Setup Windows 11 cho developer theo hướng keyboard-first: tiling window manager,
+làm việc nhiều trong terminal, Vim/Neovim, WSL2, remote. Phần navigation và quản
+lý workspace port từ [Omarchy](https://omarchy.org).
+
+Omacheese là tên riêng của repo này cho bản port đó. Nó không liên kết với dự án
+Omarchy. Mục [Ghi công](#ghi-công) liệt kê đã vay mượn những gì và nằm ở đâu.
 
 *[English](README.md)*
 
-Combo Windows 11 cho developer theo hướng **keyboard-first, tiling window
-manager, terminal-heavy, Vim/Neovim, WSL2, remote-first** — với navigation và
-quản lý workspace port từ [Omarchy](https://omarchy.org).
+## Yêu cầu
 
-**Omacheese là tên riêng của repo này** cho bản port đó. Nó không liên kết với
-dự án Omarchy; xem [Ghi công](#ghi-công) để biết chính xác đã vay mượn những gì.
+- Windows 11 (hoặc Windows 10 build 19041+ nếu muốn dùng WSL2)
+- winget, cài qua "App Installer" trên Microsoft Store
+- Bật virtualisation trong BIOS, cho module WSL2
+- Quyền admin, cho module WSL2 và debloat
+
+Còn lại installer tự lo. Nó chạy trên Windows PowerShell 5.1 không cần module
+nào, vì máy Windows vừa cài xong chỉ có bấy nhiêu.
 
 ## Cài
 
-Máy vừa cài Windows xong thì chưa có `git` để clone. Một dòng này là đủ:
+Máy mới cài Windows chưa có `git` nên chưa clone được:
 
 ```powershell
 irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1 | iex
 ```
 
-Không cần clone, không cần cài gì trước. Nó tải cả repo dạng zip rồi chạy đúng
-`setup.ps1` bên dưới.
+Lệnh này tải cả repo dạng zip rồi chạy `setup.ps1`.
 
-Muốn truyền tham số qua `iex` thì bọc lại:
+`iex` không nhận tham số. Muốn truyền thì bọc script vào block:
 
 ```powershell
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1))) -Preset desktop -Yes
 ```
 
-Chi tiết và cách chỉ-cài-một-phần: [`docs/no-clone-install.md`](docs/no-clone-install.md).
-
-Đã clone rồi thì:
+Nếu đã clone rồi:
 
 ```powershell
 ./scripts/setup.ps1
 ```
 
-Cả hai đường đều vào cùng một TUI: dò phần cứng, chỉ hiện module máy bạn **chạy
-được**, rồi theo dõi tiến trình từng bước.
+Cả hai đường đều mở cùng một TUI. Nó đọc phần cứng trước rồi làm mờ những module
+máy không chạy được, nên bạn không chọn nhầm thứ sẽ chết giữa chừng.
 
 ```text
 +- Modules ---------------------------------------------------------+
@@ -52,11 +59,11 @@ Cả hai đường đều vào cùng một TUI: dò phần cứng, chỉ hiện 
 +-------------------------------------------------------------------+
 ```
 
-Không tương tác được thì dùng preset:
+Dùng cho CI, phiên remote, hoặc chỗ nào TUI bất tiện:
 
 ```powershell
 ./scripts/setup.ps1 -Preset desktop -Yes
-./scripts/setup.ps1 -Preset everything -DryRun    # xem kế hoạch, không đổi gì
+./scripts/setup.ps1 -Preset everything -DryRun    # in kế hoạch ra, không đổi gì
 ./scripts/setup.ps1 -Modules core,cli,configs
 ```
 
@@ -65,23 +72,25 @@ Không tương tác được thì dùng preset:
 | `minimal` | terminal, shell, CLI, dotfiles |
 | `desktop` | + tiling WM (Omarchy keymap), debloat |
 | `full` | + coding agents, WSL2 AlmaLinux |
-| `everything` | + local LLM **nếu phần cứng cho phép** |
+| `everything` | + local LLM, nếu phần cứng cho phép |
 | `custom` | tự chọn |
 
-Xong rồi bấm **`SUPER + /`** để xem toàn bộ keybinding.
+Module lẻ: `core` `psmodules` `cli` `wm` `desktop` `agents` `raycast` `configs`
+`debloat` `wsl` `localllm` `verify`.
 
-> TUI chạy trên **Windows PowerShell 5.1** với zero dependency — vì đó là tất cả
-> những gì một máy Windows vừa cài xong có. CI kiểm tra điều này.
+Cài một phần, hoặc cài từ fork: [`docs/no-clone-install.md`](docs/no-clone-install.md).
 
-## Stack chính
+Cài xong, `SUPER + /` liệt kê toàn bộ keybinding.
+
+## Có gì trong đó
 
 | Nhóm | Lựa chọn |
 |---|---|
 | Terminal | Alacritty |
 | Windows shell | PowerShell 7 + Oh My Posh + PSReadLine Vi mode |
 | Window manager | komorebi + whkd + yasb |
-| Keymap | Kiểu Omarchy (SUPER-first), xem `docs/keybindings.md` |
-| Terminal session | tmux |
+| Keymap | Kiểu Omarchy, SUPER-first. Xem `docs/keybindings.md` |
+| Terminal multiplexer | tmux |
 | Editor | LazyVim / Neovim |
 | CLI | fzf, ripgrep, fd, eza, bat, zoxide, delta, lazygit, gh, jq |
 | File search | Everything |
@@ -89,27 +98,30 @@ Xong rồi bấm **`SUPER + /`** để xem toàn bộ keybinding.
 | Linux dev env | WSL2 + AlmaLinux + Zsh + Oh My Zsh |
 | Database | DBeaver Community |
 | SSH GUI | electerm |
-| SSH key / vault | Bitwarden Desktop SSH Agent (+ cầu nối vào WSL) |
-| Installer | TUI zero-dependency, dò phần cứng, theo dõi tiến trình |
-| Coding agents | Claude Code, Codex, Gemini, OpenCode — manager kiểu Omarchy |
-| Local LLM | Ollama (mọi máy) hoặc vLLM + GPU (khi đủ VRAM) |
-| Debloat | Win11Debloat, profile pin + version-control |
+| SSH key / vault | Bitwarden Desktop SSH Agent, nối cầu vào WSL |
+| Coding agents | Claude Code, Codex, Gemini, OpenCode |
+| Local LLM | Ollama cho mọi máy, hoặc vLLM + GPU khi đủ VRAM |
+| Debloat | Win11Debloat với profile pin và version-control |
 | Theme | Một palette dùng chung mọi tool (Tokyo Night, Catppuccin) |
-| Launcher | Raycast (tuỳ chọn) |
+| Launcher | Raycast, tuỳ chọn |
 
-## Triết lý
+## Ghép lại thế nào
 
-- Windows 11 là **host OS**: window manager, browser, file search, GUI tools.
-- WSL2 AlmaLinux là **dev/runtime OS**: shell, tmux, LazyVim, Ansible, CLI.
-- SSH daily dùng **Alacritty → WSL2 → tmux → ssh**; electerm cho việc GUI.
-- Jump server dùng **ProxyJump**, không dùng `ForwardAgent yes`.
-- Config sống trong Git, cài bằng symlink để sửa là ăn ngay.
-- **Mọi thứ phải verify được** — `doctor.ps1` và CI kiểm tra thay vì tin tưởng.
+Windows 11 là host OS, lo window manager, browser, file search và các tool GUI.
+WSL2 AlmaLinux là dev/runtime OS, chứa shell, tmux, LazyVim, Ansible và phần
+việc CLI.
 
-## Navigation
+SSH hằng ngày đi Alacritty vào WSL2 vào tmux rồi ssh, còn electerm dành cho việc
+cần GUI. Jump server dùng `ProxyJump`; không bao giờ bật `ForwardAgent yes`, vì
+nó phơi agent của bạn ra mọi host bạn nhảy vào.
 
-`SUPER` là phím Windows. Một modifier quản cửa sổ, mỗi modifier thêm vào là một
-chiều nhất quán:
+Config nằm trong Git và cài bằng symlink, nên sửa file trong repo là ăn ngay.
+`doctor.ps1` và CI kiểm tra setup thay vì tin là nó chạy.
+
+## Keybinding
+
+`SUPER` là phím Windows. Một modifier lo việc quản cửa sổ, mỗi modifier thêm vào
+đổi số phận của cửa sổ đó:
 
 | Phím | Ý nghĩa |
 |---|---|
@@ -119,21 +131,69 @@ chiều nhất quán:
 | `SUPER + ALT` | nhóm (stack) |
 | `SUPER + CTRL` | toggle hệ thống |
 
-Vài phím đáng nhớ trước:
+Vài phím nên nhớ trước:
 
 | Phím | Việc |
 |---|---|
-| `SUPER + /` | Bảng keybinding (search được) |
+| `SUPER + /` | Bảng keybinding, search được |
 | `SUPER + SPACE` | Menu Omacheese |
-| `SUPER + CTRL + TAB` | Workspace vừa rồi (back-and-forth) |
+| `SUPER + CTRL + TAB` | Workspace vừa rồi, qua lại |
 | `SUPER + 1…0` | Workspace 1–10 |
 | `SUPER + G` | Nhóm cửa sổ (komorebi stack) |
 | `SUPER + S` | Scratchpad |
 | `SUPER + A` | Mở coding agent mặc định |
 | `SUPER + SHIFT + CTRL + A` | Chọn agent |
 
-Chi tiết + những chỗ **cố tình lệch** khỏi Omarchy (và lý do):
+Danh sách đầy đủ và những chỗ cố tình lệch khỏi Omarchy nằm trong
 [`docs/keybindings.md`](docs/keybindings.md).
+
+## Theme
+
+Một palette chi phối viền komorebi, thanh yasb, Alacritty, menu và Raycast:
+
+```powershell
+./scripts/omacheese/omacheese-theme.ps1 -List
+./scripts/omacheese/omacheese-theme.ps1 -Set catppuccin
+```
+
+Palette chính là file `colors.toml` của Omarchy, nên bất kỳ theme nào của họ
+cũng thả vào `configs/theme/` là dùng được luôn. Xem
+[`docs/theming.md`](docs/theming.md).
+
+## Khi có sự cố
+
+```powershell
+./scripts/doctor.ps1            # kiểm tra config đã cài
+./scripts/doctor.ps1 -Repo      # kiểm tra file trong repo
+./scripts/doctor.ps1 -Quick     # bỏ qua phần tra winget cho nhanh
+```
+
+Nó tồn tại vì hai lỗi đã thật sự xảy ra ở đây, và cả hai đều không báo gì lúc
+đó. Bạn chỉ biết khi đăng nhập lại:
+
+Sai tên phím whkd. whkd đẩy từng token qua `VKey::from_keyname`, một tên sai là
+daemon chết kéo theo toàn bộ hotkey, im lặng. `enter` không phải tên hợp lệ, phải
+là `return`. `,` cũng không, phải là `oem_comma`.
+
+winget id không tồn tại. `winget install` với id sai chỉ in lỗi rồi đi tiếp, nên
+app đơn giản là không được cài.
+
+CI chạy đúng hai kiểm tra đó trên mọi lần push.
+
+## WSL2
+
+`configs/wsl/.wslconfig` bật `networkingMode=mirrored`, `dnsTunneling`,
+`sparseVhd`, `autoMemoryReclaim` và giới hạn RAM, CPU. `configs/wsl/wsl.conf`
+bật `systemd` và tắt `appendWindowsPath`, thủ phạm quen thuộc khiến
+tab-completion trong WSL chậm và binary Windows che mất binary Linux.
+
+```bash
+sudo cp ~/.config/wsl/wsl.conf /etc/wsl.conf
+```
+
+```powershell
+wsl --shutdown
+```
 
 ## Tài liệu
 
@@ -176,66 +236,32 @@ docs/
 .github/workflows/validate.yml
 ```
 
-## doctor.ps1
-
-```powershell
-./scripts/doctor.ps1            # config đã cài
-./scripts/doctor.ps1 -Repo      # file trong repo
-./scripts/doctor.ps1 -Quick     # bỏ qua tra winget (chậm)
-```
-
-Nó bắt đúng hai loại lỗi từng làm hỏng setup này và **không hề báo gì** cho tới
-khi bạn đăng nhập lại:
-
-- **Tên phím whkd sai.** whkd đẩy từng token vào `VKey::from_keyname`; **một tên
-  sai là daemon chết**, kéo theo toàn bộ hotkey — im lặng. `enter` không hợp lệ
-  (phải là `return`), `,` không hợp lệ (phải là `oem_comma`).
-- **winget id không tồn tại.** `winget install` với id sai chỉ in lỗi rồi đi
-  tiếp, nên app đơn giản là không được cài.
-
-CI chạy đúng các kiểm tra đó trên mọi push.
-
-## WSL2
-
-`configs/wsl/.wslconfig` bật `networkingMode=mirrored`, `dnsTunneling`,
-`sparseVhd`, `autoMemoryReclaim` và giới hạn RAM/CPU. `configs/wsl/wsl.conf` bật
-`systemd` và tắt `appendWindowsPath` (nguyên nhân số một khiến tab-complete
-trong WSL chậm, và khiến binary Windows che mất binary Linux).
-
-```bash
-sudo cp ~/.config/wsl/wsl.conf /etc/wsl.conf
-```
-
-```powershell
-wsl --shutdown
-```
-
 ## Ghi công
 
 Mô hình bàn phím, ý tưởng menu và các bảng màu đến từ
-**[Omarchy](https://github.com/omacom/omarchy)** của DHH / Basecamp (branch
-`quattro`). Omarchy chạy Hyprland trên Arch Linux; repo này là bản diễn dịch
-những ý tưởng đó sang Windows 11 với komorebi + whkd + yasb. Nó **không** liên
-kết, không được bảo trợ, và không phải bản port do dự án Omarchy duy trì.
+[Omarchy](https://github.com/omacom/omarchy) của DHH / Basecamp, branch
+`quattro`. Omarchy chạy Hyprland trên Arch Linux. Repo này làm lại những ý tưởng
+đó cho Windows 11 trên komorebi, whkd và yasb. Nó không liên kết, không được bảo
+trợ, và không do dự án Omarchy duy trì.
 
-Cụ thể những gì vay mượn từ Omarchy:
+Vay mượn cái gì, và nằm ở đâu:
 
-| Cái gì | Nằm ở đâu trong repo này |
+| Từ Omarchy | Ở đây |
 |---|---|
-| Ngữ pháp modifier — SUPER focus, SHIFT mang theo, SHIFT+ALT gửi đi im lặng, ALT nhóm, CTRL toggle | `configs/whkd/whkdrc` |
+| Ngữ pháp modifier: SUPER focus, SHIFT mang theo, SHIFT+ALT gửi đi im lặng, ALT nhóm, CTRL toggle | `configs/whkd/whkdrc` |
 | Điều hướng bằng phím mũi tên và toggle "former workspace" | `configs/whkd/whkdrc` |
 | Resize ba mức trên `-` / `=` | `configs/whkd/whkdrc` |
 | Nhóm cửa sổ bằng `SUPER + G` | `omacheese-stack-toggle.ps1` |
-| Một menu lồng nhau duy nhất trên `SUPER + SPACE` | `omacheese-menu.ps1` |
-| Chế độ scroll ngang (Omarchy lấy từ hyprscroller) | `omacheese-scroll-daemon.ps1` |
+| Menu lồng nhau duy nhất trên `SUPER + SPACE` | `omacheese-menu.ps1` |
+| Chế độ scroll ngang, thứ Omarchy lấy từ hyprscroller | `omacheese-scroll-daemon.ps1` |
 | Agent launcher, từ `bin/omarchy-agent` và `bin/omarchy-default-agent` | `omacheese-agent.ps1` |
 | Layout thanh trên cùng và hàng chấm workspace | `configs/yasb/` |
-| Bảng màu, copy **nguyên văn** từ `themes/<name>/colors.toml` | `configs/theme/` |
+| Bảng màu, copy nguyên văn từ `themes/<name>/colors.toml` | `configs/theme/` |
 
 Những chỗ lệch khỏi Omarchy đều là cố ý, và
 [`docs/keybindings.md`](docs/keybindings.md) giải thích lý do từng chỗ.
 
-Ngoài ra còn dựa trên: [komorebi](https://github.com/LGUG2Z/komorebi) và
+Ngoài ra còn dựa trên [komorebi](https://github.com/LGUG2Z/komorebi) và
 [whkd](https://github.com/LGUG2Z/whkd) của LGUG2Z,
 [yasb](https://github.com/amnweb/yasb),
 [Alacritty](https://github.com/alacritty/alacritty),

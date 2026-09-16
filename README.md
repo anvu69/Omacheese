@@ -1,41 +1,49 @@
-# Omacheese — Windows 11 developer power-user setup
+# Omacheese
+
+A keyboard-first Windows 11 dev setup: tiling window manager, terminal-heavy,
+Vim/Neovim, WSL2, remote work. The navigation and workspace model is ported from
+[Omarchy](https://omarchy.org).
+
+Omacheese is this repo's name for that port. It is not affiliated with the
+Omarchy project. [Credits](#credits) lists what was borrowed and where it lives.
 
 *[Tiếng Việt](README.vi.md)*
 
-A keyboard-first Windows 11 setup: tiling window manager, terminal-heavy,
-Vim/Neovim, WSL2, remote-first — with the navigation and workspace model ported
-from [Omarchy](https://omarchy.org).
+## Requirements
 
-**Omacheese is this repo's own name for that port.** It is not affiliated with
-Omarchy; see [Credits](#credits) for exactly what was borrowed.
+- Windows 11 (or Windows 10 build 19041+ if you want WSL2)
+- winget, which ships as "App Installer" from the Microsoft Store
+- Virtualisation enabled in the BIOS, for the WSL2 module
+- Admin rights, for the WSL2 and debloat modules
+
+Everything else the installer brings in itself. It runs on Windows PowerShell
+5.1 with no modules, since that is all a fresh Windows has.
 
 ## Install
 
-A freshly installed Windows has no `git` to clone with. One line is enough:
+A fresh Windows has no `git`, so there is nothing to clone with yet:
 
 ```powershell
 irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1 | iex
 ```
 
-No clone, nothing installed first. It downloads the repo as an archive and runs
-the same `setup.ps1` below.
+That downloads the repo as an archive and runs `setup.ps1`.
 
-To pass options through `iex`, wrap it in a script block:
+`iex` cannot take parameters. To pass any, wrap the script in a block:
 
 ```powershell
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1))) -Preset desktop -Yes
 ```
 
-Details, and how to install only part of it: [`docs/no-clone-install.md`](docs/no-clone-install.md).
-
-Already cloned:
+If you already cloned:
 
 ```powershell
 ./scripts/setup.ps1
 ```
 
-Both routes reach the same TUI: it detects the hardware, offers only the modules
-the machine **can actually run**, and reports progress step by step.
+Both routes open the same TUI. It reads the hardware first and greys out
+anything the machine cannot run, so you never pick a module that will fail
+halfway through.
 
 ```text
 +- Modules ---------------------------------------------------------+
@@ -52,11 +60,11 @@ the machine **can actually run**, and reports progress step by step.
 +-------------------------------------------------------------------+
 ```
 
-Non-interactive:
+For CI, remote sessions, or anywhere a TUI is awkward:
 
 ```powershell
 ./scripts/setup.ps1 -Preset desktop -Yes
-./scripts/setup.ps1 -Preset everything -DryRun    # show the plan, change nothing
+./scripts/setup.ps1 -Preset everything -DryRun    # print the plan, change nothing
 ./scripts/setup.ps1 -Modules core,cli,configs
 ```
 
@@ -65,22 +73,25 @@ Non-interactive:
 | `minimal` | terminal, shell, CLI, dotfiles |
 | `desktop` | + tiling WM (Omarchy keymap), debloat |
 | `full` | + coding agents, WSL2 AlmaLinux |
-| `everything` | + local LLM **if the hardware allows** |
+| `everything` | + local LLM, if the hardware allows |
 | `custom` | pick your own |
 
-When it finishes, press **`SUPER + /`** for every keybinding.
+Individual modules: `core` `psmodules` `cli` `wm` `desktop` `agents` `raycast`
+`configs` `debloat` `wsl` `localllm` `verify`.
 
-> The TUI runs on **Windows PowerShell 5.1** with zero dependencies — because
-> that is all a freshly installed Windows has. CI enforces it.
+Installing only part of it, or from a fork:
+[`docs/no-clone-install.md`](docs/no-clone-install.md).
 
-## The stack
+Once it finishes, `SUPER + /` lists every keybinding.
+
+## What you get
 
 | Area | Choice |
 |---|---|
 | Terminal | Alacritty |
 | Windows shell | PowerShell 7 + Oh My Posh + PSReadLine Vi mode |
 | Window manager | komorebi + whkd + yasb |
-| Keymap | Omarchy-style (SUPER-first), see `docs/keybindings.md` |
+| Keymap | Omarchy-style, SUPER-first. See `docs/keybindings.md` |
 | Terminal multiplexer | tmux |
 | Editor | LazyVim / Neovim |
 | CLI | fzf, ripgrep, fd, eza, bat, zoxide, delta, lazygit, gh, jq |
@@ -89,27 +100,31 @@ When it finishes, press **`SUPER + /`** for every keybinding.
 | Linux dev env | WSL2 + AlmaLinux + Zsh + Oh My Zsh |
 | Database | DBeaver Community |
 | SSH GUI | electerm |
-| SSH keys / vault | Bitwarden Desktop SSH Agent (+ a bridge into WSL) |
-| Installer | Zero-dependency TUI, hardware detection, progress tracking |
-| Coding agents | Claude Code, Codex, Gemini, OpenCode — Omarchy-style manager |
-| Local LLM | Ollama (any machine) or vLLM + GPU (when the VRAM is there) |
-| Debloat | Win11Debloat, pinned and version-controlled profile |
+| SSH keys / vault | Bitwarden Desktop SSH Agent, bridged into WSL |
+| Coding agents | Claude Code, Codex, Gemini, OpenCode |
+| Local LLM | Ollama anywhere, or vLLM + GPU when the VRAM is there |
+| Debloat | Win11Debloat with a pinned, version-controlled profile |
 | Theme | One palette across every tool (Tokyo Night, Catppuccin) |
-| Launcher | Optional Raycast integration |
+| Launcher | Raycast, optional |
 
-## Philosophy
+## How it is put together
 
-- Windows 11 is the **host OS**: window manager, browser, file search, GUI tools.
-- WSL2 AlmaLinux is the **dev/runtime OS**: shell, tmux, LazyVim, Ansible, CLI.
-- Daily SSH goes **Alacritty → WSL2 → tmux → ssh**; electerm for the GUI cases.
-- Jump servers use **ProxyJump**, never `ForwardAgent yes`.
-- Config lives in Git and installs as symlinks, so an edit takes effect at once.
-- **Everything must be verifiable** — `doctor.ps1` and CI check rather than trust.
+Windows 11 is the host OS and handles the window manager, browser, file search
+and GUI tools. WSL2 AlmaLinux is the dev and runtime OS, with the shell, tmux,
+LazyVim, Ansible and the CLI work.
 
-## Navigation
+Daily SSH goes Alacritty to WSL2 to tmux to ssh, with electerm for the cases
+that want a GUI. Jump servers use `ProxyJump`; `ForwardAgent yes` is never set,
+since it exposes your agent to every host you land on.
 
-`SUPER` is the Windows key. One modifier owns window management, and each added
-modifier is a consistent extra dimension:
+Config lives in Git and installs as symlinks, so editing a file in the repo
+takes effect immediately. `doctor.ps1` and CI check the setup instead of
+assuming it works.
+
+## Keybindings
+
+`SUPER` is the Windows key. One modifier handles window management, and each
+extra modifier changes what happens to the window:
 
 | Keys | Meaning |
 |---|---|
@@ -119,21 +134,70 @@ modifier is a consistent extra dimension:
 | `SUPER + ALT` | group (stack) |
 | `SUPER + CTRL` | toggle a system setting |
 
-Worth learning first:
+The ones worth learning first:
 
 | Keys | Action |
 |---|---|
-| `SUPER + /` | Keybinding list (searchable) |
+| `SUPER + /` | Keybinding list, searchable |
 | `SUPER + SPACE` | Omacheese menu |
-| `SUPER + CTRL + TAB` | Former workspace (back-and-forth) |
+| `SUPER + CTRL + TAB` | Former workspace, back and forth |
 | `SUPER + 1…0` | Workspace 1–10 |
 | `SUPER + G` | Group windows (komorebi stack) |
 | `SUPER + S` | Scratchpad |
 | `SUPER + A` | Launch the default coding agent |
 | `SUPER + SHIFT + CTRL + A` | Pick an agent |
 
-Full list, and the places this **deliberately differs** from Omarchy (with
-reasons): [`docs/keybindings.md`](docs/keybindings.md).
+The full list, and the places this differs from Omarchy on purpose, are in
+[`docs/keybindings.md`](docs/keybindings.md).
+
+## Theming
+
+One palette drives komorebi's borders, the yasb bar, Alacritty, the menu and
+Raycast:
+
+```powershell
+./scripts/omacheese/omacheese-theme.ps1 -List
+./scripts/omacheese/omacheese-theme.ps1 -Set catppuccin
+```
+
+Palettes are Omarchy's own `colors.toml` files, so any of its themes can be
+dropped into `configs/theme/` and used as is. See
+[`docs/theming.md`](docs/theming.md).
+
+## Troubleshooting
+
+```powershell
+./scripts/doctor.ps1            # check the installed config
+./scripts/doctor.ps1 -Repo      # check the files in the repo
+./scripts/doctor.ps1 -Quick     # skip the slow winget lookups
+```
+
+It exists because of two failures that have actually happened here, and neither
+one reports an error at the time. You find out when you next log in:
+
+A wrong whkd key name. whkd pushes every token through `VKey::from_keyname`, and
+one bad name kills the daemon along with every hotkey, silently. `enter` is not
+a valid name, it is `return`. `,` is not valid either, it is `oem_comma`.
+
+A winget id that does not exist. `winget install` with a bad id prints an error
+and carries on, so the app simply never gets installed.
+
+CI runs the same two checks on every push.
+
+## WSL2
+
+`configs/wsl/.wslconfig` turns on `networkingMode=mirrored`, `dnsTunneling`,
+`sparseVhd` and `autoMemoryReclaim`, and caps RAM and CPU. `configs/wsl/wsl.conf`
+turns on `systemd` and turns off `appendWindowsPath`, which is the usual reason
+tab-completion inside WSL is slow and Windows binaries shadow Linux ones.
+
+```bash
+sudo cp ~/.config/wsl/wsl.conf /etc/wsl.conf
+```
+
+```powershell
+wsl --shutdown
+```
 
 ## Docs
 
@@ -176,67 +240,32 @@ docs/
 .github/workflows/validate.yml
 ```
 
-## doctor.ps1
-
-```powershell
-./scripts/doctor.ps1            # the installed config
-./scripts/doctor.ps1 -Repo      # the files in the repo
-./scripts/doctor.ps1 -Quick     # skip the slow winget lookups
-```
-
-It catches the two failure modes that have actually broken this setup, both of
-which **report nothing** until you next log in:
-
-- **A wrong whkd key name.** whkd pushes every token through
-  `VKey::from_keyname`; **one bad name kills the daemon**, and with it every
-  hotkey — silently. `enter` is not valid (it is `return`), `,` is not valid
-  (it is `oem_comma`).
-- **A winget id that does not exist.** `winget install` with a bad id prints an
-  error and moves on, so the app simply never arrives.
-
-CI runs those same checks on every push.
-
-## WSL2
-
-`configs/wsl/.wslconfig` enables `networkingMode=mirrored`, `dnsTunneling`,
-`sparseVhd`, `autoMemoryReclaim` and caps RAM/CPU. `configs/wsl/wsl.conf`
-enables `systemd` and disables `appendWindowsPath` — the number one cause of
-slow tab-completion inside WSL, and of Windows binaries shadowing Linux ones.
-
-```bash
-sudo cp ~/.config/wsl/wsl.conf /etc/wsl.conf
-```
-
-```powershell
-wsl --shutdown
-```
-
 ## Credits
 
-The keyboard model, the menu, and the theme palettes come from
-**[Omarchy](https://github.com/omacom/omarchy)** by DHH / Basecamp (branch
-`quattro`). Omarchy runs Hyprland on Arch Linux; this repo is a reinterpretation
-of its ideas on Windows 11 with komorebi + whkd + yasb. It is not affiliated
-with, endorsed by, or a port maintained by the Omarchy project.
+The keyboard model, the menu and the theme palettes come from
+[Omarchy](https://github.com/omacom/omarchy) by DHH / Basecamp, branch
+`quattro`. Omarchy runs Hyprland on Arch Linux. This repo reworks those ideas
+for Windows 11 on komorebi, whkd and yasb. It is not affiliated with, endorsed
+by, or maintained by the Omarchy project.
 
-Borrowed from Omarchy, specifically:
+What was borrowed, and where it ended up:
 
-| What | Where it lives here |
+| From Omarchy | Here |
 |---|---|
-| The modifier grammar — SUPER focuses, SHIFT moves, SHIFT+ALT sends silently, ALT groups, CTRL toggles | `configs/whkd/whkdrc` |
+| The modifier grammar: SUPER focuses, SHIFT moves, SHIFT+ALT sends silently, ALT groups, CTRL toggles | `configs/whkd/whkdrc` |
 | Arrow-key navigation and the "former workspace" toggle | `configs/whkd/whkdrc` |
 | Three-magnitude resize on `-` / `=` | `configs/whkd/whkdrc` |
 | Window grouping on `SUPER + G` | `omacheese-stack-toggle.ps1` |
-| The one nested menu on `SUPER + SPACE` | `omacheese-menu.ps1` |
-| The horizontal scrolling strip (Omarchy gets it from hyprscroller) | `omacheese-scroll-daemon.ps1` |
+| The single nested menu on `SUPER + SPACE` | `omacheese-menu.ps1` |
+| The horizontal scrolling strip, which Omarchy gets from hyprscroller | `omacheese-scroll-daemon.ps1` |
 | The agent launcher, from `bin/omarchy-agent` and `bin/omarchy-default-agent` | `omacheese-agent.ps1` |
 | Top bar layout and the workspace dot row | `configs/yasb/` |
-| Theme palettes, copied **verbatim** from `themes/<name>/colors.toml` | `configs/theme/` |
+| Theme palettes, copied verbatim from `themes/<name>/colors.toml` | `configs/theme/` |
 
-Where this departs from Omarchy it is on purpose, and
-[`docs/keybindings.md`](docs/keybindings.md) says why in each case.
+Where this departs from Omarchy it is deliberate, and
+[`docs/keybindings.md`](docs/keybindings.md) gives the reason in each case.
 
-Also built on: [komorebi](https://github.com/LGUG2Z/komorebi) and
+Also built on [komorebi](https://github.com/LGUG2Z/komorebi) and
 [whkd](https://github.com/LGUG2Z/whkd) by LGUG2Z,
 [yasb](https://github.com/amnweb/yasb),
 [Alacritty](https://github.com/alacritty/alacritty),
