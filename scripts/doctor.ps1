@@ -186,6 +186,64 @@ if (Test-Path -LiteralPath $ps51) {
     Warn "Windows PowerShell 5.1 not found - skipped the clean-machine parse check"
 }
 
+Section "fonts"
+# Third instance of the same bug class in this repo: referring to something by
+# a name that does not exist. A missing winget id prints an error; a bad whkd
+# key name kills the daemon; a bad FONT family is the quietest of the three -
+# Windows silently substitutes a font with no icon glyphs, so every icon turns
+# into tofu or a random letter and icons overlap their labels.
+#
+# winget's DEVCOM.JetBrainsMonoNerdFont installs files named
+# JetBrainsMonoNerdFont-*.ttf but registers the family as "JetBrainsMono NF".
+Add-Type -AssemblyName System.Drawing -ErrorAction SilentlyContinue
+$families = @()
+try {
+    $families = (New-Object System.Drawing.Text.InstalledFontCollection).Families | ForEach-Object { $_.Name }
+} catch { }
+
+if (-not $families.Count) {
+    Warn "could not enumerate installed fonts"
+} else {
+    $refs = @{}
+    $alac = if ($Repo) { Join-Path $RepoRoot "configs\alacritty\alacritty.toml" } else { Join-Path $env:APPDATA "alacritty\alacritty.toml" }
+    if (Test-Path -LiteralPath $alac) {
+        Get-Content -LiteralPath $alac | Select-String -Pattern '^\s*family\s*=\s*"([^"]+)"' | ForEach-Object {
+            $refs[$_.Matches[0].Groups[1].Value] = "alacritty"
+        }
+    }
+    $kj = if ($Repo) { Join-Path $RepoRoot "configs\komorebi\komorebi.json" } else { Join-Path $cfg "komorebi\komorebi.json" }
+    if (Test-Path -LiteralPath $kj) {
+        Get-Content -LiteralPath $kj | Select-String -Pattern '"font_family"\s*:\s*"([^"]+)"' | ForEach-Object {
+            $refs[$_.Matches[0].Groups[1].Value] = "komorebi stackbar"
+        }
+    }
+
+    $missingFonts = @()
+    foreach ($name in $refs.Keys) {
+        if ($families -notcontains $name) { $missingFonts += "$name (in $($refs[$name]))" }
+    }
+    if ($missingFonts.Count) {
+        Bad "font family not installed: $($missingFonts -join '; ')"
+        Write-Host "          installed Nerd Font families:" -ForegroundColor Red
+        $families | Where-Object { $_ -match 'NF$|NFM$|Nerd Font$' } | Select-Object -First 5 |
+            ForEach-Object { Write-Host "            $_" -ForegroundColor Red }
+    } elseif ($refs.Count) {
+        Ok "all $($refs.Count) referenced font famil$(if ($refs.Count -eq 1) { 'y is' } else { 'ies are' }) installed"
+    }
+
+    # yasb CSS carries a fallback list, so only warn when none of them exist.
+    $css = if ($Repo) { Join-Path $RepoRoot "configs\yasb\styles.css" } else { Join-Path $cfg "yasb\styles.css" }
+    if (Test-Path -LiteralPath $css) {
+        $line = (Get-Content -LiteralPath $css -Raw) -replace "`r?`n", " "
+        if ($line -match 'font-family:\s*([^;]+);') {
+            $list = @($Matches[1] -split ',' | ForEach-Object { $_.Trim().Trim('"') })
+            $hit = @($list | Where-Object { $families -contains $_ })
+            if ($hit.Count) { Ok "yasb font falls back to '$($hit[0])'" }
+            else { Bad "yasb font-family lists nothing installed: $($list -join ', ')" }
+        }
+    }
+}
+
 Section "powershell 7 modules"
 # The shipped profile is PS7-only, and the two PowerShells do not share a
 # module directory (5.1 -> Documents\WindowsPowerShell\Modules,

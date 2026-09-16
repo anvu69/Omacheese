@@ -25,7 +25,7 @@
     "label": "Title",
     "tabs": {
       "width": 220,
-      "font_family": "JetBrainsMono Nerd Font",
+      "font_family": "JetBrainsMono NF",
       "font_size": 12,
       "background": "#1a1b26",
       "focused_text": "#c0caf5",

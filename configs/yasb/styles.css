@@ -16,8 +16,16 @@
    repeated literally - change them with find/replace.
    ========================================================================== */
 
+/* FONT FAMILY NAME, not the package name.
+   winget's DEVCOM.JetBrainsMonoNerdFont installs files called
+   JetBrainsMonoNerdFont-*.ttf, but the family registers as "JetBrainsMono NF".
+   "JetBrainsMono Nerd Font" does not exist; asking for it falls back to a font
+   with no icon glyphs, which is why every icon rendered as tofu or as a random
+   letter, and why icons overlapped their labels (wrong advance widths).
+   The list below covers the common Nerd Font packages, in preference order. */
 * {
-    font-family: "JetBrainsMono Nerd Font", "Segoe UI", sans-serif;
+    font-family: "JetBrainsMono NF", "JetBrainsMonoNL NF", "CaskaydiaCove NF",
+                 "UbuntuMono Nerd Font", "Segoe UI", sans-serif;
     font-size: 12px;
     font-weight: 500;
     color: #a9b1d6;
@@ -30,22 +38,35 @@
 }
 
 .widget {
-    padding: 0 8px;
+    padding: 0 7px;
     margin: 0;
 }
 
 .widget .label {
-    padding: 0 2px;
+    padding: 0 1px;
 }
 
 .widget .label.alt {
     color: #c0caf5;
 }
 
+/* Nerd Font icons are drawn wider than one text cell. Without a right gap
+   they collide with the number that follows - which is what made the CPU and
+   memory readouts unreadable. */
 .widget .icon {
     font-size: 14px;
     color: #7aa2f7;
-    padding: 0 2px;
+    padding-right: 6px;
+    padding-left: 1px;
+}
+
+/* An icon-only widget needs no trailing gap; that gap was what pushed the
+   power button past the right edge of the bar and clipped it. */
+.bluetooth-widget .icon,
+.wifi-widget .icon,
+.power-menu-widget .icon,
+.omarchy-menu-widget .icon {
+    padding-right: 1px;
 }
 
 /* --------------------------------------------------------------------------
@@ -83,8 +104,8 @@
     font-size: 11px;
     color: #414868;
     background-color: transparent;
-    margin: 0 1px;
-    padding: 0 5px;
+    margin: 0;
+    padding: 0 4px;
     border-radius: 10px;
 }
 
@@ -206,13 +227,17 @@
     color: #9ece6a;
 }
 
+/* Last widget on the bar: give it real room on the right so the glyph is not
+   sheared off by the bar edge. */
 .power-menu-widget {
-    padding: 0 10px 0 8px;
+    padding: 0 6px 0 10px;
+    margin-right: 2px;
 }
 
 .power-menu-widget .label {
     color: #f7768e;
     font-size: 14px;
+    padding-right: 0;
 }
 
 .power-menu-widget:hover .label {

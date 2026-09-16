@@ -44,7 +44,9 @@ bars:
       top: 0
       left: 8
       bottom: 0
-      right: 8
+      # More on the right: the last widget is icon-only and was being clipped
+      # by the bar edge.
+      right: 14
     widgets:
       left:
         - "omarchy_menu"
@@ -68,8 +70,8 @@ widgets:
   omarchy_menu:
     type: "yasb.custom.CustomWidget"
     options:
-      label: "󰜿"
-      label_alt: "󰜿"
+      label: "<span></span>"
+      label_alt: "<span></span>"
       class_name: "omarchy-menu-widget"
       # Goes through omarchy-run.cmd, like whkdrc does, so the bar still works
       # on a machine where PowerShell 7 was never installed.
@@ -82,8 +84,8 @@ widgets:
     options:
       label_offline: "󰸹 offline"
       # Empty and populated stay as dots; the active workspace shows its name.
-      label_workspace_btn: "󰐽"
-      label_workspace_populated_btn: "󰐾"
+      label_workspace_btn: ""
+      label_workspace_populated_btn: ""
       label_workspace_active_btn: "{name}"
       label_default_name: "{index}"
       label_zero_index: false
@@ -91,10 +93,12 @@ widgets:
       hide_if_offline: false
       enable_scroll_switching: true
       reverse_scroll_direction: false
+      # Off on purpose: komorebi_active_layout sits immediately to the
+      # right and already draws a layout glyph, so enabling this put two
+      # near-identical icons side by side. SUPER+SHIFT+SPACE still
+      # toggles the layer and the layout widget reflects it.
       toggle_workspace_layer:
-        enabled: true
-        tiling_label: "󰙀"
-        floating_label: ""
+        enabled: false
       app_icons:
         enabled_populated: false
         enabled_active: false
@@ -124,13 +128,13 @@ widgets:
         columns: ""
         rows: ""
         grid: "󰝘"
-        scrolling: ""
+        scrolling: ""
         vertical_stack: ""
         horizontal_stack: ""
-        ultrawide_vertical_stack: ""
-        right_main_vertical_stack: ""
+        ultrawide_vertical_stack: ""
+        right_main_vertical_stack: ""
         monocle: ""
-        maximized: ""
+        maximized: ""
         floating: ""
         paused: "󰾉"
         tiling: "󰙀"
@@ -156,15 +160,15 @@ widgets:
   cpu:
     type: "yasb.cpu.CpuWidget"
     options:
-      label: " {info[percent][total]}%"
-      label_alt: " {info[histograms][cpu_percent]}"
+      label: "<span></span> {info[percent][total]}%"
+      label_alt: "<span></span> {info[histograms][cpu_percent]}"
       update_interval: 2000
 
   memory:
     type: "yasb.memory.MemoryWidget"
     options:
-      label: " {virtual_mem_percent}%"
-      label_alt: " {virtual_mem_used}/{virtual_mem_total}"
+      label: "<span></span> {virtual_mem_percent}%"
+      label_alt: "<span></span> {virtual_mem_used}/{virtual_mem_total}"
       update_interval: 5000
 
   volume:
@@ -178,7 +182,7 @@ widgets:
         muted: ""
         "10": ""
         "30": ""
-        "60": ""
+        "60": ""
         "100": ""
       callbacks:
         on_left: "toggle_volume_menu"
@@ -205,9 +209,9 @@ widgets:
       max_length_ellipsis: "…"
       tooltip: true
       icons:
-        bluetooth_on: ""
-        bluetooth_off: ""
-        bluetooth_connected: ""
+        bluetooth_on: "󰂯"
+        bluetooth_off: "󰂱"
+        bluetooth_connected: "󰂰"
       callbacks:
         on_left: "toggle_menu"
         on_right: "exec cmd.exe /c start ms-settings:bluetooth"
@@ -227,7 +231,7 @@ widgets:
   power_menu:
     type: "yasb.power_menu.PowerMenuWidget"
     options:
-      label: ""
+      label: "<span></span>"
       uptime: true
       blur: false
       blur_background: true
@@ -235,8 +239,8 @@ widgets:
       button_row: 3
       buttons:
         lock: ["", "Lock"]
-        signout: ["󰍃", "Sign out"]
-        sleep: ["⏾", "Sleep"]
-        restart: ["", "Restart"]
+        signout: ["", "Sign out"]
+        sleep: ["", "Sleep"]
+        restart: ["", "Restart"]
         shutdown: ["", "Shut Down"]
-        cancel: ["󰜺", "Cancel"]
+        cancel: ["", "Cancel"]
