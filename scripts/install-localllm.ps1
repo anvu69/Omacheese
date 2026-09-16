@@ -101,14 +101,16 @@ if (-not $machine.HasWsl) {
     exit 1
 }
 
-$installed = @()
-try {
-    $raw = (& wsl.exe -l -q 2>$null) -join "`n"
-    $installed = @(($raw -replace "`0", "") -split "`r?`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ })
-} catch { }
+# Bounded, like the probe in detect.ps1: this is the last place that should
+# stall, and "wsl did not answer" means the same thing as "no distro" here.
+$r = Invoke-BoundedCommand -FilePath "wsl.exe" -ArgumentList @("-l", "-q") `
+     -TimeoutMs 8000 -StdoutEncoding ([System.Text.Encoding]::Unicode)
+$installed = @((($r.Output -replace "`0", "") -split "`r?`n") |
+    ForEach-Object { $_.Trim() } | Where-Object { $_ })
 
 if ($installed -notcontains $Distro) {
     Bad "$Distro is not installed. Run: wsl --install -d $Distro"
+    Warn "If WSL was just enabled, Windows has to restart before any distro can start."
     exit 1
 }
 

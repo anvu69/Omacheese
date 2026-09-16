@@ -9,6 +9,65 @@
 
 Set-StrictMode -Version 2.0
 
+# Run a native command with a hard deadline, and never let it touch the console.
+#
+# `wsl.exe -l -q` is why this exists. On a machine that has never had WSL the
+# inbox wsl.exe is still in System32 and still answers - but it can take a very
+# long time to do it, because it goes looking for the Store package first. The
+# setup's opening screen is "detecting hardware...", so the whole installer
+# appeared to hang before printing anything a user could act on, on precisely
+# the clean machine this repo is for. No answer is not a problem here: it just
+# means there are no distros.
+#
+# Closing stdin matters as much as the timeout. A child that decides to prompt
+# otherwise reads the installer's own console, and the run stops dead with no
+# visible question - the "it only continues when I press Enter" failure.
+function Invoke-BoundedCommand {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$FilePath,
+        [string[]]$ArgumentList = @(),
+        [int]$TimeoutMs = 6000,
+        # NOT $OutputEncoding: that is a PowerShell automatic variable, and a
+        # parameter of that name shadows it for the whole function, changing how
+        # every native call inside encodes its arguments.
+        $StdoutEncoding = $null
+    )
+
+    $result = [pscustomobject]@{ Output = ""; ExitCode = -1; TimedOut = $false; Failed = $false }
+
+    try {
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName              = $FilePath
+        $psi.Arguments             = ($ArgumentList -join ' ')
+        $psi.UseShellExecute       = $false
+        $psi.CreateNoWindow        = $true
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError  = $true
+        $psi.RedirectStandardInput  = $true
+        if ($StdoutEncoding) { $psi.StandardOutputEncoding = $StdoutEncoding }
+
+        $p = [System.Diagnostics.Process]::Start($psi)
+        $p.StandardInput.Close()
+
+        # Read asynchronously, or a child that fills a pipe buffer deadlocks
+        # against our own WaitForExit.
+        $stdout = $p.StandardOutput.ReadToEndAsync()
+        [void]$p.StandardError.ReadToEndAsync()
+
+        if (-not $p.WaitForExit($TimeoutMs)) {
+            try { $p.Kill() } catch { }
+            $result.TimedOut = $true
+            return $result
+        }
+        $result.ExitCode = $p.ExitCode
+        $result.Output   = $stdout.Result
+    } catch {
+        $result.Failed = $true
+    }
+    return $result
+}
+
 function Get-MachineProfile {
     [CmdletBinding()]
     param()
@@ -87,15 +146,30 @@ function Get-MachineProfile {
         $virtOk = [bool]$cs.HypervisorPresent
     }
 
-    $wslExe     = [bool](Get-Command wsl -ErrorAction SilentlyContinue)
-    $wslDistros = @()
+    $wslExe      = [bool](Get-Command wsl -ErrorAction SilentlyContinue)
+    $wslDistros  = @()
+    $wslProbeSlow = $false
+
+    # wsl.exe sitting in System32 says nothing: it ships with Windows whether or
+    # not the feature was ever enabled. One of these two services exists only
+    # once WSL is actually installed, and asking is instant, so it decides
+    # whether running wsl.exe is worth the wait at all.
+    $wslInstalled = $false
     if ($wslExe) {
-        try {
-            # wsl -l -q emits UTF-16; strip the nulls rather than fight encoding.
-            $raw = (& wsl.exe -l -q 2>$null) -join "`n"
-            $wslDistros = @(($raw -replace "`0", "") -split "`r?`n" |
+        $svc = @(Get-Service -Name "LxssManager", "WSLService" -ErrorAction SilentlyContinue)
+        $wslInstalled = ($svc.Count -gt 0)
+    }
+
+    if ($wslInstalled) {
+        # wsl -l -q emits UTF-16; ask for it, and strip stray nulls anyway.
+        $r = Invoke-BoundedCommand -FilePath "wsl.exe" -ArgumentList @("-l", "-q") `
+             -TimeoutMs 6000 -StdoutEncoding ([System.Text.Encoding]::Unicode)
+        if ($r.TimedOut) {
+            $wslProbeSlow = $true
+        } else {
+            $wslDistros = @((($r.Output -replace "`0", "") -split "`r?`n") |
                 ForEach-Object { $_.Trim() } | Where-Object { $_ })
-        } catch { }
+        }
     }
 
     # --- Disk -----------------------------------------------------------------
@@ -154,7 +228,8 @@ function Get-MachineProfile {
         FreeGb        = $freeGb
         Gpu           = $gpu
         VirtEnabled   = $virtOk
-        HasWsl        = $wslExe
+        HasWsl        = $wslInstalled
+        WslProbeSlow  = $wslProbeSlow
         WslDistros    = $wslDistros
         HasAlmaLinux  = [bool]($wslDistros | Where-Object { $_ -match "AlmaLinux" })
         HasWinget     = [bool](Get-Command winget -ErrorAction SilentlyContinue)
@@ -188,9 +263,11 @@ function Format-MachineSummary {
     $lines += "GPU  $gpuText"
 
     $wslText = "not installed"
-    if ($Machine.HasWsl) {
+    if ($Machine.WslProbeSlow) {
+        $wslText = "installed, but 'wsl -l' did not answer in 6s"
+    } elseif ($Machine.HasWsl) {
         if ($Machine.WslDistros.Count) { $wslText = ($Machine.WslDistros -join ", ") }
-        else { $wslText = "wsl.exe present, no distro" }
+        else { $wslText = "installed, no distro" }
     }
     $lines += "WSL  {0}{1}{2}    local LLM  {3}{4}{2}" -f `
         $T.Fg, $wslText, $T.Reset, $T.Dim, $Machine.LlmNote

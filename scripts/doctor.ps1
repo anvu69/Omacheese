@@ -34,6 +34,48 @@ function Warn { param($m) $script:Warn++; Write-Host "  WARN  $m" -ForegroundCol
 function Bad  { param($m) $script:Fail++; Write-Host "  FAIL  $m" -ForegroundColor Red }
 function Section { param($m) Write-Host "`n$m" -ForegroundColor Magenta }
 
+# --- talking to WSL safely ---------------------------------------------------
+# wsl.exe ships with Windows whether or not the feature was ever enabled, so
+# `Get-Command wsl` proves nothing, and on a machine without WSL the calls below
+# can sit there for a long time before admitting it. doctor runs as the last
+# step of every install, so that time is spent on exactly the clean machines
+# this repo is for. Ask the service registry first - instant - and put a
+# deadline on anything that does run.
+#
+# These are duplicated from scripts/lib/detect.ps1 on purpose: doctor.ps1 is
+# documented as runnable on its own, straight off a URL, with no lib/ beside it.
+function Test-WslPresent {
+    if (-not (Get-Command wsl -ErrorAction SilentlyContinue)) { return $false }
+    return (@(Get-Service -Name "LxssManager", "WSLService" -ErrorAction SilentlyContinue).Count -gt 0)
+}
+
+function Invoke-Wsl {
+    param([string[]]$WslArgs, [int]$TimeoutMs = 20000)
+
+    $out = ""
+    try {
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName               = "wsl.exe"
+        $psi.Arguments              = ($WslArgs -join ' ')
+        $psi.UseShellExecute        = $false
+        $psi.CreateNoWindow         = $true
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError  = $true
+        $psi.RedirectStandardInput  = $true
+
+        $p = [System.Diagnostics.Process]::Start($psi)
+        $p.StandardInput.Close()
+        $stdout = $p.StandardOutput.ReadToEndAsync()
+        [void]$p.StandardError.ReadToEndAsync()
+        if (-not $p.WaitForExit($TimeoutMs)) {
+            try { $p.Kill() } catch { }
+            return ""
+        }
+        $out = $stdout.Result
+    } catch { return "" }
+    return ($out -replace "`0", "")
+}
+
 # --- whkd key names ----------------------------------------------------------
 # Mirrors win_hotkeys VKey::from_keyname. Anything outside this set aborts whkd
 # on startup, taking every binding with it.
@@ -498,13 +540,18 @@ if (Test-Path -LiteralPath $agentState) {
 # into a terminal that closed before anyone could read it.
 if (-not $Quick -and $knownAgents.Count) {
     $distro = "AlmaLinux-9"
-    $haveDistro = (@(& wsl.exe -l -q 2>$null) | ForEach-Object { ($_ -replace "`0", "").Trim() }) -contains $distro
+    $haveDistro = $false
+    if (Test-WslPresent) {
+        $haveDistro = @((Invoke-Wsl @("-l", "-q") -TimeoutMs 8000) -split "`r?`n" |
+            ForEach-Object { $_.Trim() } | Where-Object { $_ }) -contains $distro
+    }
     if (-not $haveDistro) {
         Warn "$distro not installed; SUPER+ALT+A (agent in WSL) cannot work"
     } else {
         $inWsl = @()
         foreach ($k in $knownAgents.Keys) {
-            $hit = ((& wsl.exe -d $distro -- bash -lc "command -v $($knownAgents[$k]) 2>/dev/null" 2>$null) -join "").Trim()
+            $hit = (Invoke-Wsl @("-d", $distro, "--", "bash", "-lc",
+                ('"command -v {0} 2>/dev/null"' -f $knownAgents[$k]))).Trim()
             # /mnt/* is the Windows copy reaching in over the interop PATH, not
             # a Linux install, and it cannot serve as one.
             if ($hit -and $hit -notlike "/mnt/*") { $inWsl += $k }
@@ -580,7 +627,9 @@ else { Warn "mouse acceleration on (./scripts/debloat-windows.ps1)" }
 
 Section "wsl / docker"
 $distro = "AlmaLinux-9"
-if (Get-Command wsl -ErrorAction SilentlyContinue) {
+if (-not (Test-WslPresent)) {
+    Warn "WSL is not installed (./scripts/setup.ps1 -Modules wsl)"
+} else {
     $wslConf = Join-Path $env:USERPROFILE ".wslconfig"
     if (Test-Path -LiteralPath $wslConf) { Ok ".wslconfig present" } else { Warn ".wslconfig missing" }
 
@@ -600,13 +649,15 @@ if (Get-Command wsl -ErrorAction SilentlyContinue) {
     [System.IO.File]::WriteAllText($probeFile, ($probeBody -replace "`r`n", "`n"),
         (New-Object System.Text.UTF8Encoding($false)))
 
-    $probeLinux = & wsl.exe -d $distro -- wslpath -a ($probeFile -replace '\\', '/') 2>$null
-    $probeLinux = (($probeLinux -join '') -replace "`0", "").Trim()
+    # Bounded, like every other call into WSL here: booting a distro that has
+    # never been started is slow, and one that cannot boot at all used to hold
+    # the last step of the install open with nothing on screen.
+    $probeLinux = (Invoke-Wsl @("-d", $distro, "--", "wslpath", "-a",
+        ('"{0}"' -f ($probeFile -replace '\\', '/'))) -TimeoutMs 60000).Trim()
 
     $probe = ""
     if ($probeLinux) {
-        $raw = & wsl.exe -d $distro -- bash $probeLinux 2>$null
-        $raw = (($raw -join "`n") -replace "`0", "")
+        $raw = Invoke-Wsl @("-d", $distro, "--", "bash", ('"{0}"' -f $probeLinux)) -TimeoutMs 60000
         foreach ($ln in ($raw -split "`r?`n")) {
             $idx = $ln.IndexOf("W11PROBE|")
             if ($idx -ge 0) { $probe = $ln.Substring($idx + 9).Trim(); break }
