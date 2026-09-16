@@ -341,6 +341,37 @@ jobs:
           }
           if ($bad) { exit 1 }
 
+      - name: Every module installs a group that exists
+        shell: pwsh
+        run: |
+          # modules.ps1 asks for a winget group by name; packages.json defines
+          # them. A module naming a group that is not there installs nothing and
+          # reports success, which is the quietest possible failure.
+          $manifest = Get-Content configs/winget/packages.json -Raw | ConvertFrom-Json
+          $groups = $manifest.groups.PSObject.Properties.Name
+          $mods = Get-Content scripts/lib/modules.ps1 -Raw
+          $asked = [regex]::Matches($mods, 'InstallWindows -Groups @\("(\w+)"\)') |
+                   ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
+          if (-not $asked) { Write-Host 'no module groups found'; exit 1 }
+          $bad = 0
+          foreach ($a in $asked) {
+            if ($groups -contains $a) { Write-Host "ok   module group '$a'" }
+            else { Write-Host "FAIL module asks for group '$a', not in packages.json"; $bad++ }
+          }
+          # And the other way: a group nobody installs is dead weight.
+          foreach ($g in $groups) {
+            if ($asked -notcontains $g) { Write-Host "FAIL group '$g' exists but no module installs it"; $bad++ }
+          }
+          # Presets may only name modules that exist.
+          $keys = [regex]::Matches($mods, 'New-Mod -Key "(\w+)"') | ForEach-Object { $_.Groups[1].Value }
+          foreach ($m in [regex]::Matches($mods, 'Modules = @\(([^)]*)\)')) {
+            foreach ($q in [regex]::Matches($m.Groups[1].Value, '"(\w+)"')) {
+              $name = $q.Groups[1].Value
+              if ($keys -notcontains $name) { Write-Host "FAIL preset names module '$name', which does not exist"; $bad++ }
+            }
+          }
+          if ($bad) { exit 1 }
+
       - name: Module actions reference a real context member
         shell: pwsh
         run: |

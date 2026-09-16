@@ -256,6 +256,58 @@ if (-not $families.Count) {
 # end of the fonts section
 }
 
+Section "runtimes and toolchains"
+# The C++ and .NET runtimes are dependencies other software assumes is there,
+# so their absence shows up as some unrelated app failing to start rather than
+# as a missing runtime. Checked by registry, not by running anything.
+if ($Repo) {
+    Warn "skipped (-Repo mode)"
+} else {
+$uninstallKeys = @(
+    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+    "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+)
+$installedNames = @()
+foreach ($k in $uninstallKeys) {
+    if (Test-Path -LiteralPath $k) {
+        $installedNames += @(Get-ChildItem -LiteralPath $k -ErrorAction SilentlyContinue |
+            ForEach-Object { (Get-ItemProperty -LiteralPath $_.PSPath -ErrorAction SilentlyContinue).DisplayName } |
+            Where-Object { $_ })
+    }
+}
+
+$vc = @($installedNames | Where-Object { $_ -match "Visual C\+\+ (2015|2017|2019|2022|v14)" })
+if ($vc.Count) { Ok "Visual C++ runtime present ($($vc.Count) entries)" }
+else { Warn "no Visual C++ 2015+ runtime (./scripts/install-windows.ps1 -Groups core)" }
+
+# dotnet --list-runtimes is the answer from the tool itself rather than from
+# the registry, and it distinguishes runtime from SDK, which matters here:
+# core installs the runtime and the SDK is its own module.
+$dotnet = Get-Command dotnet.exe -ErrorAction SilentlyContinue
+if (-not $dotnet) {
+    Warn "dotnet not on PATH - no .NET runtime (./scripts/install-windows.ps1 -Groups core)"
+} else {
+    $runtimes = @(& $dotnet.Source --list-runtimes 2>$null)
+    $sdks     = @(& $dotnet.Source --list-sdks 2>$null)
+    if ($runtimes.Count) { Ok ".NET runtimes: $($runtimes.Count) installed" }
+    else { Warn "dotnet present but no runtimes listed" }
+    if ($sdks.Count) { Ok ".NET SDK: $($sdks.Count) installed" }
+    else { Warn "no .NET SDK - dotnet build will not work (./scripts/install-windows.ps1 -Groups dotnet)" }
+}
+
+$mise = Get-Command mise -ErrorAction SilentlyContinue
+if (-not $mise) {
+    Warn "mise not installed (./scripts/install-windows.ps1 -Groups langs)"
+} else {
+    $miseVer = ((& $mise.Source --version 2>$null) -join " ").Trim()
+    Ok "mise $miseVer"
+    # What it is actually managing on this machine, if anything.
+    $tools = @(& $mise.Source ls --installed 2>$null | Where-Object { $_ -match "\S" })
+    if ($tools.Count) { Ok "mise manages $($tools.Count) tool version(s) here" }
+    else { Ok "mise installed, no toolchains pinned yet (mise use python@3.13)" }
+}
+}
+
 Section "powershell 7 modules"
 if ($Repo) { Warn "skipped (-Repo mode)" } else {
 # The shipped profile is PS7-only, and the two PowerShells do not share a

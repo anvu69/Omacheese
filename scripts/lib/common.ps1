@@ -140,6 +140,19 @@ function Install-WingetManifest {
     Write-Host "[$groupName] $($group.description)" -ForegroundColor Magenta
 
     foreach ($pkg in $group.packages) {
+      # A package can name the architecture it is for. Without this the VC++
+      # runtime would install the x64 build on an ARM64 machine: a download
+      # that succeeds and leaves the machine without the runtime it needs.
+      if ($pkg.PSObject.Properties.Name -contains "arch" -and $pkg.arch) {
+        $here = $env:PROCESSOR_ARCHITECTURE
+        if ($env:PROCESSOR_ARCHITEW6432) { $here = $env:PROCESSOR_ARCHITEW6432 }
+        $want = switch ($pkg.arch) { "x64" { "AMD64" } "arm64" { "ARM64" } "x86" { "X86" } default { $pkg.arch } }
+        if ($here -ne $want) {
+          Write-Host ("  = {0,-34} skipped ({1} machine)" -f $pkg.id, $here) -ForegroundColor DarkGray
+          $skipped += $pkg.id
+          continue
+        }
+      }
       if (-not $Force -and (Test-WingetInstalled -Id $pkg.id)) {
         Write-Host ("  = {0,-34} already installed" -f $pkg.id) -ForegroundColor DarkGray
         $skipped += $pkg.id

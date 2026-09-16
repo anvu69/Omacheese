@@ -2,7 +2,7 @@
   "$comment": "Single source of truth for winget packages. Both install-windows.ps1 and bootstrap-windows.ps1 read this file. Every id here is verified against 'winget show --id <id> -e'.",
   "groups": {
     "core": {
-      "description": "Terminal, shell, git, fonts. Required.",
+      "description": "Terminal, shell, git, fonts, and the runtimes Windows software assumes. Required.",
       "packages": [
         {
           "id": "Microsoft.PowerShell",
@@ -23,6 +23,42 @@
         {
           "id": "DEVCOM.JetBrainsMonoNerdFont",
           "note": "Nerd Font (bar + prompt glyphs)"
+        },
+        {
+          "id": "Microsoft.VCRedist.2015+.x64",
+          "arch": "x64",
+          "note": "Visual C++ 2015-2022 runtime (x64)"
+        },
+        {
+          "id": "Microsoft.VCRedist.2015+.arm64",
+          "arch": "arm64",
+          "note": "Visual C++ runtime (ARM64 machines)"
+        },
+        {
+          "id": "Microsoft.VCRedist.2015+.x86",
+          "note": "Visual C++ runtime (x86) - still needed by 32-bit tools"
+        },
+        {
+          "id": "Microsoft.DotNet.DesktopRuntime.10",
+          "note": ".NET 10 desktop runtime - runs .NET apps; the SDK is the 'dotnet' module"
+        }
+      ]
+    },
+    "langs": {
+      "description": "One version manager for node, python, go, rust and dart.",
+      "packages": [
+        {
+          "id": "jdx.mise",
+          "note": "mise - installs and pins language versions per project"
+        }
+      ]
+    },
+    "dotnet": {
+      "description": ".NET SDK. Skip it if you never run 'dotnet build'.",
+      "packages": [
+        {
+          "id": "Microsoft.DotNet.SDK.10",
+          "note": ".NET 10 SDK - includes the runtime already in core"
         }
       ]
     },

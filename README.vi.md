@@ -49,13 +49,14 @@ máy không chạy được, nên bạn không chọn nhầm thứ sẽ chết g
 | Microsoft Windows 11 Pro  build 26200   32 GB RAM   24 threads     |
 | GPU  NVIDIA GeForce RTX 4080 SUPER  16 GB VRAM  CUDA 8.9           |
 +-------------------------------------------------------------------+
-| > [x] core         PowerShell 7, Alacritty, git, Nerd Font         |
+| > [x] core         PowerShell 7, Alacritty, git, runtime, font     |
+|   [x] langs        mise: version node, python, go, rust, dart      |
 |   [x] wm           komorebi + whkd + yasb (Omarchy keymap)         |
 |   [ ] debloat      Win11Debloat + tweaks cho tiling                |
 |   [-] localllm     Local LLM: vLLM (GPU)                           |
 |         cần chọn 'wsl' nữa, hoặc chạy lại sau khi reboot           |
 +-------------------------------------------------------------------+
-| 7 selected   space toggle  a all  n none  enter start  q quit      |
+| 9 selected   space toggle  a all  n none  enter start  q quit      |
 +-------------------------------------------------------------------+
 ```
 
@@ -75,8 +76,8 @@ Dùng cho CI, phiên remote, hoặc chỗ nào TUI bất tiện:
 | `everything` | + local LLM, nếu phần cứng cho phép |
 | `custom` | tự chọn |
 
-Module lẻ: `core` `psmodules` `cli` `wm` `desktop` `agents` `raycast` `configs`
-`debloat` `wsl` `localllm` `herdr` `verify`.
+Module lẻ: `core` `langs` `dotnet` `psmodules` `cli` `wm` `desktop` `agents`
+`raycast` `configs` `debloat` `wsl` `localllm` `herdr` `verify`.
 
 Cài một phần, hoặc cài từ fork: [`docs/no-clone-install.md`](docs/no-clone-install.md).
 
@@ -207,6 +208,7 @@ wsl --shutdown
 | [`docs/setup-tui.md`](docs/setup-tui.md) | Installer, module, gating theo phần cứng |
 | [`docs/theming.md`](docs/theming.md) | Một palette cho cả desktop |
 | [`docs/raycast.md`](docs/raycast.md) | Script commands cho Raycast (tuỳ chọn) |
+| [`docs/runtimes-and-languages.md`](docs/runtimes-and-languages.md) | Runtime C++/.NET, và mise cho version ngôn ngữ |
 | [`docs/agent-panes.md`](docs/agent-panes.md) | Chạy nhiều agent song song |
 | [`docs/ai-stack.md`](docs/ai-stack.md) | Coding agents, Docker/GPU, vLLM |
 | [`docs/windows-tuning.md`](docs/windows-tuning.md) | Debloat và taskbar |

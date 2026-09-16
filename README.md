@@ -50,13 +50,14 @@ halfway through.
 | Microsoft Windows 11 Pro  build 26200   32 GB RAM   24 threads     |
 | GPU  NVIDIA GeForce RTX 4080 SUPER  16 GB VRAM  CUDA 8.9           |
 +-------------------------------------------------------------------+
-| > [x] core         PowerShell 7, Alacritty, git, Nerd Font         |
+| > [x] core         PowerShell 7, Alacritty, git, runtimes, font    |
+|   [x] langs        mise: node, python, go, rust, dart versions     |
 |   [x] wm           komorebi + whkd + yasb (Omarchy keymap)         |
 |   [ ] debloat      Win11Debloat + tweaks for tiling                |
 |   [-] localllm     Local LLM: vLLM (GPU)                           |
 |         also select 'wsl', or re-run after a reboot                |
 +-------------------------------------------------------------------+
-| 7 selected   space toggle  a all  n none  enter start  q quit      |
+| 9 selected   space toggle  a all  n none  enter start  q quit      |
 +-------------------------------------------------------------------+
 ```
 
@@ -70,14 +71,14 @@ For CI, remote sessions, or anywhere a TUI is awkward:
 
 | Preset | Includes |
 |---|---|
-| `minimal` | terminal, shell, CLI, dotfiles |
+| `minimal` | terminal, shell, runtimes, mise, CLI, dotfiles |
 | `desktop` | + tiling WM (Omarchy keymap), debloat |
-| `full` | + coding agents, WSL2 AlmaLinux |
+| `full` | + coding agents, .NET SDK, WSL2 AlmaLinux |
 | `everything` | + local LLM, if the hardware allows |
 | `custom` | pick your own |
 
-Individual modules: `core` `psmodules` `cli` `wm` `desktop` `agents` `raycast`
-`configs` `debloat` `wsl` `localllm` `herdr` `verify`.
+Individual modules: `core` `langs` `dotnet` `psmodules` `cli` `wm` `desktop`
+`agents` `raycast` `configs` `debloat` `wsl` `localllm` `herdr` `verify`.
 
 Installing only part of it, or from a fork:
 [`docs/no-clone-install.md`](docs/no-clone-install.md).
@@ -94,6 +95,8 @@ Once it finishes, `SUPER + /` lists every keybinding.
 | Keymap | Omarchy-style, SUPER-first. See `docs/keybindings.md` |
 | Terminal multiplexer | tmux |
 | Editor | LazyVim / Neovim |
+| Runtimes | Visual C++ 2015-2022, .NET 10 desktop runtime |
+| Language versions | mise, one manager for node, python, go, rust and dart |
 | CLI | fzf, ripgrep, fd, eza, bat, zoxide, delta, lazygit, gh, jq |
 | File search | Everything |
 | Browser | Brave + Vimium C |
@@ -210,6 +213,7 @@ wsl --shutdown
 | [`docs/setup-tui.md`](docs/setup-tui.md) | Installer, modules, hardware gating |
 | [`docs/theming.md`](docs/theming.md) | One palette for the whole desktop |
 | [`docs/raycast.md`](docs/raycast.md) | Optional Raycast script commands |
+| [`docs/runtimes-and-languages.md`](docs/runtimes-and-languages.md) | C++/.NET runtimes, and mise for language versions |
 | [`docs/agent-panes.md`](docs/agent-panes.md) | Running several agents side by side |
 | [`docs/ai-stack.md`](docs/ai-stack.md) | Coding agents, Docker/GPU, vLLM |
 | [`docs/windows-tuning.md`](docs/windows-tuning.md) | Debloat and taskbar |

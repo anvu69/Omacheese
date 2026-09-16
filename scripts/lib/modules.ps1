@@ -60,6 +60,20 @@ function Get-SetupModules {
         -Available $wingetOk -Note "needs winget" -Est "3-5 min" `
         -Action { param($ctx) & $ctx.InstallWindows -Groups @("cli") }))
 
+    # One binary that manages node, python, go, rust and dart versions, so a
+    # project can pin its own without five separate managers fighting over
+    # PATH. Installing mise installs no language: you ask for them later with
+    # `mise use python@3.13`.
+    $mods.Add((New-Mod -Key "langs" -Description "mise - version manager for node, python, go, rust, dart" `
+        -Available $wingetOk -Note "needs winget" -Est "30 s" `
+        -Action { param($ctx) & $ctx.InstallWindows -Groups @("langs") }))
+
+    # Separate from the runtime in core because the SDK is four times the size
+    # and only useful if you actually build .NET.
+    $mods.Add((New-Mod -Key "dotnet" -Description ".NET 10 SDK (the runtime itself is in core)" `
+        -Available $wingetOk -Note "needs winget; 205 MB" -Est "1-3 min" `
+        -Action { param($ctx) & $ctx.InstallWindows -Groups @("dotnet") }))
+
     $mods.Add((New-Mod -Key "wm" -Description "komorebi + whkd + yasb (Omarchy keymap)" `
         -Available $wingetOk -Note "needs winget" -Est "2-3 min" `
         -Action { param($ctx) & $ctx.InstallWindows -Groups @("wm") }))
@@ -158,22 +172,22 @@ function Get-SetupProfiles {
         [pscustomobject]@{
             Key = "minimal"; Title = "Minimal"
             Description = "Terminal, shell, CLI tools, dotfiles. No tiling WM."
-            Modules = @("core", "psmodules", "cli", "configs", "verify")
+            Modules = @("core", "langs", "psmodules", "cli", "configs", "verify")
         }
         [pscustomobject]@{
             Key = "desktop"; Title = "Desktop"
             Description = "Minimal + tiling WM with the Omarchy keymap, and debloat."
-            Modules = @("core", "psmodules", "cli", "wm", "desktop", "configs", "debloat", "verify")
+            Modules = @("core", "langs", "psmodules", "cli", "wm", "desktop", "configs", "debloat", "verify")
         }
         [pscustomobject]@{
             Key = "full"; Title = "Full"
             Description = "Desktop + coding agents + WSL2 AlmaLinux."
-            Modules = @("core", "psmodules", "cli", "wm", "desktop", "agents", "configs", "debloat", "wsl", "verify")
+            Modules = @("core", "langs", "dotnet", "psmodules", "cli", "wm", "desktop", "agents", "configs", "debloat", "wsl", "verify")
         }
         [pscustomobject]@{
             Key = "everything"; Title = "Everything"
             Description = "Full + local LLM, where the hardware allows it."
-            Modules = @("core", "psmodules", "cli", "wm", "desktop", "agents", "configs", "debloat", "wsl", "localllm", "verify")
+            Modules = @("core", "langs", "dotnet", "psmodules", "cli", "wm", "desktop", "agents", "configs", "debloat", "wsl", "localllm", "verify")
         }
         [pscustomobject]@{
             Key = "custom"; Title = "Custom"
