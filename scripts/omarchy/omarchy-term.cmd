@@ -1,13 +1,11 @@
 @echo off
-:: Open one of the omarchy helper scripts in a terminal window.
+:: Open an omarchy helper in a small floating terminal.
 ::
 ::   omarchy-term.cmd <script.ps1> [args...]
 ::
-:: Used by the yasb bar's menu button and anywhere else a GUI process needs to
-:: pop up a terminal. Two things make this necessary rather than calling
-:: alacritty directly from the widget config:
+:: Why this exists rather than calling alacritty from the widget config:
 ::
-::   1. yasb runs the callback through subprocess.Popen WITHOUT a shell, so
+::   1. yasb runs callbacks through subprocess.Popen WITHOUT a shell, so
 ::      %USERPROFILE% in the command string is never expanded and the path is
 ::      taken literally. Going through cmd.exe expands it.
 ::   2. A GUI process inherits the PATH of whatever started it. yasb launched
@@ -15,12 +13,24 @@
 ::      callback fails with "cannot find the file alacritty" even though it is
 ::      installed. This locates the binary instead of trusting PATH.
 ::
-:: Falls back to the Windows console host if Alacritty is not installed at all.
+:: It runs PowerShell DIRECTLY as the terminal's command. An earlier version
+:: pointed alacritty at omarchy-run.cmd, which meant the window was hosting
+:: cmd running a batch file running PowerShell - three shells deep, and what
+:: you saw inside the window was cmd.
+::
+:: The window is deliberately small and centred so it reads as a menu rather
+:: than as "a terminal happened to open". komorebi floats it via the
+:: `omarchy-menu` class rule in komorebi.json.
 
 setlocal EnableDelayedExpansion
 
 set "SCRIPT=%~1"
 set "ARGS=%~2 %~3 %~4 %~5"
+
+:: Prefer PowerShell 7; fall back to Windows PowerShell.
+set "PS="
+for /f "delims=" %%I in ('where pwsh.exe 2^>nul') do if not defined PS set "PS=%%I"
+if not defined PS set "PS=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 
 :: `where` rather than the %%~$PATH:P modifier - that form only resolves for a
 :: real for-variable in a batch context and silently yields nothing otherwise,
@@ -30,12 +40,18 @@ for /f "delims=" %%I in ('where alacritty.exe 2^>nul') do if not defined ALAC se
 if not defined ALAC if exist "%ProgramFiles%\Alacritty\alacritty.exe" set "ALAC=%ProgramFiles%\Alacritty\alacritty.exe"
 if not defined ALAC if exist "%LOCALAPPDATA%\Programs\Alacritty\alacritty.exe" set "ALAC=%LOCALAPPDATA%\Programs\Alacritty\alacritty.exe"
 
-set "RUNNER=%~dp0omarchy-run.cmd"
-
 if defined ALAC (
-    start "" "!ALAC!" --class omarchy-menu,omarchy-menu -e "!RUNNER!" "!SCRIPT!" !ARGS!
+    start "" "!ALAC!" ^
+        --class omarchy-menu,omarchy-menu ^
+        --title "omarchy" ^
+        -o window.dimensions.columns=88 ^
+        -o window.dimensions.lines=26 ^
+        -o window.padding.x=14 ^
+        -o window.padding.y=10 ^
+        -o window.decorations=\"none\" ^
+        -e "!PS!" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "!SCRIPT!" !ARGS!
 ) else (
-    start "omarchy" cmd.exe /c ""!RUNNER!" "!SCRIPT!" !ARGS!"
+    start "omarchy" "!PS!" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "!SCRIPT!" !ARGS!
 )
 
 endlocal

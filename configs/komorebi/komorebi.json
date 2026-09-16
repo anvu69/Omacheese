@@ -68,8 +68,12 @@
     { "kind": "Exe", "id": "dbeaver.exe",     "matching_strategy": "Equals" },
     { "kind": "Exe", "id": "Everything.exe",  "matching_strategy": "Equals" },
     { "kind": "Exe", "id": "PowerToys.exe",   "matching_strategy": "Equals" },
-    { "kind": "Class", "id": "omarchy-menu",  "matching_strategy": "Equals" }
+
+    { "kind": "Title", "id": "omarchy",       "matching_strategy": "Equals" }
   ],
+
+  "_comment_floating_menu": "The omarchy menu is matched by TITLE, not Class. Alacritty's --class flag is an X11/Wayland concept that does nothing on Windows: komorebi reports the class of every Alacritty window as the literal string 'Window Class', so a Class rule can never match it. --title does work, and omarchy-term.cmd sets it to 'omarchy'.",
+
 
   "ignore_rules": [
     { "kind": "Exe", "id": "SnippingTool.exe",     "matching_strategy": "Equals" },

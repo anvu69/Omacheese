@@ -18,7 +18,45 @@ $ErrorActionPreference = "Stop"
 
 $cfg  = Join-Path $env:USERPROFILE ".config"
 $bin  = Join-Path $cfg "omarchy\bin"
-$term = "alacritty"
+
+# Resolve binaries instead of trusting PATH. This menu is launched from the
+# bar, and a GUI process inherits the PATH of whatever started it - so bare
+# "alacritty" or "nvim" silently did nothing, which is why picking an action
+# just closed the window.
+function Resolve-Bin {
+    param([string]$Name, [string[]]$Fallbacks = @())
+    $c = Get-Command $Name -ErrorAction SilentlyContinue
+    if ($c) { return $c.Source }
+    foreach ($f in $Fallbacks) {
+        $expanded = [Environment]::ExpandEnvironmentVariables($f)
+        if (Test-Path -LiteralPath $expanded) { return $expanded }
+    }
+    return $null
+}
+
+$term = Resolve-Bin "alacritty" @(
+    "%ProgramFiles%\Alacritty\alacritty.exe",
+    "%LOCALAPPDATA%\Programs\Alacritty\alacritty.exe"
+)
+
+function Start-InTerminal {
+    param([Parameter(Mandatory)][string[]]$Command)
+    if ($term) {
+        Start-Process -FilePath $term -ArgumentList (@("-e") + $Command)
+    } else {
+        # No Alacritty: fall back to a console window rather than doing nothing.
+        Start-Process -FilePath $Command[0] -ArgumentList ($Command[1..($Command.Count - 1)])
+    }
+}
+
+function Show-Problem {
+    param([string]$Message)
+    Write-Host ""
+    Write-Host "  $Message" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  Press Enter to close" -ForegroundColor DarkGray
+    [void](Read-Host)
+}
 
 # Each entry is: Label = command to run (string = shell, scriptblock = inline).
 $Menus = [ordered]@{
@@ -36,18 +74,22 @@ $Menus = [ordered]@{
     }
 
     apps = [ordered]@{
-        "Terminal"                = { Start-Process $term }
-        "Terminal (WSL + tmux)"   = { Start-Process $term -ArgumentList '-e','wsl.exe','-d','AlmaLinux-9','--','tmux','new-session','-A','-s','main' }
-        "Neovim (WSL)"            = { Start-Process $term -ArgumentList '-e','wsl.exe','-d','AlmaLinux-9','--','nvim' }
-        "Browser"                 = { Start-Process "brave" }
-        "Browser (private)"       = { Start-Process "brave" -ArgumentList '--incognito' }
-        "File manager"            = { Start-Process "explorer" }
-        "Everything (search)"     = { Start-Process "everything" }
-        "electerm (SSH)"          = { Start-Process "electerm" }
-        "DBeaver"                 = { Start-Process "dbeaver" }
-        "Bitwarden"               = { Start-Process "bitwarden" }
-        "btop"                    = { Start-Process $term -ArgumentList '-e','btop' }
-        "lazygit"                 = { Start-Process $term -ArgumentList '-e','lazygit' }
+        # No -e: let Alacritty start its configured shell (pwsh).
+        "Terminal"                = {
+            if ($term) { Start-Process -FilePath $term }
+            else { Show-Problem "Alacritty is not installed." }
+        }
+        "Terminal (WSL + tmux)"   = { Start-InTerminal @("wsl.exe","-d","AlmaLinux-9","--","tmux","new-session","-A","-s","main") }
+        "Neovim (WSL)"            = { Start-InTerminal @("wsl.exe","-d","AlmaLinux-9","--","nvim") }
+        "Browser"                 = { $p = Resolve-Bin "brave"; if ($p) { Start-Process $p } else { Show-Problem "brave is not installed." } }
+        "Browser (private)"       = { $p = Resolve-Bin "brave"; if ($p) { Start-Process $p -ArgumentList "--incognito" } else { Show-Problem "brave is not installed." } }
+        "File manager"            = { $p = Resolve-Bin "explorer"; if ($p) { Start-Process $p } else { Show-Problem "explorer is not installed." } }
+        "Everything (search)"     = { $p = Resolve-Bin "everything"; if ($p) { Start-Process $p } else { Show-Problem "everything is not installed." } }
+        "electerm (SSH)"          = { $p = Resolve-Bin "electerm"; if ($p) { Start-Process $p } else { Show-Problem "electerm is not installed." } }
+        "DBeaver"                 = { $p = Resolve-Bin "dbeaver"; if ($p) { Start-Process $p } else { Show-Problem "dbeaver is not installed." } }
+        "Bitwarden"               = { $p = Resolve-Bin "bitwarden"; if ($p) { Start-Process $p } else { Show-Problem "bitwarden is not installed." } }
+        "btop"                    = { Start-InTerminal @("btop") }
+        "lazygit"                 = { Start-InTerminal @("lazygit") }
     }
 
     agents = [ordered]@{
@@ -146,16 +188,28 @@ $Menus = [ordered]@{
 
 function Edit-Config {
     param([string]$Path)
+
     if (-not (Test-Path -LiteralPath $Path)) {
-        Write-Host "Not found: $Path" -ForegroundColor Yellow
-        Start-Sleep -Seconds 2
+        Show-Problem "Not found: $Path"
         return
     }
-    $editor = $env:EDITOR
+
+    $editor = Resolve-Bin "nvim"
+    if (-not $editor) { $editor = Resolve-Bin "code" }
+    if (-not $editor) { $editor = Resolve-Bin "notepad" @("%SystemRoot%\System32\notepad.exe") }
+
     if (-not $editor) {
-        $editor = if (Get-Command nvim -ErrorAction SilentlyContinue) { "nvim" } else { "notepad" }
+        Show-Problem "No editor found (looked for nvim, code, notepad)."
+        return
     }
-    Start-Process $term -ArgumentList '-e', $editor, $Path
+
+    # notepad is a GUI app - putting it inside a terminal gives you an empty
+    # terminal and a detached notepad, so only terminal editors go via -e.
+    if ($editor -match 'nvim|vim') {
+        Start-InTerminal @($editor, $Path)
+    } else {
+        Start-Process -FilePath $editor -ArgumentList $Path
+    }
 }
 
 function Show-Menu {

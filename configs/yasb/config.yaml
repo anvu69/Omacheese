@@ -185,11 +185,11 @@ widgets:
       # `volume_icons` as a list was deprecated in 2.0.x. The dict form keys
       # on the upper bound of each volume band.
       icons:
-        muted: ""
-        "10": ""
-        "30": ""
-        "60": ""
-        "100": ""
+        muted: "󰝟"
+        "10": "󰖁"
+        "30": "󰕿"
+        "60": "󰖀"
+        "100": "󰕾"
       callbacks:
         on_left: "toggle_volume_menu"
         on_right: "exec cmd.exe /c start ms-settings:sound"
@@ -200,6 +200,7 @@ widgets:
       label: "<span>{wifi_icon}</span>"
       label_alt: "{wifi_name} {wifi_strength}%"
       update_interval: 10000
+      ethernet_icon: "󰈀"
       callbacks:
         on_left: "toggle_label"
         on_right: "exec cmd.exe /c start ms-settings:network"

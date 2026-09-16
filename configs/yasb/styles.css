@@ -265,14 +265,16 @@
 .bluetooth-menu .bluetooth-list {
     background-color: transparent;
     padding: 0 8px 8px 8px;
-    min-height: 180px;
 }
 
+/* No min-height here. Setting one on rows inside a Qt layout that is already
+   sizing them makes the rows overlap - the layout reserves one height and the
+   stylesheet paints another. Padding alone gives the spacing. */
 .bluetooth-menu .bluetooth-item {
     background-color: transparent;
     border-radius: 8px;
-    padding: 9px 10px;
-    min-height: 34px;
+    padding: 10px 12px;
+    margin: 2px 0;
 }
 
 .bluetooth-menu .bluetooth-item:hover {
@@ -304,31 +306,27 @@
     font-size: 11px;
 }
 
+/* One rule for every button in the popup. They were declared separately with
+   different padding, which is why they came out different sizes. */
 .bluetooth-menu .connect,
-.bluetooth-menu .settings-button {
-    background-color: #24283b;
-    color: #c0caf5;
-    border: none;
-    border-radius: 6px;
-    padding: 7px 14px;
-    font-size: 12px;
-}
-
-.bluetooth-menu .connect:hover,
-.bluetooth-menu .settings-button:hover {
-    background-color: #292e42;
-}
-
+.bluetooth-menu .settings-button,
 .bluetooth-menu .power-button {
     background-color: #24283b;
     color: #c0caf5;
-    border: none;
+    border: 1px solid #292e42;
     border-radius: 6px;
-    padding: 6px 12px;
+    padding: 6px 14px;
+    margin: 0 2px;
+    font-size: 12px;
+    min-width: 88px;
+    min-height: 26px;
 }
 
+.bluetooth-menu .connect:hover,
+.bluetooth-menu .settings-button:hover,
 .bluetooth-menu .power-button:hover {
     background-color: #292e42;
+    border: 1px solid #7aa2f7;
 }
 
 .bluetooth-menu .footer {
@@ -383,8 +381,49 @@
     color: #9ece6a;
 }
 
+/* A QSlider draws nothing but its sub-controls, so without ::groove and
+   ::handle rules Qt paints the stock Windows slider - which is what made it
+   look oversized and crude next to the rest of the popup. */
 .audio-menu .volume-slider {
-    padding: 8px 16px 14px 16px;
+    padding: 10px 16px 16px 16px;
+    min-height: 20px;
+}
+
+.audio-menu .volume-slider::groove:horizontal {
+    background-color: #292e42;
+    height: 4px;
+    border-radius: 2px;
+}
+
+.audio-menu .volume-slider::sub-page:horizontal {
+    background-color: #7aa2f7;
+    height: 4px;
+    border-radius: 2px;
+}
+
+.audio-menu .volume-slider::add-page:horizontal {
+    background-color: #292e42;
+    height: 4px;
+    border-radius: 2px;
+}
+
+.audio-menu .volume-slider::handle:horizontal {
+    background-color: #c0caf5;
+    border: none;
+    width: 12px;
+    height: 12px;
+    margin: -4px 0;
+    border-radius: 6px;
+}
+
+.audio-menu .volume-slider::handle:horizontal:hover {
+    background-color: #ffffff;
+}
+
+.audio-menu .system-volume-container,
+.audio-menu .apps-container,
+.audio-menu .audio-container {
+    background-color: transparent;
 }
 
 /* Last widget on the bar: needs room on BOTH sides, the right one so the bar
