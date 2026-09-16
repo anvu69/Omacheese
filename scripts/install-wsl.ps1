@@ -52,7 +52,12 @@ foreach ($feature in @("Microsoft-Windows-Subsystem-Linux", "VirtualMachinePlatf
     } else {
         Info "enabling $feature..."
         $r = Enable-WindowsOptionalFeature -Online -FeatureName $feature -All -NoRestart -ErrorAction SilentlyContinue
-        if ($r -and $r.RestartNeeded) { $needReboot = $true }
+        # Do not wait to be told. VirtualMachinePlatform needs a reboot whether
+        # or not DISM sets RestartNeeded, and treating "just enabled" as "ready"
+        # is what made the distro install, and then everything downstream of it,
+        # fail on a machine that was only a restart away from working.
+        $needReboot = $true
+        if ($r -and $r.RestartNeeded) { Info "  restart flagged by DISM" }
         Good "$feature enabled"
     }
 }
@@ -68,7 +73,11 @@ if ($needReboot) {
     Warn "distro can start. After rebooting, run:"
     Warn "    wsl --install -d $Distro"
     Warn "    bash scripts/install-almalinux.sh   (inside the distro)"
-    exit 0
+    # 3010 is the Windows installer convention for "succeeded, reboot required".
+    # setup.ps1 reads it and skips the steps that would only fail until then -
+    # the local-LLM module in particular, which needs a running distro and used
+    # to report a failure that was really just "not yet".
+    exit 3010
 }
 
 # --- distro ------------------------------------------------------------------

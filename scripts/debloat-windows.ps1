@@ -21,10 +21,69 @@ param(
     [switch]$RemoveApps,
     [switch]$DryRun,
     [switch]$NoRestorePoint,
-    [switch]$SkipTweaks
+    [switch]$SkipTweaks,
+
+    # Set only by the elevated relaunch below, so the new window stays up long
+    # enough to read. Nothing else should pass it.
+    [switch]$Pause
 )
 
 $ErrorActionPreference = "Stop"
+
+# --- host and elevation ------------------------------------------------------
+# Win11Debloat is a Windows PowerShell 5.1 script and says so: it calls
+# Get-AppxPackage and Get-ComputerRestorePoint, and under pwsh 7 the Appx module
+# fails with "Operation is not supported on this platform" (0x80131539). Recent
+# versions refuse to start at all when $PSVersionTable.PSEdition is 'Core'.
+#
+# That is not hypothetical here. setup.ps1 runs every step in the host it was
+# itself started from, so installing PowerShell 7 by hand and re-running the
+# setup from pwsh - the obvious move when the one-liner fails - is exactly what
+# turns this step into a hard failure.
+#
+# It also needs admin, and upstream asks for it with `Read-Host "Restart as
+# Administrator? (y/n)"`. As a setup step with its output redirected to a log,
+# that is an invisible question, and the installer stops dead until someone
+# guesses to press Enter. Decide both here, before anything is downloaded.
+$isCore = ($PSVersionTable.PSEdition -eq "Core")
+$isElevated = (New-Object Security.Principal.WindowsPrincipal(
+    [Security.Principal.WindowsIdentity]::GetCurrent())
+).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+if (($isCore -or -not $isElevated) -and $PSCommandPath) {
+    $winPs = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+    if (-not (Test-Path -LiteralPath $winPs)) {
+        throw "Windows PowerShell 5.1 not found at $winPs, and Win11Debloat cannot run under pwsh."
+    }
+
+    $relaunch = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$PSCommandPath`"")
+    foreach ($k in $PSBoundParameters.Keys) {
+        if ($k -eq "Pause") { continue }
+        $v = $PSBoundParameters[$k]
+        if ($v -is [switch]) {
+            if ($v.IsPresent) { $relaunch += "-$k" }
+        } else {
+            $relaunch += @("-$k", "`"$v`"")
+        }
+    }
+
+    if ($isElevated) {
+        Write-Host "Re-running under Windows PowerShell 5.1 (Win11Debloat needs the Appx module)." -ForegroundColor Yellow
+        $p = Start-Process -FilePath $winPs -ArgumentList $relaunch -NoNewWindow -PassThru -Wait
+    } else {
+        Write-Host "Win11Debloat needs administrator. Accepting the UAC prompt opens a new window." -ForegroundColor Yellow
+        try {
+            $p = Start-Process -FilePath $winPs -ArgumentList ($relaunch + "-Pause") -Verb RunAs -PassThru -Wait
+        } catch {
+            # Declining UAC throws. Say what happened rather than letting a raw
+            # "The operation was canceled by the user" be the whole story.
+            Write-Host "Elevation was declined - nothing was changed." -ForegroundColor Yellow
+            Write-Host "Run this from an elevated Windows PowerShell to apply it." -ForegroundColor DarkGray
+            exit 1
+        }
+    }
+    exit $p.ExitCode
+}
 
 $Repo = Split-Path -Parent $PSScriptRoot
 
@@ -104,6 +163,7 @@ if ($DryRun) {
         $AppsToRemove -split ',' | ForEach-Object { Write-Host "  $_" -ForegroundColor DarkGray }
     }
     Write-Host "`nDry run - nothing was changed." -ForegroundColor Yellow
+    if ($Pause) { Read-Host "`nEnter to close" | Out-Null }
     return
 }
 
@@ -149,3 +209,7 @@ if (-not $SkipTweaks) {
 
 Write-Host ""
 Write-Host "Done. Verify with: ./scripts/doctor.ps1" -ForegroundColor Green
+
+# Only set by the elevated relaunch: without it that window closes the instant
+# it finishes and nobody ever sees what it did.
+if ($Pause) { Read-Host "`nEnter to close" | Out-Null }

@@ -42,7 +42,16 @@ function Initialize-Tui {
 
     if ($script:TuiVtEnabled) { return }
 
-    # ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
+    # ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004 on the output handle.
+    #
+    # DisableQuickEdit is the other half, and it fixes a bug that looks nothing
+    # like a console setting. With QuickEdit on - the Windows default - a single
+    # click anywhere in the window puts the console into selection mode, and
+    # every write from the process blocks until someone presses Enter or Esc.
+    # During a 10-minute winget or WSL step that reads as a hang: the work
+    # underneath has finished, the installer looks frozen, and pressing Enter
+    # "resumes" it. ENABLE_EXTENDED_FLAGS (0x0080) has to be set in the same
+    # call or clearing ENABLE_QUICK_EDIT_MODE (0x0040) is ignored.
     $sig = @'
 using System;
 using System.Runtime.InteropServices;
@@ -59,6 +68,13 @@ public static class TuiNative {
         if (!GetConsoleMode(h, out mode)) return false;
         return SetConsoleMode(h, mode | 0x0004);
     }
+    public static bool DisableQuickEdit() {
+        IntPtr h = GetStdHandle(-10);
+        uint mode;
+        if (!GetConsoleMode(h, out mode)) return false;
+        mode = (mode & ~0x0040u) | 0x0080u;
+        return SetConsoleMode(h, mode);
+    }
 }
 '@
     try {
@@ -66,6 +82,7 @@ public static class TuiNative {
             Add-Type -TypeDefinition $sig -ErrorAction Stop
         }
         [void][TuiNative]::EnableVt()
+        [void][TuiNative]::DisableQuickEdit()
         $script:TuiVtEnabled = $true
     } catch {
         # Fall back to no colour rather than failing the installer.

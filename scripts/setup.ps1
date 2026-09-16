@@ -190,24 +190,122 @@ if (-not $Yes) {
 # invocation in one place means the TUI is the only thing that knows about
 # progress, and the scripts stay usable on their own.
 
+# Handed to every child as stdin. Without it a child that decides to ask a
+# question reads THIS console instead, and since its output goes to a log the
+# question is invisible: the installer simply stops, and carries on only when
+# someone guesses to press Enter. Win11Debloat's "Restart as Administrator?
+# (y/n)" is the one that actually did this. An empty file means any such prompt
+# gets EOF and the child moves on or fails honestly.
+$NullIn = Join-Path $RunDir "stdin.empty"
+Set-Content -LiteralPath $NullIn -Value ([string]::Empty) -NoNewline
+
+# What the live board is currently showing, so a running step can refresh it.
+$script:BoardSteps  = $null
+$script:BoardTitle  = ""
+$script:BoardFooter = @()
+$script:BoardTail   = ""
+$script:BoardDrawn  = [datetime]::MinValue
+
+function Show-Board {
+    if (-not $script:BoardSteps) { return }
+    $footer = $script:BoardFooter
+    if ($script:BoardTail) { $footer = $footer + ("{0}{1}{2}" -f $T.Dim, $script:BoardTail, $T.Reset) }
+    Write-TuiBoard -Steps $script:BoardSteps -Title $script:BoardTitle -FooterLines $footer
+    $script:BoardDrawn = Get-Date
+}
+
+# A step that prints nothing for ten minutes is indistinguishable from one that
+# has hung, and that is how every long winget run read. Show its last line of
+# output instead. Throttled, and only redrawn when the line actually changes,
+# so the board does not strobe.
+function Update-StepTail {
+    param([string]$Log)
+    if (-not $script:BoardSteps) { return }
+    if (((Get-Date) - $script:BoardDrawn).TotalMilliseconds -lt 1200) { return }
+
+    $line = ""
+    try {
+        if (Test-Path -LiteralPath $Log) {
+            $line = @(Get-Content -LiteralPath $Log -Tail 8 -ErrorAction SilentlyContinue |
+                      Where-Object { $_ -and $_.Trim() }) | Select-Object -Last 1
+        }
+    } catch { }
+    if (-not $line) { return }
+
+    $line = ([string]$line).Trim()
+    if ($line.Length -gt 78) { $line = $line.Substring(0, 78) + "..." }
+    if ($line -eq $script:BoardTail) { return }
+
+    $script:BoardTail = $line
+    Show-Board
+}
+
 function Invoke-Step {
-    param([string]$Key, [string[]]$Arguments, [string]$File, [switch]$Elevate)
+    param(
+        [string]$Key,
+        [string[]]$Arguments,
+        [string]$File,
+        [switch]$Elevate,
+        # Win11Debloat, and anything else that needs the Appx or DISM cmdlets,
+        # cannot run under pwsh 7. Without this every step ran in whatever host
+        # started the setup, so running it from PowerShell 7 - the natural thing
+        # to do after installing pwsh by hand - broke the debloat step outright.
+        [switch]$WindowsPowerShell
+    )
 
     $log = Join-Path $RunDir "$Key.log"
     Write-SetupLog "run $File $($Arguments -join ' ')"
 
-    $psExe = (Get-Process -Id $PID).Path
-    $argList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $File) + $Arguments
+    if ($WindowsPowerShell) {
+        $psExe = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+        if (-not (Test-Path -LiteralPath $psExe)) { $psExe = (Get-Process -Id $PID).Path }
+    } else {
+        $psExe = (Get-Process -Id $PID).Path
+    }
+
+    # One string, not an array: Start-Process joins an array with spaces and
+    # does not quote, so a username with a space in it broke every step.
+    $argLine = '-NoProfile -ExecutionPolicy Bypass -File "{0}"' -f $File
+    if ($Arguments -and $Arguments.Count) { $argLine += " " + ($Arguments -join " ") }
 
     if ($Elevate -and -not $Machine.IsElevated) {
-        $p = Start-Process -FilePath $psExe -ArgumentList $argList -Verb RunAs -PassThru -Wait
+        # -Verb RunAs cannot redirect any stream, so this one gets its own
+        # window and the user watches it there. -Wait is what actually waits:
+        # a handle to an elevated child cannot always be reopened by PID from
+        # an unelevated parent, so WaitForExit() alone is not dependable here.
+        $p = Start-Process -FilePath $psExe -ArgumentList $argLine -Verb RunAs -PassThru -Wait
+        try { $p.WaitForExit() } catch { }
         return $p.ExitCode
     }
 
-    $p = Start-Process -FilePath $psExe -ArgumentList $argList `
-        -NoNewWindow -PassThru -Wait `
+    $p = Start-Process -FilePath $psExe -ArgumentList $argLine `
+        -NoNewWindow -PassThru `
+        -RedirectStandardInput $NullIn `
         -RedirectStandardOutput $log -RedirectStandardError "$log.err"
+
+    # Poll instead of -Wait so the board can keep reporting.
+    while (-not $p.HasExited) {
+        Start-Sleep -Milliseconds 400
+        Update-StepTail -Log $log
+    }
+    $p.WaitForExit()
     return $p.ExitCode
+}
+
+# Store apps have no path to launch: their Start-menu shortcut is the handle.
+function Start-StartMenuApp {
+    param([string]$Name)
+    foreach ($r in @([Environment]::GetFolderPath("Programs"),
+                     [Environment]::GetFolderPath("CommonPrograms"))) {
+        if (-not $r -or -not (Test-Path -LiteralPath $r)) { continue }
+        $hit = Get-ChildItem -LiteralPath $r -Filter "*.lnk" -Recurse -ErrorAction SilentlyContinue |
+               Where-Object { $_.BaseName -like "*$Name*" } |
+               Sort-Object { $_.BaseName.Length } | Select-Object -First 1
+        if ($hit) {
+            try { Start-Process -FilePath $hit.FullName; return $true } catch { }
+        }
+    }
+    return $false
 }
 
 $ctx = @{
@@ -229,7 +327,11 @@ $ctx = @{
         Invoke-Step -Key "herdr" -File (Join-Path $RepoRoot "scripts\install-herdr.ps1") -Arguments @()
     }
     Debloat = {
-        Invoke-Step -Key "debloat" -File (Join-Path $RepoRoot "scripts\debloat-windows.ps1") -Arguments @()
+        # Windows PowerShell, and elevated: Win11Debloat needs the Appx module
+        # (absent from pwsh 7) and admin, and asks for the latter with an
+        # interactive prompt that this runner cannot answer.
+        Invoke-Step -Key "debloat" -File (Join-Path $RepoRoot "scripts\debloat-windows.ps1") `
+            -Arguments @() -WindowsPowerShell -Elevate
     }
     InstallWsl = {
         Invoke-Step -Key "wsl" -File (Join-Path $RepoRoot "scripts\install-wsl.ps1") -Arguments @() -Elevate
@@ -263,16 +365,34 @@ $ctx = @{
 $startAll = Get-Date
 $failed = @()
 
+# Set when a step reports that Windows needs restarting before it can finish.
+# Steps listed against it are skipped rather than run into a wall: the local-LLM
+# module needs a distro that cannot boot until the reboot has happened, and
+# failing there told the user nothing except that something was broken.
+$script:RebootRequired = $false
+$NeedsRunningWsl = @("localllm")
+
 for ($i = 0; $i -lt $steps.Count; $i++) {
     $s = $steps[$i]
+
+    if ($script:RebootRequired -and $NeedsRunningWsl -contains $s.Key) {
+        $s.Status = "Skipped"
+        $s.Detail = "needs the restart WSL asked for - run it after rebooting"
+        Write-SetupLog "$($s.Key): Skipped (reboot pending)"
+        continue
+    }
+
     $s.Status = "Running"
     $s.Detail = "started $(Get-Date -Format 'HH:mm:ss')"
 
-    Write-TuiBoard -Steps $steps -Title ("Installing  [{0}/{1}]" -f ($i + 1), $steps.Count) `
-        -FooterLines @(
-            ("{0}{1}{2}  {3}" -f $T.Bright, $s.Key, $T.Reset, $s.Description),
-            ("{0}logs: {1}{2}" -f $T.Dim, $RunDir, $T.Reset)
-        )
+    $script:BoardSteps  = $steps
+    $script:BoardTitle  = ("Installing  [{0}/{1}]" -f ($i + 1), $steps.Count)
+    $script:BoardFooter = @(
+        ("{0}{1}{2}  {3}" -f $T.Bright, $s.Key, $T.Reset, $s.Description),
+        ("{0}logs: {1}{2}" -f $T.Dim, $RunDir, $T.Reset)
+    )
+    $script:BoardTail = ""
+    Show-Board
 
     # Refresh PATH between steps so a module can use what the previous one
     # installed (configs looks for komorebic, verify looks for everything).
@@ -291,9 +411,21 @@ for ($i = 0; $i -lt $steps.Count; $i++) {
     }
     $elapsed = [math]::Round(((Get-Date) - $t0).TotalSeconds)
 
+    # 3010 is the installer convention for "done, but Windows must restart".
+    # install-wsl.ps1 returns it after enabling the Windows features, which is
+    # a success - the machine is one reboot from a working WSL, not broken.
+    $note = $null
+    if ($code -eq 3010) {
+        $script:RebootRequired = $true
+        $code = 0
+        $note = "RESTART REQUIRED to finish"
+    }
+
     if ($code -eq 0) {
         $s.Status = "Done"
-        if ($s.Key -eq "verify" -and $script:DoctorSummary) {
+        if ($note) {
+            $s.Detail = "{0}s - {1}" -f $elapsed, $note
+        } elseif ($s.Key -eq "verify" -and $script:DoctorSummary) {
             $s.Detail = "{0}s - {1}" -f $elapsed, $script:DoctorSummary
         } else {
             $s.Detail = "{0}s" -f $elapsed
@@ -310,6 +442,46 @@ for ($i = 0; $i -lt $steps.Count; $i++) {
     Write-SetupLog "$($s.Key): $($s.Status) in ${elapsed}s (exit $code)"
 }
 
+$script:BoardSteps = $null
+
+$didWsl     = @($steps | Where-Object { $_.Key -eq "wsl"     -and $_.Status -eq "Done" }).Count -gt 0
+$didWm      = @($steps | Where-Object { $_.Key -eq "wm"      -and $_.Status -eq "Done" }).Count -gt 0
+$didConfigs = @($steps | Where-Object { $_.Key -eq "configs" -and $_.Status -eq "Done" }).Count -gt 0
+$didRaycast = @($steps | Where-Object { $_.Key -eq "raycast" -and $_.Status -eq "Done" }).Count -gt 0
+
+# --- start what was just installed -------------------------------------------
+# Nothing used to start after a successful install. komorebi, whkd and yasb all
+# waited for the next login, PowerToys was the only thing that came up on its
+# own, and the honest impression of a fresh machine was that the setup had done
+# nothing at all. The Startup shortcut handles every later login; this handles
+# the session the user is sitting in.
+$env:PATH = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
+            [Environment]::GetEnvironmentVariable("Path", "User")
+
+$desktopUp = $false
+if ($didWm -and $didConfigs) {
+    $startScript = Join-Path $RepoRoot "scripts\start-desktop.ps1"
+    if (Test-Path -LiteralPath $startScript) {
+        Write-Host ""
+        Write-Host ("  {0}starting komorebi + whkd + yasb...{1}" -f $T.Dim, $T.Reset)
+        $rc = Invoke-Step -Key "desktop-start" -File $startScript -Arguments @()
+        # Ask the process list, not the exit code: start-desktop.ps1 reports a
+        # komorebi that never answered on stdout and still exits 0, and claiming
+        # "the desktop is running" when it is not is worse than saying nothing.
+        $desktopUp = [bool](Get-Process komorebi -ErrorAction SilentlyContinue)
+        Write-SetupLog "desktop-start: exit $rc, komorebi running: $desktopUp"
+    }
+}
+
+# Raycast is a Store app that wants an account, so it is useless until someone
+# has actually opened it once. Installing it and saying nothing left it sitting
+# there configured by nobody.
+$raycastUp = $false
+if ($didRaycast) {
+    $raycastUp = Start-StartMenuApp -Name "Raycast"
+    Write-SetupLog "raycast launch: $raycastUp"
+}
+
 # --- summary -----------------------------------------------------------------
 $total = [math]::Round(((Get-Date) - $startAll).TotalMinutes, 1)
 
@@ -320,9 +492,6 @@ if ($failed.Count) {
 } else {
     $footer += "{0}All {1} steps completed in {2} min.{3}" -f $T.Green, $steps.Count, $total, $T.Reset
 }
-
-$didWsl = @($steps | Where-Object { $_.Key -eq "wsl" -and $_.Status -eq "Done" }).Count -gt 0
-$didWm  = @($steps | Where-Object { $_.Key -eq "wm"  -and $_.Status -eq "Done" }).Count -gt 0
 
 # Where the machine's previous configs went. The most important line for
 # anyone who ran this on a box that already had a setup.
@@ -344,10 +513,36 @@ if (Test-Path -LiteralPath $marker) {
     }
 }
 
+$resume = Join-Path $RepoRoot "scripts\setup.ps1"
+
+if ($script:RebootRequired) {
+    $footer += ""
+    $footer += "{0}RESTART WINDOWS to finish.{1}" -f ($T.Yellow + $T.Bold), $T.Reset
+    $footer += "  {0}WSL's Windows features are enabled but inactive until then; anything" -f $T.Dim
+    $footer += "  that needs a running distro was skipped rather than failed.{0}" -f $T.Reset
+    $footer += "  after rebooting:"
+    $footer += "    {0}wsl --install -d AlmaLinux-9{1}" -f $T.Cyan, $T.Reset
+    $footer += "    {0}{1} -Modules localllm{2}" -f $T.Cyan, $resume, $T.Reset
+}
+
 $footer += ""
 $footer += "{0}Next:{1}" -f $T.Bright, $T.Reset
-if ($didWsl)  { $footer += "  {0}wsl --install -d AlmaLinux-9{1} may need a reboot first" -f $T.Cyan, $T.Reset }
-if ($didWm)   { $footer += "  {0}./scripts/start-desktop.ps1{1}   then {0}SUPER + /{1} for the keymap" -f $T.Cyan, $T.Reset }
+if ($desktopUp) {
+    $footer += "  {0}the desktop is running{1} - {2}SUPER + /{1} for the keymap, {2}SUPER + SPACE{1} for the menu" -f $T.Green, $T.Reset, $T.Cyan
+} elseif ($didWm) {
+    $footer += "  {0}./scripts/start-desktop.ps1{1}   then {0}SUPER + /{1} for the keymap" -f $T.Cyan, $T.Reset
+}
+if ($didRaycast) {
+    if ($raycastUp) { $footer += "  {0}Raycast is open{1} - sign in, then add {2}~/.config/omacheese/raycast{1} as a script directory" -f $T.Green, $T.Reset, $T.Cyan }
+    else            { $footer += "  {0}open Raycast once{1} to sign in and add {0}~/.config/omacheese/raycast{1}" -f $T.Cyan, $T.Reset }
+}
+if ($didWsl -and -not $script:RebootRequired) {
+    $footer += "  {0}wsl -d AlmaLinux-9{1}           then {0}bash scripts/install-almalinux.sh{1}" -f $T.Cyan, $T.Reset
+}
+# PATH is read once per process. Everything winget just installed is missing
+# from the shell this was launched from, which is why a fresh machine looked
+# like it needed a full restart to run anything.
+$footer += "  {0}open a NEW terminal{1}            this one still has the old PATH" -f $T.Cyan, $T.Reset
 $footer += "  {0}./scripts/doctor.ps1{1}          full check including winget ids" -f $T.Cyan, $T.Reset
 
 Write-TuiBoard -Steps $steps -Title "Done" -FooterLines $footer

@@ -253,6 +253,20 @@ prompt tương tác — sẽ treo installer).
 whkdrc gọi `omacheese-run.cmd`, chọn pwsh nếu có, không thì `powershell.exe`.
 Trước đây 11 binding hardcode `pwsh` và im lặng không làm gì khi bỏ qua `core`.
 
+### Ngược lại: debloat **bắt buộc** 5.1
+
+`Win11Debloat` gọi `Get-AppxPackage` và `Get-ComputerRestorePoint`. Module
+`Appx` không nạp được trong pwsh 7 — nó fail với *"Operation is not supported on
+this platform"* (0x80131539) — nên bản upstream **từ chối chạy** khi
+`$PSVersionTable.PSEdition` là `Core`.
+
+Đây không phải chuyện lý thuyết. `setup.ps1` chạy mọi bước bằng đúng host đã
+khởi động nó, nên "cài PowerShell 7 bằng tay rồi chạy lại setup từ pwsh" — phản
+xạ tự nhiên khi one-liner lỗi — chính là thứ biến bước debloat thành lỗi cứng.
+
+`Invoke-Step -WindowsPowerShell` giải quyết: bước debloat luôn chạy bằng
+`powershell.exe` 5.1, và `-Elevate` để nó không phải hỏi.
+
 ---
 
 ## Thêm module
@@ -280,3 +294,94 @@ trong repo, nên script đó vẫn chạy độc lập được.
 
 Module đều idempotent: cài rồi thì bỏ qua, config thì backup trước khi ghi đè.
 Chạy lại toàn bộ là an toàn.
+
+---
+
+## Những lỗi máy mới từng gặp, và chỗ đã sửa
+
+Tất cả đều chỉ xuất hiện trên **máy vừa cài Windows**, nên máy dev không thấy.
+
+### `irm ... | iex` lỗi ngay ở dòng `iex`
+
+Windows 11 sạch để execution policy của Windows PowerShell ở `Restricted`. Bản
+thân `irm | iex` không bị chặn — đoạn text đó không chạm đĩa — nên one-liner
+chạy, in banner, rồi chết ở đúng việc đầu tiên nó làm: `& <repo>\scripts\setup.ps1`.
+PowerShell báo lỗi đó **theo dòng người dùng gõ**, nên thông báo chỉ vào `iex`
+và đọc như thể one-liner sai.
+
+`install.ps1` đặt `Set-ExecutionPolicy -Scope Process Bypass` trước khi gọi
+setup. Scope process: không đổi gì ngoài lần chạy này, không cần quyền admin.
+
+### Cài PowerShell 7 bằng tay rồi chạy lại → debloat chết
+
+Xem [mục trên](#ngược-lại-debloat-bắt-buộc-51). Đây là hệ quả trực tiếp của lỗi
+trước: cài pwsh 7 là phản xạ hợp lý khi one-liner lỗi, và nó làm hỏng bước khác.
+
+### "Timeout" ngay đoạn check WSL, trên máy chưa cài gì
+
+`wsl.exe` nằm sẵn trong `System32` **dù feature chưa bao giờ được bật**, nên
+`Get-Command wsl` không chứng minh điều gì. Trên máy chưa có WSL, `wsl -l -q`
+vẫn trả lời — nhưng có thể rất lâu, vì nó đi tìm gói Store trước. Màn hình đầu
+tiên của setup là `detecting hardware...`, nên cả installer trông như treo trước
+khi in được thứ gì hữu ích.
+
+`detect.ps1` giờ hỏi service registry trước (`LxssManager` / `WSLService` —
+tức thì), và chỉ khi có mới chạy `wsl.exe`, qua `Invoke-BoundedCommand` với
+deadline 6 giây. `doctor.ps1` có bản sao cùng logic (nó phải chạy độc lập được).
+
+### Chạy ngầm xong rồi mà phải nhấn Enter mới đi tiếp
+
+Hai nguyên nhân, đã sửa cả hai:
+
+**QuickEdit.** Mặc định của Windows console: click một cái vào cửa sổ là console
+vào chế độ chọn text, và **mọi lệnh ghi của tiến trình bị chặn** cho tới khi ai
+đó bấm Enter hoặc Esc. Giữa một bước winget 10 phút thì nó đọc đúng như treo.
+`Initialize-Tui` tắt `ENABLE_QUICK_EDIT_MODE` (phải set kèm
+`ENABLE_EXTENDED_FLAGS`, không thì bị bỏ qua).
+
+**Câu hỏi vô hình.** `Invoke-Step` chuyển stdout/stderr của mỗi bước vào log, mà
+stdin thì vẫn là console của installer. Script con nào hỏi gì — `Win11Debloat`
+hỏi `Restart as Administrator? (y/n)` — thì câu hỏi biến mất vào log còn con trỏ
+đứng chờ. Giờ mỗi bước được cấp một file rỗng làm stdin, nên prompt như vậy nhận
+EOF thay vì nuốt mất phiên cài.
+
+### LocalLLM không cài được vì "chưa khởi động được tiến trình yêu cầu"
+
+`wsl --install` bật hai Windows feature, và **phải reboot** trước khi bất kỳ
+distro nào chạy được. Bước `localllm` chạy ngay sau đó trong cùng phiên, cần một
+distro đang chạy, và báo *failure* — trong khi sự thật chỉ là "chưa tới lúc".
+
+`install-wsl.ps1` giờ trả về **3010** (quy ước installer của Windows: thành công,
+cần reboot). `setup.ps1` đọc mã đó, đánh dấu bước wsl là Done kèm
+`RESTART REQUIRED`, và **Skip** những bước cần distro đang chạy thay vì cho chúng
+đâm đầu vào tường. Phần tổng kết in lệnh chạy tiếp sau khi reboot.
+
+### Cài xong mà phải restart cả máy mới thấy gì chạy
+
+Trước đây không có gì được khởi động sau khi cài: komorebi, whkd và yasb đều đợi
+lần đăng nhập sau, PowerToys là thứ duy nhất tự lên (vì nó tự đăng ký autostart),
+nên ấn tượng thành thật về một máy mới là setup **chẳng làm gì cả**.
+
+Shortcut trong Startup lo mọi lần đăng nhập sau; `setup.ps1` giờ lo phiên bạn
+đang ngồi: chạy `start-desktop.ps1` khi `wm` + `configs` đều xong, và mở Raycast
+một lần khi module `raycast` được chọn (Store app cần đăng nhập thì mới dùng
+được, cài xong mà không mở thì nó nằm đó không ai cấu hình).
+
+PATH thì không sửa được từ bên ngoài: một tiến trình đọc PATH đúng một lần lúc
+khởi động. Terminal đang chạy setup vẫn giữ PATH cũ, nên phần tổng kết nói thẳng
+là hãy mở terminal mới — không phải reboot.
+
+### Alacritty mất theme sau khi mở agent lần đầu
+
+Chi tiết trong [`theming.md`](theming.md). Tóm tắt: `[keyboard] bindings = [...]`
+là mảng định nghĩa tĩnh, mà `/terminal-setup` của Claude Code **nối thêm** một
+block `[[keyboard.bindings]]` vào cuối file. TOML không cho mở rộng mảng tĩnh,
+nên cả file thành lỗi parse (`alacritty.toml:104:12  duplicate key`) và Alacritty
+rơi về mặc định. Config giờ viết dạng array-of-tables ngay từ đầu, và ship sẵn
+binding Shift+Enter để agent không còn gì phải thêm.
+
+### Config biến mất sau lần cài thứ hai
+
+Repo từng được giải nén vào `%TEMP%\omacheese-install`, và `link-configs.ps1`
+symlink mọi thứ vào đó. Xem
+[`no-clone-install.md`](no-clone-install.md#repo-nằm-ở-đâu-sau-khi-cài).
