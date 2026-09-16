@@ -56,9 +56,11 @@ the repo gets the same one. `mise install` only downloads.
 # or just mise, by hand
 winget install --id jdx.mise -e
 
-# then, in a new terminal
-mise use -g node@lts python@3.13 go@latest rust@latest
-mise use -g dart@latest
+# then, in a new terminal: languages
+mise use -g node@lts python@3.13 go@latest rust@latest dart@latest
+
+# and the package managers you want on top
+mise use -g pnpm yarn bun deno
 ```
 
 Inside WSL:
@@ -66,7 +68,11 @@ Inside WSL:
 ```bash
 curl -fsSL https://mise.run | sh
 echo 'eval "$(mise activate zsh)"' >> ~/.zshrc
+mise use -g node@lts python@3.13 go@latest rust@latest
 ```
+
+The Linux side has fewer sharp edges, but not none - see the table below for
+which of these actually install where.
 
 ### Verified on Windows, not assumed
 
@@ -102,6 +108,84 @@ npm install -g @google/gemini-cli
 ```
 
 That is precisely the job `fnm` used to do here, which is why fnm is gone.
+
+### Package managers, same tool
+
+The native package manager arrives with its language and needs nothing extra:
+
+| `mise use -g ...` | you also get |
+|---|---|
+| `node` | `npm`, `npx` |
+| `rust` | `cargo` |
+| `go` | `go mod` |
+| `dart` | `pub` |
+
+The alternatives are separate tools, and mise installs those too:
+
+```powershell
+mise use -g pnpm yarn bun deno    # node ecosystem
+mise use -g uv                    # python
+```
+
+### What works on Windows, and how to tell in advance
+
+Not everything does, and the predictor is the **backend**, not the tool. Run
+`mise registry <tool>` and read what comes back:
+
+| backend | what it does | Windows |
+|---|---|---|
+| `core:` | built into mise | works |
+| `aqua:` | downloads a prebuilt binary | works, **if** the upstream aqua entry declares Windows |
+| `ubi:`, `github:` | downloads a release asset | usually works |
+| `npm:` | resolves an npm package | fails when the package compiles native code |
+| `vfox:`, `asdf:` | runs a plugin script | generally fails on Windows |
+
+Measured on mise 2026.9.5, this machine:
+
+| tool | backend | result |
+|---|---|---|
+| pnpm | `aqua` | 15s, 12.4.2 |
+| yarn | `aqua` | 8s, 4.18.0 |
+| bun | `core` | 10s, 1.4.2 |
+| deno | `core` | 13s, 2.9.6 |
+| uv | `aqua` | 15s, 0.12.15 |
+| pipx | `aqua:pypa/pipx` | **fails**: `unsupported env: windows/amd64 (supported: ["darwin", "linux"])` |
+| poetry | `vfox` | **fails**: vfox plugin error |
+
+So an `aqua` backend is not a guarantee on its own - pipx has one and still
+refuses, because the upstream registry entry only lists macOS and Linux. The
+error is at least explicit about it, which is more than the npm backend manages.
+
+And the same two, measured inside AlmaLinux (mise 2026.9.9) rather than assumed
+to be fine because it is Linux:
+
+| tool | inside WSL |
+|---|---|
+| pipx | **works**, 1s, 1.17.2 - but only after a modern Python exists. On the stock AlmaLinux 3.9 it installs and then refuses to run: `Python 3.10 or later is required`. `mise use -g python@3.13` first and it is fine. |
+| poetry | **fails here too**: `Installing Poetry (2.4.3): An error occurred.` A newer Python does not help. The `vfox` backend is the problem, not the platform. |
+
+Which is worth spelling out because the obvious guess - that these are Windows
+problems and Linux is fine - is only half right.
+
+### pipx and poetry on Windows: use uv
+
+Both of their jobs are covered by `uv`, which does install cleanly here:
+
+```powershell
+uv tool install ruff          # what pipx does - isolated CLI tools
+uv tool run ruff check .      # or: uvx ruff check .
+uv python install 3.13        # what pyenv does
+uv init / uv add / uv sync    # what poetry does - projects and lockfiles
+```
+
+Verified: `uv tool install cowsay` then `uv tool run cowsay` worked in about a
+second, and `uv python list` shows uv managing its own CPython builds.
+
+`uv` is installed by the `agents` module through winget rather than mise. That
+is deliberate: winget puts it on the machine PATH, so it works in cmd, in
+Windows PowerShell 5.1, and in any shell that has never activated mise. Tools
+the ML stack might reach for should not depend on shell activation. If you
+prefer it managed, `mise use -g uv` works too - just do not run both.
 
 ### fnm is no longer installed
 
