@@ -118,28 +118,44 @@ strip: the focused window takes almost the whole screen and the rest wait just
 off the edge, so you scroll sideways instead of splitting the screen smaller
 and smaller.
 
-komorebi has this natively as the `scrolling` layout. Two settings give it the
-Omarchy shape, and `omarchy-scrolling.ps1` applies both:
+komorebi has this natively as the `scrolling` layout, pinned to one column.
+What `omarchy-scrolling.ps1` adds is the padding that lets the neighbour peek
+in at the edge:
 
 ```
-komorebic change-layout scrolling
-komorebic scrolling-layout-columns 1   one window per screen
-komorebic workspace-padding 0 <ws> 40  pulls it in so the neighbour peeks
+inset  = workspace_padding + container_padding
+window = monitor_width - 2 * inset
+peek   = inset - 2 * container_padding
 ```
 
-Measured on a 2560px monitor:
+Two consequences, both of which the script now handles:
 
-| Workspace padding | Window width | Neighbour peek |
+- **`container_padding` is the gap between windows, and it comes off the peek
+  twice.** Scrolling mode sets it to 0, so the whole inset shows as peek
+  instead of half of it disappearing into the space between neighbours.
+- **A fixed padding is a different fraction of every screen.** 40px is 3% of a
+  1366px laptop but 1.6% of a 2560px monitor, which is why the sliver only
+  registered on the small one. The inset is computed from the monitor's work
+  area, so it looks the same on every machine.
+
+The window width is the knob; the peek follows from it. Measured on a 2560px
+monitor:
+
+| `-WindowPercent` | Window width | Neighbour peek |
 |---|---|---|
-| 8 | 2530 px (98.8%) | none |
-| **40** | **2466 px (96.3%)** | **33 px** |
-| 70 | 2406 px (94.0%) | 63 px |
+| **95** (default) | **2444 px (95.5%)** | **70 px** |
+| 92 | 2368 px (92.5%) | 108 px |
+| 90 | 2316 px (90.5%) | 134 px |
 
-40 is the default: about 96% with a visible sliver of what is behind you.
+A 95% window leaves 5% of the screen over, so the peek can never exceed 2.5%
+per side. For a wider sliver, give up some width:
+
+```powershell
+omarchy-scrolling.ps1 -WindowPercent 92
+```
+
 Press the binding again to return to BSP. `SUPER + SPACE` -> Windows has a
 two-column variant.
-
-Tune it by editing the defaults in `scripts/omarchy/omarchy-scrolling.ps1`.
 
 ## Resize
 
