@@ -72,8 +72,10 @@ bw_agent_start() {
         >/dev/null 2>&1 &
     ) >/dev/null 2>&1
     # Give socat a moment to create the socket before the shell moves on.
-    local i
-    for i in 1 2 3 4 5 6 7 8 9 10; do
+    # `_` rather than `i`: the counter is never read, and shellcheck -S warning
+    # fails the build on an unused loop variable (SC2034).
+    local _
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
       [ -S "$_bw_agent_sock" ] && break
       sleep 0.1
     done

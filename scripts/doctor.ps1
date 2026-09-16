@@ -121,10 +121,18 @@ function Test-Whkdrc {
 Write-Host "doctor - $(if ($Repo) { 'repo files' } else { 'installed config' })" -ForegroundColor Cyan
 
 Section "commands"
+# -Repo checks the repo's files, so what this particular box has installed is
+# a different question - and on a CI runner the answer is always "nothing".
+# Failing here made every CI run red for reasons no commit could fix, which
+# is how a checker gets ignored.
+if ($Repo) {
+    Warn "skipped (-Repo mode checks files, not this machine)"
+} else {
 foreach ($c in @("winget","komorebic","whkd","yasb","alacritty","pwsh","git","fzf","wsl")) {
     if (Get-Command $c -ErrorAction SilentlyContinue) { Ok $c }
     elseif ($c -in @("fzf","alacritty")) { Warn "$c not on PATH (menus/pickers need it)" }
     else { Bad "$c not on PATH" }
+}
 }
 
 Section "package manifest"
@@ -187,6 +195,7 @@ if (Test-Path -LiteralPath $ps51) {
 }
 
 Section "fonts"
+if ($Repo) { Warn "skipped (-Repo mode)" } else {
 # Third instance of the same bug class in this repo: referring to something by
 # a name that does not exist. A missing winget id prints an error; a bad whkd
 # key name kills the daemon; a bad FONT family is the quietest of the three -
@@ -244,7 +253,11 @@ if (-not $families.Count) {
     }
 }
 
+# end of the fonts section
+}
+
 Section "powershell 7 modules"
+if ($Repo) { Warn "skipped (-Repo mode)" } else {
 # The shipped profile is PS7-only, and the two PowerShells do not share a
 # module directory (5.1 -> Documents\WindowsPowerShell\Modules,
 # 7 -> Documents\PowerShell\Modules). Modules installed from the wrong host
@@ -276,6 +289,9 @@ if (-not $pwshCmd) {
             Warn "also in the 5.1 module tree (pwsh 7 ignores these): $($stray -join ', ')"
         }
     }
+}
+
+# end of the powershell 7 modules section
 }
 
 Section "whkd"
@@ -347,6 +363,9 @@ if ($Repo) {
 }
 
 Section "environment"
+if ($Repo) {
+    Warn "skipped (-Repo mode)"
+} else {
 $kch = [Environment]::GetEnvironmentVariable("KOMOREBI_CONFIG_HOME", "User")
 if ($kch) { Ok "KOMOREBI_CONFIG_HOME=$kch" } else { Bad "KOMOREBI_CONFIG_HOME not set for the user" }
 
@@ -354,7 +373,10 @@ $startupLnk = Join-Path ([Environment]::GetFolderPath("Startup")) "komorebi-desk
 if (Test-Path -LiteralPath $startupLnk) { Ok "autostart shortcut present" }
 else { Warn "no autostart shortcut - the desktop will not come back after a reboot" }
 
+}
+
 Section "ssh agent"
+if ($Repo) { Warn "skipped (-Repo mode)" } else {
 $agentSvc = Get-Service ssh-agent -ErrorAction SilentlyContinue
 if ($agentSvc -and $agentSvc.StartType -ne "Disabled") {
     Warn "Windows 'OpenSSH Authentication Agent' is $($agentSvc.StartType); Bitwarden needs it Disabled to own the pipe"
@@ -367,10 +389,24 @@ if (Get-Command npiperelay.exe -ErrorAction SilentlyContinue) {
     Warn "npiperelay not found - WSL will have no SSH keys. winget install --id albertony.npiperelay -e"
 }
 
+# end of the ssh agent section
+}
+
 Section "coding agents"
+if ($Repo) { Warn "skipped (-Repo mode)" } else {
 $agentState = Join-Path $cfg "omacheese\defaults\agent"
-$knownAgents = @{ claude = "claude"; codex = "codex"; gemini = "gemini"; opencode = "opencode"
-                  copilot = "copilot"; cursor = "cursor-agent"; crush = "crush" }
+$agentRegistry = Join-Path $cfg "omacheese\bin\omacheese-default-agent.ps1"
+$knownAgents = @{}
+if (Test-Path -LiteralPath $agentRegistry) {
+    # Dot-source the installed registry rather than keeping a second copy here.
+    # A duplicated table is how a wrong command name survives: it looks right in
+    # one file and is never compared against the other.
+    . $agentRegistry
+    foreach ($k in $script:Agents.Keys) { $knownAgents[$k] = $script:Agents[$k].Command }
+    Ok "agent registry readable ($($knownAgents.Count) agents)"
+} else {
+    Bad "agent registry missing: $agentRegistry"
+}
 $installedAgents = @()
 foreach ($k in $knownAgents.Keys) {
     if (Get-Command $knownAgents[$k] -ErrorAction SilentlyContinue) { $installedAgents += $k }
@@ -382,6 +418,31 @@ if (Test-Path -LiteralPath $agentState) {
     Ok "default agent: $((Get-Content -LiteralPath $agentState -Raw).Trim())"
 } else {
     Warn "no default agent set (SUPER+SHIFT+CTRL+A, or omacheese-default-agent.ps1 claude)"
+}
+
+# SUPER+ALT+A runs the agent inside AlmaLinux. Installing it on Windows tells
+# you nothing about that: the WSL module ships zsh, tmux and the CLI tools, and
+# no agent and no Node. Before this check the hotkey printed "command not found"
+# into a terminal that closed before anyone could read it.
+if (-not $Quick -and $knownAgents.Count) {
+    $distro = "AlmaLinux-9"
+    $haveDistro = (@(& wsl.exe -l -q 2>$null) | ForEach-Object { ($_ -replace "`0", "").Trim() }) -contains $distro
+    if (-not $haveDistro) {
+        Warn "$distro not installed; SUPER+ALT+A (agent in WSL) cannot work"
+    } else {
+        $inWsl = @()
+        foreach ($k in $knownAgents.Keys) {
+            $hit = ((& wsl.exe -d $distro -- bash -lc "command -v $($knownAgents[$k]) 2>/dev/null" 2>$null) -join "").Trim()
+            # /mnt/* is the Windows copy reaching in over the interop PATH, not
+            # a Linux install, and it cannot serve as one.
+            if ($hit -and $hit -notlike "/mnt/*") { $inWsl += $k }
+        }
+        if ($inWsl.Count) { Ok "agents in ${distro}: $($inWsl -join ', ')" }
+        else { Warn "no agent installed in $distro (wsl -d $distro -- bash ~/.config/omacheese/install-agents.sh)" }
+    }
+}
+
+# end of the coding agents section
 }
 
 Section "windows tuning"
