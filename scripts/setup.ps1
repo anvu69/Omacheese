@@ -212,6 +212,9 @@ $ctx = @{
     LinkConfigs = {
         Invoke-Step -Key "configs" -File (Join-Path $RepoRoot "scripts\link-configs.ps1") -Arguments @()
     }
+    InstallHerdr = {
+        Invoke-Step -Key "herdr" -File (Join-Path $RepoRoot "scripts\install-herdr.ps1") -Arguments @()
+    }
     Debloat = {
         Invoke-Step -Key "debloat" -File (Join-Path $RepoRoot "scripts\debloat-windows.ps1") -Arguments @()
     }

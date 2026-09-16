@@ -40,6 +40,9 @@
 win + return                 : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" alacritty
 win + shift + return         : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" brave
 win + alt + return           : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" alacritty -e wsl.exe -d AlmaLinux-9 -- tmux new-session -A -s main
+# herdr, if installed. Same chord Omarchy uses. Optional: without herdr this
+# opens a terminal that prints "could not find herdr" and stays up to say so.
+win + control + return       : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" alacritty -e "%USERPROFILE%\.config\omacheese\bin\omacheese-herdr.cmd"
 
 win + shift + b              : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" brave
 win + shift + alt + b        : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" brave --incognito

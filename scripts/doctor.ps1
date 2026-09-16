@@ -445,6 +445,43 @@ if (-not $Quick -and $knownAgents.Count) {
 # end of the coding agents section
 }
 
+Section "herdr (optional)"
+# herdr is opt-in, so "not installed" is a normal state, not a warning worth
+# nagging about. What IS worth checking is a half-installed one: the binary
+# without its config, or a config herdr will not read.
+if ($Repo) {
+    Warn "skipped (-Repo mode)"
+} else {
+$herdrExe = (Get-Command herdr -ErrorAction SilentlyContinue).Source
+if (-not $herdrExe) {
+    $f = Join-Path $env:LOCALAPPDATA "Programs\Herdr\bin\herdr.exe"
+    if (Test-Path -LiteralPath $f) { $herdrExe = $f }
+}
+if (-not $herdrExe) {
+    Ok "herdr not installed (optional - ./scripts/install-herdr.ps1)"
+} else {
+    Ok "herdr: $herdrExe"
+
+    # %APPDATA%, not ~/.config. herdr --help prints the path, and
+    # `herdr config check` says "config: ok" for a file it never opened, so
+    # the wrong path here is invisible without testing the right one.
+    $herdrCfg = Join-Path $env:APPDATA "herdr\config.toml"
+    if (Test-Path -LiteralPath $herdrCfg) {
+        $check = (& $herdrExe config check 2>&1) -join "`n"
+        if ($check -match "config: ok") { Ok "herdr config valid" }
+        elseif ($check -match "unknown config key|parse error") {
+            Bad "herdr config rejected: $(($check -split "`n" | Select-Object -Skip 1 -First 2) -join "; ")"
+        } else { Warn "herdr config check said: $check" }
+    } else {
+        Warn "herdr installed but no config at $herdrCfg (./scripts/omacheese/omacheese-theme.ps1 -Set tokyo-night)"
+    }
+
+    $layouts = Join-Path $cfg "omacheese\agent-layouts.ps1"
+    if (Test-Path -LiteralPath $layouts) { Ok "hdl/hds/hdlm/hsl installed" }
+    else { Warn "agent-layouts.ps1 missing (./scripts/link-configs.ps1)" }
+}
+}
+
 Section "windows tuning"
 # The settings that actually conflict with a tiling WM, plus the ones the
 # debloat profile is responsible for. This is what answers "is the taskbar

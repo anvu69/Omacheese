@@ -172,3 +172,12 @@ function sst {
 function desktop { & (Join-Path $env:USERPROFILE ".config\omacheese\bin\start-desktop.ps1") @args }
 function keys    { & (Join-Path $env:USERPROFILE ".config\omacheese\bin\omacheese-keybindings.ps1") }
 function omenu   { & (Join-Path $env:USERPROFILE ".config\omacheese\bin\omacheese-menu.ps1") @args }
+
+# --- Agent layouts (herdr) --------------------------------------------------
+# hdl / hds / hdlm / hsl, the Windows counterpart to the tmux tdl/tds/tdlm/tsl
+# functions in the WSL zshrc. Separate file so a machine without herdr simply
+# does not get them, rather than getting functions that fail on use.
+$agentLayouts = Join-Path $env:USERPROFILE ".config\omacheese\agent-layouts.ps1"
+if (Test-Path -LiteralPath $agentLayouts) { . $agentLayouts }
+
+function h { & herdr @args }

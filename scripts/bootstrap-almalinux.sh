@@ -51,6 +51,7 @@ if [ "$SKIP_CONFIGS" -eq 0 ]; then
   for f in \
     "configs/zsh/zshrc" \
     "configs/zsh/aliases.zsh" \
+    "configs/zsh/agent-layouts.zsh" \
     "configs/tmux/tmux.conf" \
     "configs/wsl/wsl.conf" \
     "configs/wsl/ssh-agent-bridge.sh" \
@@ -75,6 +76,7 @@ if [ "$SKIP_CONFIGS" -eq 0 ]; then
   backup "$HOME/.gitconfig"; cp "$WORKDIR/configs/git/gitconfig"    "$HOME/.gitconfig"
 
   cp "$WORKDIR/configs/zsh/aliases.zsh"              "$HOME/.config/zsh/aliases.zsh"
+  cp "$WORKDIR/configs/zsh/agent-layouts.zsh"        "$HOME/.config/zsh/agent-layouts.zsh"
   cp "$WORKDIR/configs/wsl/ssh-agent-bridge.sh"      "$HOME/.config/wsl/ssh-agent-bridge.sh"
   cp "$WORKDIR/configs/wsl/wsl.conf"                 "$HOME/.config/wsl/wsl.conf"
   cp "$WORKDIR/configs/oh-my-posh/poweruser.omp.json" "$HOME/.config/oh-my-posh/poweruser.omp.json"

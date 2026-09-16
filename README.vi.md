@@ -76,7 +76,7 @@ Dùng cho CI, phiên remote, hoặc chỗ nào TUI bất tiện:
 | `custom` | tự chọn |
 
 Module lẻ: `core` `psmodules` `cli` `wm` `desktop` `agents` `raycast` `configs`
-`debloat` `wsl` `localllm` `verify`.
+`debloat` `wsl` `localllm` `herdr` `verify`.
 
 Cài một phần, hoặc cài từ fork: [`docs/no-clone-install.md`](docs/no-clone-install.md).
 
@@ -100,6 +100,7 @@ Cài xong, `SUPER + /` liệt kê toàn bộ keybinding.
 | SSH GUI | electerm |
 | SSH key / vault | Bitwarden Desktop SSH Agent, nối cầu vào WSL |
 | Coding agents | Claude Code, Codex, Gemini, OpenCode |
+| Pane cho agent | Layout tmux trong WSL; herdr trên Windows, tùy chọn |
 | Local LLM | Ollama cho mọi máy, hoặc vLLM + GPU khi đủ VRAM |
 | Debloat | Win11Debloat với profile pin và version-control |
 | Theme | Một palette dùng chung mọi tool (Tokyo Night, Catppuccin) |
@@ -143,6 +144,8 @@ Vài phím nên nhớ trước:
 | `SUPER + S` | Scratchpad |
 | `SUPER + A` | Mở coding agent mặc định |
 | `SUPER + SHIFT + CTRL + A` | Chọn agent |
+| `SUPER + ALT + ENTER` | WSL + tmux |
+| `SUPER + CTRL + ENTER` | herdr, để theo dõi nhiều agent cùng lúc |
 
 Danh sách đầy đủ và những chỗ cố tình lệch khỏi Omarchy nằm trong
 [`docs/keybindings.md`](docs/keybindings.md).
@@ -203,6 +206,7 @@ wsl --shutdown
 | [`docs/setup-tui.md`](docs/setup-tui.md) | Installer, module, gating theo phần cứng |
 | [`docs/theming.md`](docs/theming.md) | Một palette cho cả desktop |
 | [`docs/raycast.md`](docs/raycast.md) | Script commands cho Raycast (tuỳ chọn) |
+| [`docs/agent-panes.md`](docs/agent-panes.md) | Chạy nhiều agent song song |
 | [`docs/ai-stack.md`](docs/ai-stack.md) | Coding agents, Docker/GPU, vLLM |
 | [`docs/windows-tuning.md`](docs/windows-tuning.md) | Debloat và taskbar |
 | [`docs/no-clone-install.md`](docs/no-clone-install.md) | Cài không cần clone |
@@ -255,6 +259,8 @@ Vay mượn cái gì, và nằm ở đâu:
 | Menu lồng nhau duy nhất trên `SUPER + SPACE` | `omacheese-menu.ps1` |
 | Chế độ scroll ngang, thứ Omarchy lấy từ hyprscroller | `omacheese-scroll-daemon.ps1` |
 | Agent launcher, từ `bin/omarchy-agent` và `bin/omarchy-default-agent` | `omacheese-agent.ps1` |
+| Các layout pane `tdl`/`tds`/`tdlm`/`tsl` và `hdl`/`hds`/`hdlm`/`hsl`, từ `default/bash/fns/tmux` và `fns/herdr` | `configs/zsh/agent-layouts.zsh`, `configs/powershell/agent-layouts.ps1` |
+| Ý tưởng soi config herdr theo config tmux, và chỗ bấm `SUPER+CTRL+ENTER` | `configs/herdr/config.toml.tmpl` |
 | Layout thanh trên cùng và hàng chấm workspace | `configs/yasb/` |
 | Bảng màu, copy nguyên văn từ `themes/<name>/colors.toml` | `configs/theme/` |
 

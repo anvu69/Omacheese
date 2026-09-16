@@ -153,11 +153,17 @@ jobs:
           }
           if ($pals.Count -eq 0) { Write-Host "no palettes"; exit 1 }
 
-          $pairs = @(
-            @{ T = "configs/komorebi/komorebi.json.tmpl";   C = "configs/komorebi/komorebi.json" }
-            @{ T = "configs/yasb/styles.css.tmpl";          C = "configs/yasb/styles.css" }
-            @{ T = "configs/alacritty/alacritty.toml.tmpl"; C = "configs/alacritty/alacritty.toml" }
-          )
+          # Discovered, not listed. A hardcoded list here went stale twice already
+          # in this repo, and a template nobody checks is a template that rots.
+          # Not every template has a committed counterpart: the herdr config
+          # renders straight to %APPDATA%, so the round-trip check below only
+          # runs where the rendered file is actually in the repo.
+          $pairs = Get-ChildItem configs -Recurse -Filter *.tmpl | ForEach-Object {
+            @{ T = $_.FullName.Replace("$PWD\", "").Replace("\", "/")
+               C = $_.FullName.Replace("$PWD\", "").Replace("\", "/") -replace '\.tmpl$', '' }
+          }
+          if ($pairs.Count -eq 0) { Write-Host "no templates found"; exit 1 }
+          Write-Host "$($pairs.Count) templates discovered"
 
           $bad = 0
           foreach ($p in $pairs) {
@@ -174,6 +180,10 @@ jobs:
             # tokyo-night is what the committed files are rendered from.
             $rendered = [regex]::Replace($tmpl, '\{\{(\w+)\}\}', {
               param($m) $pals["tokyo-night"][$m.Groups[1].Value] })
+            if (-not (Test-Path -LiteralPath $p.C)) {
+              Write-Host "ok   $($p.T) (tokens only; renders outside the repo)"
+              continue
+            }
             $committed = [IO.File]::ReadAllText($p.C)
             if ($rendered -ne $committed) {
               Write-Host "FAIL $($p.C) is not render($($p.T), tokyo-night)"
@@ -241,6 +251,24 @@ jobs:
             }
           }
           Write-Host "$($script:Agents.Count) agents checked"
+          if ($bad) { exit 1 }
+
+      - name: Module actions reference a real context member
+        shell: pwsh
+        run: |
+          # modules.ps1 calls $ctx.Something; setup.ps1 builds $ctx. A name that
+          # exists in one and not the other fails only when a user ticks that
+          # module, which is the worst time to find out.
+          $mods  = Get-Content scripts/lib/modules.ps1 -Raw
+          $setup = Get-Content scripts/setup.ps1 -Raw
+          $used = [regex]::Matches($mods, '\$ctx\.(\w+)') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
+          $defined = [regex]::Matches($setup, '(?m)^\s{4}(\w+) = \{') | ForEach-Object { $_.Groups[1].Value }
+          $bad = 0
+          foreach ($u in $used) {
+            if ($defined -contains $u) { Write-Host "ok   `$ctx.$u" }
+            else { Write-Host "FAIL `$ctx.$u is not defined in setup.ps1"; $bad++ }
+          }
+          if ($used.Count -eq 0) { Write-Host "no `$ctx references found"; exit 1 }
           if ($bad) { exit 1 }
 
       - name: "No unregistered snippingtool: protocol"
@@ -337,8 +365,14 @@ jobs:
       - name: zsh syntax
         run: |
           sudo apt-get install -y -qq zsh
-          zsh -n configs/zsh/zshrc
-          zsh -n configs/zsh/aliases.zsh
+          # Globbed: naming the files here meant a new one silently went
+          # unchecked, which is how agent-layouts.zsh nearly shipped unparsed.
+          shopt -s nullglob
+          files=(configs/zsh/zshrc configs/zsh/*.zsh)
+          [ ${#files[@]} -gt 0 ] || { echo "no zsh files found"; exit 1; }
+          for f in "${files[@]}"; do
+            zsh -n "$f" && echo "ok   $f"
+          done
 
   winget-ids:
     # Package ids are the other thing that broke here: bootstrap shipped

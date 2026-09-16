@@ -72,6 +72,16 @@ function Get-SetupModules {
         -Available $wingetOk -Note "needs winget" -Est "2-4 min" `
         -Action { param($ctx) & $ctx.InstallWindows -Groups @("agents") }))
 
+    # Off by default like raycast, and for a related reason: herdr is excellent
+    # but it is a second multiplexer on a machine that already has tmux, and it
+    # is the one thing here that does not come from winget - the `herdr` moniker
+    # on winget belongs to an unofficial fork, so install-herdr.ps1 goes to
+    # herdr.dev instead. Opt in when you want it.
+    $mods.Add((New-Mod -Key "herdr" -Description "herdr agent multiplexer + the hdl/hds/hdlm/hsl layouts" `
+        -Default $false `
+        -Note "installs from herdr.dev, not winget" -Est "1-2 min" `
+        -Action { param($ctx) & $ctx.InstallHerdr }))
+
     # Off by default, and deliberately so. Raycast is a Microsoft Store package
     # that wants an account, which is a poor fit for provisioning a machine
     # unattended - but it is an excellent launcher, and the repo ships script

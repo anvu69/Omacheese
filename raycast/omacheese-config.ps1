@@ -18,16 +18,16 @@ param([string]$Choice)
 . (Join-Path $PSScriptRoot "_omacheese-lib.ps1")
 
 $paths = @{
-    "whkdrc"    = Join-Path $OmarchyConfig "whkdrc"
-    "komorebi"  = Join-Path $OmarchyConfig "komorebi\komorebi.json"
-    "yasb"      = Join-Path $OmarchyConfig "yasb\config.yaml"
-    "yasb-css"  = Join-Path $OmarchyConfig "yasb\styles.css"
+    "whkdrc"    = Join-Path $OmacheeseConfig "whkdrc"
+    "komorebi"  = Join-Path $OmacheeseConfig "komorebi\komorebi.json"
+    "yasb"      = Join-Path $OmacheeseConfig "yasb\config.yaml"
+    "yasb-css"  = Join-Path $OmacheeseConfig "yasb\styles.css"
     "alacritty" = Join-Path $env:APPDATA "alacritty\alacritty.toml"
     "profile"   = $PROFILE.CurrentUserCurrentHost
     "ssh"       = Join-Path $env:USERPROFILE ".ssh\config"
     "git"       = Join-Path $env:USERPROFILE ".gitconfig"
     "wsl"       = Join-Path $env:USERPROFILE ".wslconfig"
-    "scrolling" = Join-Path $OmarchyConfig "omacheese\scrolling.json"
+    "scrolling" = Join-Path $OmacheeseConfig "omacheese\scrolling.json"
 }
 
 $path = $paths[$Choice]

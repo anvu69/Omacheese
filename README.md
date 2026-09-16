@@ -77,7 +77,7 @@ For CI, remote sessions, or anywhere a TUI is awkward:
 | `custom` | pick your own |
 
 Individual modules: `core` `psmodules` `cli` `wm` `desktop` `agents` `raycast`
-`configs` `debloat` `wsl` `localllm` `verify`.
+`configs` `debloat` `wsl` `localllm` `herdr` `verify`.
 
 Installing only part of it, or from a fork:
 [`docs/no-clone-install.md`](docs/no-clone-install.md).
@@ -102,6 +102,7 @@ Once it finishes, `SUPER + /` lists every keybinding.
 | SSH GUI | electerm |
 | SSH keys / vault | Bitwarden Desktop SSH Agent, bridged into WSL |
 | Coding agents | Claude Code, Codex, Gemini, OpenCode |
+| Agent panes | tmux layouts in WSL; herdr on Windows, optional |
 | Local LLM | Ollama anywhere, or vLLM + GPU when the VRAM is there |
 | Debloat | Win11Debloat with a pinned, version-controlled profile |
 | Theme | One palette across every tool (Tokyo Night, Catppuccin) |
@@ -146,6 +147,8 @@ The ones worth learning first:
 | `SUPER + S` | Scratchpad |
 | `SUPER + A` | Launch the default coding agent |
 | `SUPER + SHIFT + CTRL + A` | Pick an agent |
+| `SUPER + ALT + ENTER` | WSL + tmux |
+| `SUPER + CTRL + ENTER` | herdr, for watching several agents at once |
 
 The full list, and the places this differs from Omarchy on purpose, are in
 [`docs/keybindings.md`](docs/keybindings.md).
@@ -207,6 +210,7 @@ wsl --shutdown
 | [`docs/setup-tui.md`](docs/setup-tui.md) | Installer, modules, hardware gating |
 | [`docs/theming.md`](docs/theming.md) | One palette for the whole desktop |
 | [`docs/raycast.md`](docs/raycast.md) | Optional Raycast script commands |
+| [`docs/agent-panes.md`](docs/agent-panes.md) | Running several agents side by side |
 | [`docs/ai-stack.md`](docs/ai-stack.md) | Coding agents, Docker/GPU, vLLM |
 | [`docs/windows-tuning.md`](docs/windows-tuning.md) | Debloat and taskbar |
 | [`docs/no-clone-install.md`](docs/no-clone-install.md) | Installing without a clone |
@@ -259,6 +263,8 @@ What was borrowed, and where it ended up:
 | The single nested menu on `SUPER + SPACE` | `omacheese-menu.ps1` |
 | The horizontal scrolling strip, which Omarchy gets from hyprscroller | `omacheese-scroll-daemon.ps1` |
 | The agent launcher, from `bin/omarchy-agent` and `bin/omarchy-default-agent` | `omacheese-agent.ps1` |
+| The `tdl`/`tds`/`tdlm`/`tsl` and `hdl`/`hds`/`hdlm`/`hsl` pane layouts, from `default/bash/fns/tmux` and `fns/herdr` | `configs/zsh/agent-layouts.zsh`, `configs/powershell/agent-layouts.ps1` |
+| Mirroring the herdr config onto the tmux config, and the `SUPER+CTRL+ENTER` chord | `configs/herdr/config.toml.tmpl` |
 | Top bar layout and the workspace dot row | `configs/yasb/` |
 | Theme palettes, copied verbatim from `themes/<name>/colors.toml` | `configs/theme/` |
 

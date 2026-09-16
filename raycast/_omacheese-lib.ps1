@@ -9,12 +9,12 @@
 
 $ErrorActionPreference = "Stop"
 
-$OmarchyConfig = Join-Path $env:USERPROFILE ".config"
-$OmarchyBin    = Join-Path $OmarchyConfig "omacheese\bin"
+$OmacheeseConfig = Join-Path $env:USERPROFILE ".config"
+$OmacheeseBin    = Join-Path $OmacheeseConfig "omacheese\bin"
 
 # komorebic reads its config from here, and Raycast does not run a login shell,
 # so the variable has to be set rather than inherited.
-$env:KOMOREBI_CONFIG_HOME = Join-Path $OmarchyConfig "komorebi"
+$env:KOMOREBI_CONFIG_HOME = Join-Path $OmacheeseConfig "komorebi"
 
 # Raycast launches commands from its own process, which inherits whatever PATH
 # that had. Resolve binaries rather than trusting it - this is the same trap
@@ -71,7 +71,7 @@ function Get-PowerShellExe {
 # Run one of the omacheese helpers without showing a console.
 function Start-Helper {
     param([string]$Name, [string[]]$Arguments = @())
-    $script = Join-Path $OmarchyBin $Name
+    $script = Join-Path $OmacheeseBin $Name
     if (-not (Test-Path -LiteralPath $script)) { throw "Missing helper: $script" }
     Start-Process -FilePath (Get-PowerShellExe) -WindowStyle Hidden `
         -ArgumentList (@("-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $script) + $Arguments)
@@ -80,7 +80,7 @@ function Start-Helper {
 # Run an omacheese helper in a terminal, for the ones that print something.
 function Start-HelperInTerminal {
     param([string]$Name, [string[]]$Arguments = @())
-    $script = Join-Path $OmarchyBin $Name
+    $script = Join-Path $OmacheeseBin $Name
     if (-not (Test-Path -LiteralPath $script)) { throw "Missing helper: $script" }
     Start-InTerminal (@((Get-PowerShellExe), "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $script) + $Arguments)
 }

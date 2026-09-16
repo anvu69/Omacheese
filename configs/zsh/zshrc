@@ -62,5 +62,10 @@ command -v oh-my-posh >/dev/null 2>&1 && [ -f "$HOME/.config/oh-my-posh/poweruse
 # --- Bitwarden SSH agent bridge (Windows -> WSL) -----------------------------
 [ -f "$HOME/.config/wsl/ssh-agent-bridge.sh" ] && source "$HOME/.config/wsl/ssh-agent-bridge.sh"
 
+# --- Agent layouts (tmux) ---------------------------------------------------
+# tdl / tds / tdlm / tsl - editor-and-agent pane layouts. The herdr twins live
+# on the Windows side, in configs/powershell/agent-layouts.ps1.
+[ -f "$HOME/.config/zsh/agent-layouts.zsh" ] && source "$HOME/.config/zsh/agent-layouts.zsh"
+
 # --- Aliases ----------------------------------------------------------------
 [ -f "$HOME/.config/zsh/aliases.zsh" ] && source "$HOME/.config/zsh/aliases.zsh"

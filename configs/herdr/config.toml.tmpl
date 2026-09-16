@@ -1,0 +1,136 @@
+# Mirrors configs/tmux/tmux.conf, the way Omarchy's config/herdr/config.toml
+# mirrors its own tmux config. The vocabulary maps across:
+#
+#   tmux session -> herdr workspace,  tmux window -> herdr tab,  pane -> pane
+#
+# Colour placeholders are filled in from the active palette by
+# scripts/omacheese/omacheese-theme.ps1. Edit the .tmpl, never the rendered
+# file - see docs/theming.md.
+#
+# Rendered to %APPDATA%\herdr\config.toml, which is where herdr actually reads
+# it - `herdr --help` prints the path. It is NOT ~/.config/herdr. Worth knowing
+# because `herdr config check` answers "config: ok" for a file it never opened,
+# so a wrong path here looks exactly like a working one.
+#
+# Every key below was checked against `herdr --default-config` on 0.9.0.
+# herdr ignores an unknown key with a warning rather than failing, so a typo
+# here is silent: run `herdr config check` after editing.
+
+[theme]
+# herdr ships built-in tokyo-night and catppuccin themes, which would cover the
+# two palettes in this repo. Using "terminal" plus explicit overrides instead
+# means any of Omarchy's other 22 palettes works the moment you drop its
+# colors.toml into configs/theme/ - which is the point of the palette system.
+name = "terminal"
+
+[theme.custom]
+# These ten are the whole set herdr accepts; anything else is ignored.
+panel_bg = "{{background}}"
+sidebar_bg = "{{dark_background}}"
+active_row_bg = "{{lighter_background}}"
+selection_bg = "{{selection}}"
+text = "{{foreground}}"
+accent = "{{accent}}"
+red = "{{red}}"
+green = "{{green}}"
+yellow = "{{yellow}}"
+blue = "{{blue}}"
+
+[terminal]
+# Matches -c "#{pane_current_path}" on every split, window and session in tmux.
+new_cwd = "follow"
+
+[keys]
+# tmux here uses C-a, not Omarchy's C-Space: C-a is already this repo's prefix
+# and it is what the muscle memory expects. Mirroring means matching THIS
+# tmux.conf, not Omarchy's.
+prefix = "ctrl+a"
+
+reload_config = "prefix+r"
+help = "prefix+?"
+detach = "prefix+d"
+
+# tmux's copy-mode; herdr calls the equivalent edit_scrollback.
+edit_scrollback = "prefix+["
+
+# Panes. tmux binds | and - for splits.
+split_horizontal = "prefix+backslash"
+split_vertical = "prefix+minus"
+close_pane = "prefix+x"
+zoom = "prefix+z"
+last_pane = "prefix+semicolon"
+
+# tmux binds h/j/k/l behind the prefix and Alt+arrows without it.
+focus_pane_left = "prefix+h"
+focus_pane_down = "prefix+j"
+focus_pane_up = "prefix+k"
+focus_pane_right = "prefix+l"
+
+navigate_pane_left = "alt+left"
+navigate_pane_down = "alt+down"
+navigate_pane_up = "alt+up"
+navigate_pane_right = "alt+right"
+
+resize_pane_left = "prefix+shift+h"
+resize_pane_down = "prefix+shift+j"
+resize_pane_up = "prefix+shift+k"
+resize_pane_right = "prefix+shift+l"
+
+# Windows -> tabs
+new_tab = "prefix+c"
+rename_tab = "prefix+comma"
+close_tab = "prefix+shift+x"
+switch_tab = "prefix+1..9"
+previous_tab = "prefix+p"
+next_tab = "prefix+n"
+
+# Sessions -> workspaces
+new_workspace = "prefix+shift+c"
+rename_workspace = "prefix+shift+w"
+close_workspace = "prefix+shift+d"
+previous_workspace = "prefix+shift+p"
+next_workspace = "prefix+shift+n"
+
+# No tmux equivalent, and the reason to run herdr at all: jump straight to
+# whichever agent wants you, without hunting through panes.
+# `agents` is not a [keys] name - it lives under the legacy [keys.indexed]
+# table. The sidebar is where the agent panel is, so toggle that instead.
+toggle_sidebar = "prefix+b"
+next_agent = "prefix+a"
+# Not prefix+ctrl+a: the prefix here IS ctrl+a, and herdr refuses a binding
+# that repeats it, because pressing the prefix twice sends a literal one.
+previous_agent = "prefix+shift+a"
+focus_agent = "prefix+alt+1..9"
+
+[ui]
+# set -g mouse on
+mouse_capture = true
+
+# tmux drew single-line dividers and no outer frame or scrollbar column.
+pane_gaps = false
+pane_outer_borders = false
+pane_scrollbars = false
+
+# kill-pane and kill-window never asked, and automatic-rename named windows
+# without prompting.
+confirm_close = false
+prompt_new_tab_name = false
+
+# The agent state - working, blocked, idle - drawn where you can see it. This
+# is the part tmux has no answer for.
+# "symbols" over the default "dots": distinct glyphs for blocked, working,
+# done, idle and unknown read at a glance, where four colours of the same
+# dot do not.
+status_indicators = "symbols"
+show_agent_labels_on_pane_borders = true
+# Order the agent panel by who needs attention rather than by workspace.
+agent_panel_sort = "priority"
+
+# tmux's status bar was at the top and its status-right carried the zoom flag
+# then the hostname.
+tab_bar_position = "top"
+tab_bar_right = [{ type = "zoom" }, { type = "hostname" }]
+
+# set -g set-titles-string '#h:#W'. komorebi matches windows on title, so this
+# is also what the WM sees.
+window_title = "{hostname}: {workspace}"

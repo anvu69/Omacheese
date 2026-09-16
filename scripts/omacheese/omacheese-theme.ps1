@@ -163,6 +163,9 @@ $targets = @(
     @{ Tmpl = "komorebi\komorebi.json.tmpl";   Repo = "configs\komorebi\komorebi.json.tmpl";   Dest = (Join-Path $cfg "komorebi\komorebi.json") }
     @{ Tmpl = "yasb\styles.css.tmpl";          Repo = "configs\yasb\styles.css.tmpl";          Dest = (Join-Path $cfg "yasb\styles.css") }
     @{ Tmpl = "alacritty\alacritty.toml.tmpl"; Repo = "configs\alacritty\alacritty.toml.tmpl"; Dest = (Join-Path $env:APPDATA "alacritty\alacritty.toml") }
+    # Optional: only rendered when herdr is installed, so a machine without it
+    # does not grow a config for a binary that is not there.
+    @{ Tmpl = "herdr\config.toml.tmpl"; Repo = "configs\herdr\config.toml.tmpl"; Dest = (Join-Path $env:APPDATA "herdr\config.toml"); Optional = $true }
 )
 
 $written = 0
@@ -170,6 +173,10 @@ foreach ($t in $targets) {
     if ($tmplSource -eq "repo") { $src = Join-Path $repoRoot $t.Repo }
     else { $src = Join-Path $tmplDir (Split-Path $t.Tmpl -Leaf) }
 
+    if ($t.Optional -and -not (Get-Command herdr -ErrorAction SilentlyContinue) -and
+        -not (Test-Path -LiteralPath (Join-Path $env:LOCALAPPDATA "Programs\Herdr\bin\herdr.exe"))) {
+        continue
+    }
     if (-not (Test-Path -LiteralPath $src)) {
         Write-Warning "missing template: $src"
         continue
@@ -197,6 +204,11 @@ if (-not (Test-Path -LiteralPath $themeHome)) { New-Item -ItemType Directory -Pa
 Set-Content -LiteralPath $activeFile -Value $Set -Encoding ASCII
 
 Write-Host ""
+if (Get-Command herdr -ErrorAction SilentlyContinue) {
+    # Reloads in the running server, so a live session keeps its panes.
+    & herdr server reload-config 2>$null | Out-Null
+}
+
 Write-Host "Theme: $Set ($written configs rendered)" -ForegroundColor Cyan
 
 if ($NoRestart) { exit 0 }

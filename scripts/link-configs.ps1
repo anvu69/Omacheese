@@ -111,6 +111,15 @@ Put "configs\wsl\ssh-agent-bridge.sh"  (Join-Path $cfg "wsl\ssh-agent-bridge.sh"
 & $Install -Source (Join-Path $Repo "scripts\install-agents-wsl.sh") `
            -Destination (Join-Path $cfg "omacheese\install-agents.sh") | Out-Null
 
+# Dot-sourced by the PowerShell profile when present.
+& $Install -Source (Join-Path $Repo "configs\powershell\agent-layouts.ps1") `
+           -Destination (Join-Path $cfg "omacheese\agent-layouts.ps1") | Out-Null
+
+# omacheese-herdr.cmd names this path when herdr is missing, so it has to be
+# there for the message to be worth printing.
+& $Install -Source (Join-Path $Repo "scripts\install-herdr.ps1") `
+           -Destination (Join-Path $omacheese "install-herdr.ps1") | Out-Null
+
 Write-Host "`n[ssh]" -ForegroundColor Magenta
 # Example only - never overwrite a real ~/.ssh/config.
 Install-ConfigFile -Source (Join-Path $Repo "configs\ssh\config.example") `

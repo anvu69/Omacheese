@@ -291,10 +291,20 @@ function Get-Menu {
                 param($text)
                 if ($text) { Start-HelperInTerminal (Join-Path $bin "omacheese-agent.ps1") @("-Prompt", $text) } })
             (New-Entry "Launch unattended" "Skips every permission prompt" -Sub "agents-yolo")
+            (New-Entry "Agent panes (herdr)" "Watch several agents at once" -Sub "herdr")
             (New-Entry "Pick / change default" "Choose which agent SUPER+A runs" -Action {
                 Start-HelperInTerminal (Join-Path $bin "omacheese-agent.ps1") @("-Pick") })
             (New-Entry "List agents" "Show what is installed" -Action {
                 Start-HelperInTerminal (Join-Path $bin "omacheese-default-agent.ps1") @("-List") })
+        ) }
+
+        "herdr" { @(
+            (New-Entry "Open herdr" "Launch or reattach to the session" -Action {
+                Start-InTerminal @((Join-Path $bin "omacheese-herdr.cmd")) })
+            (New-Entry "Agent status" "Which agents are working, blocked or idle" -Action {
+                Start-HelperInTerminal (Join-Path $bin "omacheese-herdr-status.ps1") })
+            (New-Entry "Install herdr" "Optional; installs from herdr.dev, not winget" -Action {
+                Start-HelperInTerminal (Join-Path $bin "install-herdr.ps1") })
         ) }
 
         "agents-yolo" { @(

@@ -212,6 +212,7 @@ Omarchy's three-magnitude resize on the `-` / `=` keys.
 |---|---|
 | `SUPER + ENTER` | Alacritty |
 | `SUPER + ALT + ENTER` | Alacritty → WSL → tmux |
+| `SUPER + CTRL + ENTER` | herdr, if installed — see [agent-panes.md](agent-panes.md) |
 | `SUPER + SHIFT + ENTER` / `SUPER + SHIFT + B` | Brave |
 | `SUPER + SHIFT + ALT + B` | Brave (private) |
 | `SUPER + SHIFT + F` | Explorer |
