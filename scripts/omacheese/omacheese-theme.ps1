@@ -95,7 +95,7 @@ function Write-RaycastTheme {
     $appearance = "dark"
     if ($P.ContainsKey("mode") -and $P["mode"]) { $appearance = $P["mode"] }
     $theme = [ordered]@{
-        author         = "windows11-dev-poweruser"
+        author         = "Omacheese"
         authorUsername = "anvu69"
         version        = "1"
         name           = "Omacheese $Name"

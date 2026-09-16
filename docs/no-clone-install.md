@@ -8,7 +8,7 @@ Chạy setup thẳng từ GitHub, không cần `git clone`.
 ## 1. Windows one-liner
 
 ```powershell
-irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/anvu69/Omacheese/main/install.ps1 | iex
 ```
 
 Không cần `git`, không cần set biến gì trước. Nó tải **cả repo dưới dạng zip**
@@ -29,19 +29,19 @@ Nếu zip không tải được, nó tự chuyển sang `git clone --depth 1`.
 
 ```powershell
 # xem nó định làm gì, không đổi gì cả
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1))) -DryRun
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/anvu69/Omacheese/main/install.ps1))) -DryRun
 
 # chỉ cài app, không đụng config
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1))) -Modules core,psmodules,cli,wm,desktop -Yes
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/anvu69/Omacheese/main/install.ps1))) -Modules core,psmodules,cli,wm,desktop -Yes
 
 # chỉ cài config, không cài app
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1))) -Modules configs -Yes
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/anvu69/Omacheese/main/install.ps1))) -Modules configs -Yes
 ```
 
 Hoặc tải về file rồi chạy — thói quen tốt hơn với script chạy code từ Internet:
 
 ```powershell
-irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1 -OutFile install.ps1
+irm https://raw.githubusercontent.com/anvu69/Omacheese/main/install.ps1 -OutFile install.ps1
 ./install.ps1 -DryRun
 ```
 
@@ -69,7 +69,7 @@ Tải về đọc trước rồi mới chạy — nên làm với bất kỳ scr
 Internet:
 
 ```powershell
-irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1 -OutFile "$env:TEMP\install.ps1"
+irm https://raw.githubusercontent.com/anvu69/Omacheese/main/install.ps1 -OutFile "$env:TEMP\install.ps1"
 notepad "$env:TEMP\install.ps1"
 powershell -ExecutionPolicy Bypass -File "$env:TEMP\install.ps1" -DryRun
 ```
@@ -85,7 +85,7 @@ và in ra lệnh mới.
 Phía Linux vẫn tải từng file, và ở đó `--skip-*` **có thật**:
 
 ```bash
-repo="https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main"
+repo="https://raw.githubusercontent.com/anvu69/Omacheese/main"
 curl -fsSL "$repo/scripts/bootstrap-almalinux.sh" | bash -s -- --repo "$repo"
 
 # chỉ package
@@ -98,7 +98,7 @@ curl -fsSL "$repo/scripts/bootstrap-almalinux.sh" | bash -s -- --repo "$repo" --
 ## 5. Chạy một script lẻ
 
 ```powershell
-$repo="https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main"
+$repo="https://raw.githubusercontent.com/anvu69/Omacheese/main"
 irm "$repo/scripts/doctor.ps1" -OutFile "$env:TEMP\doctor.ps1"
 powershell -ExecutionPolicy Bypass -File "$env:TEMP\doctor.ps1"
 ```

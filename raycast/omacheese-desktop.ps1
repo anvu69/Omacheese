@@ -12,7 +12,7 @@
 # Documentation:
 # @raycast.description Restart, inspect or stop the komorebi / whkd / yasb stack
 # @raycast.author anvu69
-# @raycast.authorURL https://github.com/anvu69/windows11-dev-poweruser
+# @raycast.authorURL https://github.com/anvu69/Omacheese
 #
 # needsConfirmation is on because two of these entries tear the desktop down.
 # Lock, sleep, restart and shut down are deliberately absent - Raycast ships

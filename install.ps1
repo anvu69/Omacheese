@@ -1,18 +1,18 @@
 # One command to set up a fresh Windows 11 machine.
 #
-#   irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/anvu69/Omacheese/main/install.ps1 | iex
 #
 # No git, no clone, nothing installed first. It fetches the repo as an archive
 # and runs scripts/setup.ps1 - the same TUI a cloned repo gets.
 #
 # To pass options through `iex`, wrap it in a script block:
 #
-#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1))) -Preset desktop -Yes
+#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/anvu69/Omacheese/main/install.ps1))) -Preset desktop -Yes
 #
 # Or fetch it to a file first, which is the better habit for anything that runs
 # code off the internet:
 #
-#   irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1 -OutFile install.ps1
+#   irm https://raw.githubusercontent.com/anvu69/Omacheese/main/install.ps1 -OutFile install.ps1
 #   ./install.ps1 -DryRun
 #
 # This file lives at the repo root on purpose: it is the shortest URL the repo
@@ -21,7 +21,7 @@
 [CmdletBinding()]
 param(
     # owner/name. Override to install a fork.
-    [string]$Repo = "anvu69/windows11-dev-poweruser",
+    [string]$Repo = "anvu69/Omacheese",
     [string]$Branch = "main",
 
     # No [ValidateSet] here, deliberately. `irm | iex` - the command at the top
@@ -57,16 +57,16 @@ if ($Preset -and $knownPresets -notcontains $Preset) {
 }
 
 if ($Repo -notmatch '^[^/\s]+/[^/\s]+$') {
-    throw "-Repo must be owner/name, for example anvu69/windows11-dev-poweruser"
+    throw "-Repo must be owner/name, for example anvu69/Omacheese"
 }
 $owner, $name = $Repo.Split("/")
 
 Write-Host ""
-Write-Host "  windows11-dev-poweruser" -ForegroundColor Cyan
+Write-Host "  Omacheese" -ForegroundColor Cyan
 Write-Host "  $owner/$name@$Branch" -ForegroundColor DarkGray
 Write-Host ""
 
-$WorkDir = Join-Path $env:TEMP "windows11-dev-poweruser-install"
+$WorkDir = Join-Path $env:TEMP "omacheese-install"
 if (Test-Path -LiteralPath $WorkDir) { Remove-Item -LiteralPath $WorkDir -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $WorkDir | Out-Null
 

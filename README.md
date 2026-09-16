@@ -24,7 +24,7 @@ Everything else the installer brings in itself. It runs on Windows PowerShell
 A fresh Windows has no `git`, so there is nothing to clone with yet:
 
 ```powershell
-irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/anvu69/Omacheese/main/install.ps1 | iex
 ```
 
 That downloads the repo as an archive and runs `setup.ps1`.
@@ -32,7 +32,7 @@ That downloads the repo as an archive and runs `setup.ps1`.
 `iex` cannot take parameters. To pass any, wrap the script in a block:
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1))) -Preset desktop -Yes
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/anvu69/Omacheese/main/install.ps1))) -Preset desktop -Yes
 ```
 
 If you already cloned:

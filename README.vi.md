@@ -24,7 +24,7 @@ nào, vì máy Windows vừa cài xong chỉ có bấy nhiêu.
 Máy mới cài Windows chưa có `git` nên chưa clone được:
 
 ```powershell
-irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/anvu69/Omacheese/main/install.ps1 | iex
 ```
 
 Lệnh này tải cả repo dạng zip rồi chạy `setup.ps1`.
@@ -32,7 +32,7 @@ Lệnh này tải cả repo dạng zip rồi chạy `setup.ps1`.
 `iex` không nhận tham số. Muốn truyền thì bọc script vào block:
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1))) -Preset desktop -Yes
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/anvu69/Omacheese/main/install.ps1))) -Preset desktop -Yes
 ```
 
 Nếu đã clone rồi:

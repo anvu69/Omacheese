@@ -1,4 +1,4 @@
-# windows11-dev-poweruser - interactive setup.
+# Omacheese - interactive setup.
 #
 #   ./scripts/setup.ps1                 pick a profile, then run
 #   ./scripts/setup.ps1 -Preset full    skip the menus
@@ -87,7 +87,7 @@ if ($Modules) {
         $menuItems = foreach ($p in $profiles) {
             [pscustomobject]@{ Key = $p.Key; Title = $p.Title; Description = $p.Description }
         }
-        $Preset = Show-TuiMenu -Items $menuItems -Title "windows11-dev-poweruser" `
+        $Preset = Show-TuiMenu -Items $menuItems -Title "Omacheese" `
             -HeaderLines ($header + $warnings)
         if (-not $Preset) { Clear-Tui; Write-Host "Cancelled."; return }
     }
@@ -326,7 +326,7 @@ $didWm  = @($steps | Where-Object { $_.Key -eq "wm"  -and $_.Status -eq "Done" }
 
 # Where the machine's previous configs went. The most important line for
 # anyone who ran this on a box that already had a setup.
-$marker = Join-Path $env:USERPROFILE ".config\windows11-dev-poweruser\last-backup.txt"
+$marker = Join-Path $env:USERPROFILE ".config\omacheese\last-backup.txt"
 if (Test-Path -LiteralPath $marker) {
     $backupDir = (Get-Content -LiteralPath $marker -Raw).Trim()
     if ($backupDir -and (Test-Path -LiteralPath $backupDir)) {

@@ -3,7 +3,7 @@
 # The install entry point is now install.ps1 at the repo root, because that is
 # the shortest URL the repo can offer and it needs no $repo variable set first:
 #
-#   irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/anvu69/Omacheese/main/install.ps1 | iex
 #
 # This forwards to it. If you are reading this because you saved the old
 # one-liner, switch to the one above.
@@ -13,7 +13,7 @@ param(
     # The old parameter: a raw base URL like
     # https://raw.githubusercontent.com/<owner>/<name>/<branch>
     [string]$RepoRawBase = "",
-    [string]$Repo = "anvu69/windows11-dev-poweruser",
+    [string]$Repo = "anvu69/Omacheese",
     [string]$Branch = "main",
 
     # No [ValidateSet]: this file is fetched with `irm | iex` too, and under
@@ -83,7 +83,7 @@ if ($DryRun)  { $forward["DryRun"]  = $true }
 if ($local -and (Test-Path -LiteralPath $local)) {
     & $local @forward
 } else {
-    $tmp = Join-Path $env:TEMP "windows11-dev-poweruser-install.ps1"
+    $tmp = Join-Path $env:TEMP "omacheese-install.ps1"
     Invoke-WebRequest -UseBasicParsing -Uri $installUrl -OutFile $tmp
     & $tmp @forward
 }

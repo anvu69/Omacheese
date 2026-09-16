@@ -360,7 +360,7 @@ function Write-TuiBanner {
     $T = $script:Tui
     Clear-Tui
     Write-Host ""
-    Write-Host ("  {0}{1}windows11-dev-poweruser{2}" -f $T.Accent, $T.Bold, $T.Reset)
+    Write-Host ("  {0}{1}Omacheese{2}" -f $T.Accent, $T.Bold, $T.Reset)
     Write-Host ("  {0}keyboard-first Windows 11, Omarchy keymap{1}" -f $T.Dim, $T.Reset)
     Write-Host ""
 }

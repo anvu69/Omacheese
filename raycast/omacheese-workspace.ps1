@@ -12,7 +12,7 @@
 # Documentation:
 # @raycast.description Jump to a workspace, or move the focused window to one
 # @raycast.author anvu69
-# @raycast.authorURL https://github.com/anvu69/windows11-dev-poweruser
+# @raycast.authorURL https://github.com/anvu69/Omacheese
 #
 # The titles here mirror the workspace names in komorebi.json. If you rename a
 # workspace there, rename it in the dropdown too - Raycast metadata is static,

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Bootstrap the AlmaLinux (WSL2) side from GitHub Raw, without cloning.
 #
-#   repo="https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main"
+#   repo="https://raw.githubusercontent.com/anvu69/Omacheese/main"
 #   curl -fsSL "$repo/scripts/bootstrap-almalinux.sh" | bash -s -- --repo "$repo"
 
 set -euo pipefail
@@ -25,7 +25,7 @@ done
 [ -n "$REPO_RAW_BASE" ] || REPO_RAW_BASE="${DEV_REPO_RAW:-}"
 
 if [ -z "$REPO_RAW_BASE" ]; then
-  echo "Missing --repo https://raw.githubusercontent.com/<user>/windows11-dev-poweruser/main" >&2
+  echo "Missing --repo https://raw.githubusercontent.com/<user>/Omacheese/main" >&2
   exit 1
 fi
 

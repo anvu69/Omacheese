@@ -5,7 +5,7 @@
 #   ./scripts/link-configs.ps1 -NoAutostart
 #
 # Anything already present is backed up first, into ONE folder per run:
-#   %USERPROFILE%\.config\windows11-dev-poweruser\backups\<timestamp>\
+#   %USERPROFILE%\.config\omacheese\backups\<timestamp>\
 # mirroring the original paths, with a manifest.tsv. The path is printed at
 # the end; restore-backup.ps1 puts it all back.
 #
@@ -246,7 +246,7 @@ Write-BackupSummary
 $backupRoot = Get-BackupRoot
 if ($backupRoot) {
     # Leave a breadcrumb so setup.ps1 can surface it in the final summary.
-    $marker = Join-Path $env:USERPROFILE ".config\windows11-dev-poweruser\last-backup.txt"
+    $marker = Join-Path $env:USERPROFILE ".config\omacheese\last-backup.txt"
     Ensure-Dir (Split-Path -Parent $marker)
     Set-Content -LiteralPath $marker -Value $backupRoot -Encoding utf8
 }

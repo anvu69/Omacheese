@@ -12,7 +12,7 @@
 # Documentation:
 # @raycast.description Launch a coding agent, optionally with a prompt
 # @raycast.author anvu69
-# @raycast.authorURL https://github.com/anvu69/windows11-dev-poweruser
+# @raycast.authorURL https://github.com/anvu69/Omacheese
 #
 # -Yolo is deliberately not offered here. It skips every permission prompt, and
 # a dropdown entry one keystroke away from "Default agent" is the wrong place

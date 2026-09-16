@@ -30,7 +30,7 @@ anywhere someone is representing the project.
 ## Enforcement
 
 Report a problem by opening a
-[private security advisory](https://github.com/anvu69/windows11-dev-poweruser/security/advisories/new).
+[private security advisory](https://github.com/anvu69/Omacheese/security/advisories/new).
 It is the private channel this repository has, and it works for conduct reports
 as well as vulnerabilities. Reports stay confidential.
 

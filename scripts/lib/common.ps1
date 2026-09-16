@@ -20,7 +20,7 @@ function Ensure-Dir {
 #
 # Instead there is ONE backup root per run:
 #
-#   %USERPROFILE%\.config\windows11-dev-poweruser\backups\<timestamp>\
+#   %USERPROFILE%\.config\omacheese\backups\<timestamp>\
 #       C\Users\you\.config\whkdrc
 #       C\Users\you\Documents\PowerShell\Microsoft.PowerShell_profile.ps1
 #       manifest.tsv
@@ -37,7 +37,7 @@ function Initialize-BackupRoot {
 
   if (-not $Root) {
     $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    $Root  = Join-Path $env:USERPROFILE ".config\windows11-dev-poweruser\backups\$stamp"
+    $Root  = Join-Path $env:USERPROFILE ".config\omacheese\backups\$stamp"
   }
   Ensure-Dir $Root
   $script:BackupRoot = $Root

@@ -37,7 +37,7 @@ máy sạch nó **không chạy được**.
 **1. Chọn preset**
 
 ```text
-+- windows11-dev-poweruser ------------------------------------------+
++- Omacheese --------------------------------------------------------+
 | Microsoft Windows 11 Pro  build 26200   32 GB RAM   24 threads      |
 | GPU  NVIDIA GeForce RTX 4080 SUPER  16 GB VRAM  CUDA 8.9            |
 | WSL  AlmaLinux-9    local LLM  16 GB VRAM - vLLM in a GPU container |
@@ -152,7 +152,7 @@ Mọi file bị thay đều được backup **trước**, vào **một folder du
 lần chạy**:
 
 ```text
-%USERPROFILE%\.config\windows11-dev-poweruser\backups\<timestamp>\
+%USERPROFILE%\.config\omacheese\backups\<timestamp>\
     C\Users\ban\.config\whkdrc
     C\Users\ban\.config\yasb\config.yaml
     C\Users\ban\Documents\PowerShell\Microsoft.PowerShell_profile.ps1
@@ -167,7 +167,7 @@ Cây thư mục mirror đường dẫn gốc nên nhìn là biết file nào ở
 
 ```text
 | Your previous config was backed up (5 file(s)):                      |
-|   C:\Users\ban\.config\windows11-dev-poweruser\backups\20260916-013020|
+|   C:\Users\ban\.config\omacheese\backups\20260916-013020|
 |   restore: ./scripts/restore-backup.ps1                              |
 ```
 

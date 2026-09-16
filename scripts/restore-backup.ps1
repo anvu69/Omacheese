@@ -18,22 +18,32 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$BackupsDir = Join-Path $env:USERPROFILE ".config\windows11-dev-poweruser\backups"
+$BackupsDir = Join-Path $env:USERPROFILE ".config\omacheese\backups"
 
-if (-not (Test-Path -LiteralPath $BackupsDir)) {
+# The project was called windows11-dev-poweruser until it was renamed to
+# Omacheese, and backups taken before then are still on disk under the old
+# directory. They are the ones most worth restoring - they hold what the
+# machine looked like before this repo first touched it - so both locations
+# are searched and the combined list is sorted by timestamp.
+$legacyDir = Join-Path $env:USERPROFILE ".config\windows11-dev-poweruser\backups"
+
+$searched = @($BackupsDir, $legacyDir) | Where-Object { Test-Path -LiteralPath $_ }
+if (-not $searched.Count) {
     Write-Host "No backups yet: $BackupsDir" -ForegroundColor Yellow
     return
 }
 
-$runs = @(Get-ChildItem -LiteralPath $BackupsDir -Directory | Sort-Object Name -Descending)
+# Directory names are timestamps, so sorting by name sorts by time.
+$runs = @($searched | ForEach-Object { Get-ChildItem -LiteralPath $_ -Directory } |
+          Sort-Object Name -Descending)
 
 if (-not $runs.Count) {
-    Write-Host "No backup runs under $BackupsDir" -ForegroundColor Yellow
+    Write-Host "No backup runs under $($searched -join ' or ')" -ForegroundColor Yellow
     return
 }
 
 if ($List) {
-    Write-Host "Backup runs in $BackupsDir" -ForegroundColor Green
+    Write-Host "Backup runs in $($searched -join ' and ')" -ForegroundColor Green
     foreach ($r in $runs) {
         $m = Join-Path $r.FullName "manifest.tsv"
         $n = 0

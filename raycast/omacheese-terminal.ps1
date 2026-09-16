@@ -11,7 +11,7 @@
 # Documentation:
 # @raycast.description Open Alacritty running a shell or a TUI
 # @raycast.author anvu69
-# @raycast.authorURL https://github.com/anvu69/windows11-dev-poweruser
+# @raycast.authorURL https://github.com/anvu69/Omacheese
 
 param([string]$Choice)
 
