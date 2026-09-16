@@ -50,25 +50,32 @@
     color: #c0caf5;
 }
 
-/* Nerd Font icons draw INK that is wider than the glyph's advance width. Qt
-   sizes the label from the advance, so with tight padding the ink gets sheared
-   off at the edges - that is the "clipped icon" look, and it is why shrinking
-   padding to 1px made it worse rather than better.
-   Padding on BOTH sides gives the ink somewhere to live. */
+/* ICON CLIPPING - use min-width, NOT padding.
+
+   yasb puts every <span> in its own QLabel (core/widgets/base.py), sized from
+   the font's ADVANCE width for that glyph. Nerd Font icons routinely draw INK
+   wider than their advance, and Qt clips a QLabel's text to its CONTENT rect.
+   Padding sits outside the content rect, so adding padding widens the widget
+   but changes nothing about the clipping - tested with 30px of padding and the
+   CPU, RAM, speaker and bluetooth glyphs were still sheared.
+
+   min-width enlarges the content rect itself, which is what actually gives the
+   ink room. 22px covers the 14px icons here; raise it alongside font-size. */
 .widget .icon {
     font-size: 14px;
     color: #7aa2f7;
-    padding-left: 4px;
-    padding-right: 7px;
+    min-width: 22px;
+    padding-left: 2px;
+    padding-right: 6px;
 }
 
-/* Icon-only widgets: the trailing space is not separating an icon from a
-   value, but it still has to cover the ink overhang, so it stays generous. */
+/* Icon-only widgets need no gap before a value, but still need the width. */
 .bluetooth-widget .icon,
 .wifi-widget .icon,
 .omarchy-menu-widget .icon {
-    padding-left: 5px;
-    padding-right: 5px;
+    min-width: 22px;
+    padding-left: 3px;
+    padding-right: 3px;
 }
 
 /* --------------------------------------------------------------------------
@@ -104,6 +111,7 @@
 
 .komorebi-workspaces .ws-btn {
     font-size: 11px;
+    min-width: 14px;
     color: #414868;
     background-color: transparent;
     margin: 0;
@@ -152,7 +160,10 @@
 .komorebi-active-layout .label {
     font-size: 17px;
     color: #bb9af7;
-    padding: 0 7px;
+    /* Lone icon rendered as .label, so it needs min-width too - see the note
+       on icon clipping above. Scaled to the larger font-size. */
+    min-width: 26px;
+    padding: 0 4px;
 }
 
 .komorebi-active-layout .widget-container:hover {
@@ -242,8 +253,9 @@
 .power-menu-widget .label {
     color: #f7768e;
     font-size: 15px;
-    padding-left: 5px;
-    padding-right: 5px;
+    min-width: 24px;
+    padding-left: 2px;
+    padding-right: 2px;
 }
 
 .power-menu-widget:hover .label {
