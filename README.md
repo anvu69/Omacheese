@@ -9,12 +9,19 @@ quản lý workspace port từ [Omarchy](https://omarchy.org).
 Máy vừa cài Windows xong thì chưa có `git` để clone. Một dòng này là đủ:
 
 ```powershell
-$repo="https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main"; irm "$repo/scripts/bootstrap-windows.ps1" | iex
+irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1 | iex
 ```
 
-Nó tải cả repo dưới dạng zip rồi chạy đúng `setup.ps1` bên dưới — không cần
-git, không cần cài gì trước. Chi tiết và cách chỉ-cài-một-phần:
-[`docs/no-clone-install.md`](docs/no-clone-install.md).
+Không cần clone, không cần cài gì trước. Nó tải cả repo dạng zip rồi chạy đúng
+`setup.ps1` bên dưới.
+
+Muốn truyền tham số qua `iex` thì bọc lại:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1))) -Preset desktop -Yes
+```
+
+Chi tiết và cách chỉ-cài-một-phần: [`docs/no-clone-install.md`](docs/no-clone-install.md).
 
 Đã clone rồi thì:
 
@@ -125,7 +132,7 @@ Chi tiết + những chỗ **cố tình lệch** khỏi Omarchy (và lý do):
 ## Cài không cần clone
 
 ```powershell
-$repo="https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main"; irm "$repo/scripts/bootstrap-windows.ps1" | iex
+irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1 | iex
 ```
 
 AlmaLinux WSL:

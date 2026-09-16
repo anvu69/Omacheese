@@ -8,11 +8,12 @@ Chạy setup thẳng từ GitHub, không cần `git clone`.
 ## 1. Windows one-liner
 
 ```powershell
-$repo="https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main"; irm "$repo/scripts/bootstrap-windows.ps1" | iex
+irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1 | iex
 ```
 
-Nó tải **cả repo dưới dạng zip** (một request, ~1.6s) rồi chạy đúng
-`scripts/setup.ps1` mà bản clone dùng — nên trải nghiệm giống hệt nhau.
+Không cần `git`, không cần set biến gì trước. Nó tải **cả repo dưới dạng zip**
+(một request, ~1.6s) rồi chạy đúng `scripts/setup.ps1` mà bản clone dùng — nên
+trải nghiệm giống hệt nhau.
 
 Trước đây script này liệt kê từng file cần tải. Danh sách đó lạc hậu ngay khi có
 file mới: đến lúc thay thì nó đã **thiếu 25 file**, trong đó có
@@ -24,21 +25,24 @@ Nếu zip không tải được, nó tự chuyển sang `git clone --depth 1`.
 
 ## 2. Chọn cài gì
 
-Không có `-SkipInstall` / `-SkipConfigs` ở phía Windows — dùng `-Preset` hoặc
-`-Modules`:
+`iex` không nhận tham số, nên bọc trong script block:
 
 ```powershell
-$repo="https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main"
-irm "$repo/scripts/bootstrap-windows.ps1" -OutFile "$env:TEMP\bootstrap.ps1"
-
 # xem nó định làm gì, không đổi gì cả
-& "$env:TEMP\bootstrap.ps1" -RepoRawBase $repo -DryRun
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1))) -DryRun
 
 # chỉ cài app, không đụng config
-& "$env:TEMP\bootstrap.ps1" -RepoRawBase $repo -Modules core,psmodules,cli,wm,desktop -Yes
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1))) -Modules core,psmodules,cli,wm,desktop -Yes
 
 # chỉ cài config, không cài app
-& "$env:TEMP\bootstrap.ps1" -RepoRawBase $repo -Modules configs -Yes
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1))) -Modules configs -Yes
+```
+
+Hoặc tải về file rồi chạy — thói quen tốt hơn với script chạy code từ Internet:
+
+```powershell
+irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1 -OutFile install.ps1
+./install.ps1 -DryRun
 ```
 
 **Preset:**
@@ -57,30 +61,24 @@ irm "$repo/scripts/bootstrap-windows.ps1" -OutFile "$env:TEMP\bootstrap.ps1"
 Không truyền gì thì TUI mở ra, dò phần cứng và chỉ hiện những module máy đó chạy
 được.
 
+Cài từ fork hoặc nhánh khác: `-Repo owner/name` và `-Branch <tên-nhánh>`.
+
 ## 3. Safer mode
 
-```powershell
-$repo="https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main"
-irm "$repo/scripts/bootstrap-windows.ps1" -OutFile "$env:TEMP\bootstrap.ps1"
-notepad "$env:TEMP\bootstrap.ps1"
-powershell -ExecutionPolicy Bypass -File "$env:TEMP\bootstrap.ps1" -RepoRawBase $repo
-```
-
-### Nếu gặp lỗi `Set -RepoRawBase...`
-
-Do chưa set biến `$repo` trước khi `iex`. Hai cách:
+Tải về đọc trước rồi mới chạy — nên làm với bất kỳ script nào chạy code từ
+Internet:
 
 ```powershell
-$repo="https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main"
-irm "$repo/scripts/bootstrap-windows.ps1" | iex
+irm https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main/install.ps1 -OutFile "$env:TEMP\install.ps1"
+notepad "$env:TEMP\install.ps1"
+powershell -ExecutionPolicy Bypass -File "$env:TEMP\install.ps1" -DryRun
 ```
 
-```powershell
-$env:DEV_REPO_RAW="https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main"
-irm "$env:DEV_REPO_RAW/scripts/bootstrap-windows.ps1" | iex
-```
+### Lệnh cũ vẫn chạy
 
-Nhánh khác `main` thì thêm `-Branch <tên-nhánh>`.
+One-liner cũ (`$repo=...; irm "$repo/scripts/bootstrap-windows.ps1" | iex`) vẫn
+hoạt động — `scripts/bootstrap-windows.ps1` giờ chỉ forward sang `install.ps1`
+và in ra lệnh mới.
 
 ## 4. AlmaLinux (WSL) one-liner
 
