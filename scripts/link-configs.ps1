@@ -105,6 +105,12 @@ Put "configs\wsl\.wslconfig"           (Join-Path $env:USERPROFILE ".wslconfig")
 Put "configs\wsl\wsl.conf"             (Join-Path $cfg "wsl\wsl.conf")
 Put "configs\wsl\ssh-agent-bridge.sh"  (Join-Path $cfg "wsl\ssh-agent-bridge.sh")
 
+# Lands next to the other omacheese helpers because that is the path
+# omacheese-agent.ps1 -Wsl prints when it finds no agent inside the distro.
+# ~/.config is readable from AlmaLinux as-is, so there is nothing to copy in.
+& $Install -Source (Join-Path $Repo "scripts\install-agents-wsl.sh") `
+           -Destination (Join-Path $cfg "omacheese\install-agents.sh") | Out-Null
+
 Write-Host "`n[ssh]" -ForegroundColor Magenta
 # Example only - never overwrite a real ~/.ssh/config.
 Install-ConfigFile -Source (Join-Path $Repo "configs\ssh\config.example") `

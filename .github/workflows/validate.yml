@@ -210,6 +210,50 @@ jobs:
           }
           if ($bad) { exit 1 }
 
+      - name: Raycast commands carry this project's package name
+        shell: pwsh
+        run: |
+          # Raycast groups commands by packageName in its UI. A stale one from
+          # before the rename puts them under someone else's project name.
+          $bad = 0
+          foreach ($f in Get-ChildItem raycast -Filter *.ps1 | Where-Object { $_.Name -notlike "_*" }) {
+            $text = Get-Content -LiteralPath $f.FullName -Raw
+            $m = [regex]::Match($text, '(?m)^#\s*@raycast\.packageName\s+(.*?)\s*$')
+            if (-not $m.Success) { Write-Host "FAIL $($f.Name): no packageName"; $bad++; continue }
+            if ($m.Groups[1].Value -ne "Omacheese") {
+              Write-Host "FAIL $($f.Name): packageName is '$($m.Groups[1].Value)', expected Omacheese"; $bad++; continue
+            }
+            Write-Host "ok   $($f.Name)"
+          }
+          if ($bad) { exit 1 }
+
+      - name: Every agent has a Windows and a Linux install line
+        shell: pwsh
+        run: |
+          # omacheese-agent.ps1 -Wsl prints LinuxInstall when it finds no agent
+          # inside the distro. An agent missing that field printed a blank line
+          # where the fix should have been.
+          . ./scripts/omacheese/omacheese-default-agent.ps1
+          $bad = 0
+          foreach ($k in $script:Agents.Keys) {
+            foreach ($field in "Name", "Command", "Install", "LinuxInstall") {
+              if (-not $script:Agents[$k][$field]) { Write-Host "FAIL ${k}: no $field"; $bad++ }
+            }
+          }
+          Write-Host "$($script:Agents.Count) agents checked"
+          if ($bad) { exit 1 }
+
+      - name: "No unregistered snippingtool: protocol"
+        shell: pwsh
+        run: |
+          # Windows 11 dropped the snippingtool: handler; ms-screensketch: is
+          # the registered one. Start-Process on a missing handler throws into
+          # a hidden window, so the hotkey and the menu entry both did nothing.
+          $hits = Get-ChildItem -Recurse -File -Include *.ps1, *.cmd, whkdrc |
+                  Select-String -Pattern 'snippingtool:' -SimpleMatch
+          if ($hits) { $hits | ForEach-Object { Write-Host "FAIL $($_.Path):$($_.LineNumber)" }; exit 1 }
+          Write-Host "ok   no snippingtool: references"
+
       - name: PSScriptAnalyzer
         shell: pwsh
         run: |

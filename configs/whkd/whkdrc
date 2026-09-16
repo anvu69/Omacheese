@@ -57,9 +57,9 @@ win + shift + t              : "%USERPROFILE%\.config\omacheese\bin\omacheese-op
 # SUPER+A launches whichever agent is set as default; SUPER+SHIFT+CTRL+A (the
 # chord Omarchy uses) opens the picker. Neither passes a skip-permissions flag
 # by default - add -Yolo in the picker menu when you want that.
-win + a                      : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" alacritty --class omacheese-agent,omacheese-agent -e "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-agent.ps1"
-win + shift + control + a    : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" alacritty --class omacheese-agent,omacheese-agent -e "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-agent.ps1" -Pick
-win + alt + a                : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" alacritty --class omacheese-agent,omacheese-agent -e "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-agent.ps1" -Wsl
+win + a                      : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" alacritty -e "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-agent.ps1"
+win + shift + control + a    : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" alacritty -e "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-agent.ps1" -Pick
+win + alt + a                : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" alacritty -e "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-agent.ps1" -Wsl
 
 # ----------------------------------------------------------------------------
 # Menus and discovery

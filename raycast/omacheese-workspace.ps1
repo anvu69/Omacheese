@@ -2,7 +2,7 @@
 # @raycast.schemaVersion 1
 # @raycast.title Workspace
 # @raycast.mode silent
-# @raycast.packageName Omarchy
+# @raycast.packageName Omacheese
 #
 # Optional parameters:
 # @raycast.icon 🗂️

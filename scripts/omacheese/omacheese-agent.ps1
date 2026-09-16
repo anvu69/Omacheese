@@ -67,7 +67,7 @@ if ($Pick -or -not $agentKey) {
 # printed an empty agent name and then died on `& $agent.Command`.
 $agentDef = $script:Agents[$agentKey]
 
-if (-not (Test-AgentInstalled $agentKey)) {
+if (-not $Wsl -and -not (Test-AgentInstalled $agentKey)) {
     Write-Host "$($agentDef.Name) is not installed." -ForegroundColor Red
     Write-Host "  $($agentDef.Install)" -ForegroundColor Cyan
     Read-Host "`nEnter to close"
@@ -91,11 +91,54 @@ if ($Yolo) { $argv += $agentDef.Yolo }
 if ($Prompt) { $argv += $Prompt }
 
 if ($Wsl) {
+    $distro = "AlmaLinux-9"
+
+    # Everything below is checked inside the distro, because that is the machine
+    # the agent actually runs on. Test-AgentInstalled above asks the Windows
+    # PATH, which answers a different question: claude can be installed on
+    # Windows and absent in AlmaLinux, and on a fresh install it always is. The
+    # WSL module installs zsh, tmux and the CLI tools - no agent, and no Node.
+    $distros = @(& wsl.exe -l -q 2>$null) | ForEach-Object { ($_ -replace "`0", "").Trim() }
+    if ($distros -notcontains $distro) {
+        Write-Host "$distro is not installed." -ForegroundColor Red
+        Write-Host "  ./scripts/setup.ps1 -Modules wsl" -ForegroundColor Cyan
+        Read-Host "`nEnter to close"
+        return
+    }
+
+    $probe = ((& wsl.exe -d $distro -- bash -lc "command -v $($agentDef.Command) 2>/dev/null" 2>$null) -join "").Trim()
+
+    # A hit under /mnt/c is the Windows copy leaking in over the interop PATH.
+    # It is a shim around a Windows .exe, so running it from a Linux shell
+    # either fails or quietly runs the Windows agent against Windows paths,
+    # which is the opposite of what -Wsl is for.
+    if (-not $probe -or $probe -like "/mnt/*") {
+        $why = if ($probe) { "only the Windows copy is visible, over the interop PATH" }
+               else        { "not installed in $distro" }
+        Write-Host "$($agentDef.Name): $why." -ForegroundColor Red
+        Write-Host ""
+        Write-Host "Install it inside the distro:" -ForegroundColor Cyan
+        Write-Host "  wsl -d $distro -- bash -lc '$($agentDef.LinuxInstall)'" -ForegroundColor White
+        Write-Host ""
+        Write-Host "Or install every agent at once:" -ForegroundColor Cyan
+        Write-Host "  wsl -d $distro -- bash ~/.config/omacheese/install-agents.sh" -ForegroundColor White
+        if ($probe -like "/mnt/*") {
+            Write-Host ""
+            Write-Host "Windows binaries shadow Linux ones until wsl.conf is applied:" -ForegroundColor DarkGray
+            Write-Host "  wsl -d $distro -- sudo cp ~/.config/wsl/wsl.conf /etc/wsl.conf" -ForegroundColor DarkGray
+            Write-Host "  wsl --shutdown" -ForegroundColor DarkGray
+        }
+        Read-Host "`nEnter to close"
+        return
+    }
+
     # Run the Linux copy of the agent inside the distro, in the mapped path.
-    $wslPath = (wsl.exe -d AlmaLinux-9 -- wslpath -a "$($Directory -replace '\\','/')" 2>$null)
-    $inner   = "cd '$wslPath' && $($agentDef.Command) $($argv -join ' ')"
-    Write-Host "Launching $($agentDef.Name) in AlmaLinux-9..." -ForegroundColor Cyan
-    wsl.exe -d AlmaLinux-9 -- bash -lc $inner
+    $wslPath = ((& wsl.exe -d $distro -- wslpath -a "$($Directory -replace '\\','/')" 2>$null) -join "").Trim()
+    if (-not $wslPath) { $wslPath = "." }
+    $inner = "cd '$wslPath' && $($agentDef.Command) $($argv -join ' ')"
+    Write-Host "Launching $($agentDef.Name) in $distro..." -ForegroundColor Cyan
+    & wsl.exe -d $distro -- bash -lc $inner
+    if ($LASTEXITCODE -ne 0) { Read-Host "`nExited with $LASTEXITCODE. Enter to close" }
     return
 }
 

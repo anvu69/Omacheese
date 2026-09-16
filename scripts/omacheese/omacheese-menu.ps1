@@ -325,7 +325,7 @@ function Get-Menu {
 
         "capture" { @(
             (New-Entry "Region to clipboard" "Snip part of the screen" -Action { Start-Process "ms-screenclip:" })
-            (New-Entry "Snipping Tool" "Full capture app" -Action { Start-Process "snippingtool:" })
+            (New-Entry "Snipping Tool" "Full capture app" -Action { Start-Process "ms-screensketch:" })
             (New-Entry "Screen recording" "Xbox Game Bar" -Action { Start-Process "ms-gamebar:" })
             (New-Entry "Open Screenshots folder" "Pictures\Screenshots" -Action {
                 Start-Process "explorer" -ArgumentList (Join-Path $env:USERPROFILE "Pictures\Screenshots") })

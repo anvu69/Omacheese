@@ -18,25 +18,21 @@
 
 setlocal EnableDelayedExpansion
 
-:: Capture our own directory BEFORE the shift below. `shift` moves %0 as well,
-:: so %~dp0 afterwards resolves to the current directory instead of this
-:: script, and the slow path went looking for the .ps1 in whatever folder
-:: the hotkey happened to fire from.
+:: Our own directory, captured up front so the slow path can find the .ps1
+:: next to this file rather than in whatever folder the hotkey fired from.
 set "HERE=%~dp0"
 
 set "APP=%~1"
 if "%APP%"=="" exit /b 1
-shift
 
-:: Rebuild the remaining arguments.
+:: Take the remaining arguments in one piece. Walking them with shift and %1
+:: re-tokenises, and cmd counts a comma as a delimiter, so
+:: `--class agent,agent` arrived as `--class agent agent`; Alacritty rejected
+:: the extra positional and the agent hotkeys opened nothing at all.
+:: `delims= ` splits on space only, and `tokens=1,*` keeps the tail verbatim.
 set "ARGS="
-:collect
-if "%~1"=="" goto resolved
-set "ARGS=!ARGS! %1"
-shift
-goto collect
-
-:resolved
+for /f "tokens=1,* delims= " %%A in ("%*") do set "ARGS= %%B"
+if "%ARGS%"==" " set "ARGS="
 set "CACHE=%USERPROFILE%\.config\omacheese\app-paths.txt"
 set "EXE="
 if not exist "%CACHE%" goto slow

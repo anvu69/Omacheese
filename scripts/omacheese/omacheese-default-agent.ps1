@@ -28,6 +28,11 @@ $StateFile = Join-Path $env:USERPROFILE ".config\omacheese\defaults\agent"
 # your work tree, opting in each time is the better trade.
 #
 # Flags marked "verified" were checked against the installed CLI's --help.
+#
+# `Install` is the Windows line, `LinuxInstall` the one for -Wsl. They are not
+# the same command and could not be: winget does not exist inside AlmaLinux,
+# and Claude Code ships a native Linux installer that needs no Node at all,
+# which the WSL image otherwise does not have.
 $script:Agents = [ordered]@{
     claude = @{
         Name    = "Claude Code"
@@ -35,6 +40,7 @@ $script:Agents = [ordered]@{
         Yolo    = @("--dangerously-skip-permissions")   # verified
         Winget  = "Anthropic.ClaudeCode"
         Install = "winget install --id Anthropic.ClaudeCode -e"
+        LinuxInstall = "curl -fsSL https://claude.ai/install.sh | bash"
     }
     codex = @{
         Name    = "Codex"
@@ -42,36 +48,42 @@ $script:Agents = [ordered]@{
         Yolo    = @("--dangerously-bypass-approvals-and-sandbox")  # verified
         Winget  = "OpenAI.Codex"
         Install = "winget install --id OpenAI.Codex -e"
+        LinuxInstall = "npm install -g @openai/codex"
     }
     gemini = @{
         Name    = "Gemini CLI"
         Command = "gemini"
         Yolo    = @("--yolo")                            # verified
         Install = "npm install -g @google/gemini-cli"
+        LinuxInstall = "npm install -g @google/gemini-cli"
     }
     opencode = @{
         Name    = "OpenCode"
         Command = "opencode"
         Yolo    = @()   # no documented non-interactive approval flag on the TUI
         Install = "npm install -g opencode-ai"
+        LinuxInstall = "curl -fsSL https://opencode.ai/install | bash"
     }
     copilot = @{
         Name    = "GitHub Copilot CLI"
         Command = "copilot"
         Yolo    = @("--allow-all")                       # unverified - not installed here
         Install = "npm install -g @github/copilot"
+        LinuxInstall = "npm install -g @github/copilot"
     }
     cursor = @{
         Name    = "Cursor CLI"
         Command = "cursor-agent"
         Yolo    = @("--force")                           # unverified - not installed here
         Install = "See https://cursor.com/cli"
+        LinuxInstall = "curl https://cursor.com/install -fsS | bash"
     }
     crush = @{
         Name    = "Crush"
         Command = "crush"
         Yolo    = @("--yolo")                            # unverified - not installed here
         Install = "npm install -g @charmland/crush"
+        LinuxInstall = "npm install -g @charmland/crush"
     }
 }
 
