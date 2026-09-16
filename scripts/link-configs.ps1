@@ -23,6 +23,21 @@ $ErrorActionPreference = "Stop"
 $Repo = Split-Path -Parent $PSScriptRoot
 . (Join-Path $Repo "scripts\lib\common.ps1")
 
+# A symlink is only worth making when its target is going to be there tomorrow.
+# Run from a copy of the repo that lives under %TEMP% - which is where the
+# one-liner installer used to unpack it - every link here points at a directory
+# Windows deletes on its own schedule, and the whole setup silently reverts:
+# the prompt goes back to bare PowerShell, Alacritty loses its theme, and
+# SUPER+SPACE stops answering. Copy instead, so the files stand on their own.
+$tempRoot = ""
+if ($env:TEMP) { $tempRoot = [IO.Path]::GetFullPath($env:TEMP).TrimEnd('\') }
+if (-not $Copy -and $tempRoot -and
+    [IO.Path]::GetFullPath($Repo).StartsWith($tempRoot + '\', [StringComparison]::OrdinalIgnoreCase)) {
+    Write-Host "  this repo is under %TEMP% - copying configs instead of linking them" -ForegroundColor Yellow
+    Write-Host "  (a link into %TEMP% breaks the next time Windows clears it)" -ForegroundColor DarkGray
+    $Copy = $true
+}
+
 $Install = if ($Copy) { "Install-ConfigFile" } else { "Install-ConfigLink" }
 
 function Put {
@@ -249,6 +264,23 @@ if ($backupRoot) {
     $marker = Join-Path $env:USERPROFILE ".config\omacheese\last-backup.txt"
     Ensure-Dir (Split-Path -Parent $marker)
     Set-Content -LiteralPath $marker -Value $backupRoot -Encoding utf8
+}
+
+# --- retire the old %TEMP% install ------------------------------------------
+# Installs made before the one-liner moved to %LOCALAPPDATA% unpacked the repo
+# into %TEMP%\omacheese-install and linked everything at it. Everything above
+# has just been repointed at $Repo, so that copy is now only a trap: it is what
+# Windows clears when it sweeps %TEMP%, and finding it later makes it look like
+# there are two installs. Safe to remove only now, and only from elsewhere.
+$legacyRoot = ""
+if ($tempRoot) { $legacyRoot = Join-Path $tempRoot "omacheese-install" }
+if ($legacyRoot -and (Test-Path -LiteralPath $legacyRoot) -and
+    -not [IO.Path]::GetFullPath($Repo).StartsWith([IO.Path]::GetFullPath($legacyRoot), [StringComparison]::OrdinalIgnoreCase)) {
+    try {
+        Remove-Item -LiteralPath $legacyRoot -Recurse -Force -ErrorAction Stop
+        Write-Host ""
+        Write-Host "  removed the old %TEMP% install ($legacyRoot)" -ForegroundColor DarkGray
+    } catch { }
 }
 
 Write-Host ""

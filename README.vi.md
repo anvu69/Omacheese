@@ -41,6 +41,12 @@ Nếu đã clone rồi:
 ./scripts/setup.ps1
 ```
 
+Chạy trong **Windows PowerShell 5.1 có sẵn** của máy mới là đúng — không cần cài
+PowerShell 7 trước, và **không nên** chạy setup từ pwsh 7 (xem
+[`docs/setup-tui.md`](docs/setup-tui.md#ngược-lại-debloat-bắt-buộc-51)). Repo
+được giải nén vào `%LOCALAPPDATA%\Omacheese\repo` và ở lại đó, vì config trỏ
+symlink vào chính thư mục đó.
+
 Cả hai đường đều mở cùng một TUI. Nó đọc phần cứng trước rồi làm mờ những module
 máy không chạy được, nên bạn không chọn nhầm thứ sẽ chết giữa chừng.
 

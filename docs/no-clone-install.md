@@ -15,6 +15,32 @@ Không cần `git`, không cần set biến gì trước. Nó tải **cả repo 
 (một request, ~1.6s) rồi chạy đúng `scripts/setup.ps1` mà bản clone dùng — nên
 trải nghiệm giống hệt nhau.
 
+### Repo nằm ở đâu sau khi cài
+
+```
+%LOCALAPPDATA%\Omacheese\repo
+```
+
+**Không phải `%TEMP%`, và đây không phải chi tiết vặt.** `link-configs.ps1`
+*symlink* PowerShell profile, `~/.config`, `whkdrc`, `komorebi.json` và
+`%APPDATA%\alacritty` vào đúng thư mục mà installer giải nén ra. Nghĩa là thư
+mục đó **chính là bản repo đã cài**, không phải chỗ tạm, và nó phải sống lâu
+hơn lần chạy. Trong `%TEMP%` thì không:
+
+- installer xoá thư mục làm việc của chính nó ở **đầu** mỗi lần chạy, nên lần
+  cài thứ hai làm hỏng mọi config lần đầu đã link;
+- Storage Sense và Disk Cleanup dọn `%TEMP%` theo lịch riêng của Windows.
+
+Kết quả đều giống nhau: mọi symlink trỏ vào hư không, và triệu chứng đúng y như
+một bản cài hỏng — prompt quay về PowerShell trần, Alacritty mất theme,
+`SUPER + SPACE` im lặng.
+
+Chạy `install.ps1` từ thư mục đã có `scripts/setup.ps1` bên cạnh (bản clone,
+hoặc bản đã giải nén) thì nó dùng luôn bản đó, không tải đè lên.
+
+Cài xong, bản `%TEMP%\omacheese-install` cũ (nếu có từ lần cài trước) được
+`link-configs.ps1` xoá — sau khi đã trỏ lại mọi config sang chỗ mới.
+
 Trước đây script này liệt kê từng file cần tải. Danh sách đó lạc hậu ngay khi có
 file mới: đến lúc thay thì nó đã **thiếu 25 file**, trong đó có
 `omacheese-menu.cmd` (thứ mà `SUPER+SPACE` thực sự chạy), scroll daemon, toàn bộ
