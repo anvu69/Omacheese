@@ -164,13 +164,11 @@ Ensure-Dir $tmplDest
 foreach ($p in Get-ChildItem (Join-Path $Repo "configs\theme") -Filter *.toml -ErrorAction SilentlyContinue) {
     & $Install -Source $p.FullName -Destination (Join-Path $palDest $p.Name) | Out-Null
 }
-foreach ($t in @("configs\komorebi\komorebi.json.tmpl",
-                 "configs\yasb\styles.css.tmpl",
-                 "configs\alacritty\alacritty.toml.tmpl")) {
-    $src = Join-Path $Repo $t
-    if (Test-Path -LiteralPath $src) {
-        & $Install -Source $src -Destination (Join-Path $tmplDest (Split-Path $t -Leaf)) | Out-Null
-    }
+# Discovered, not listed. The previous hardcoded list had already gone stale:
+# it never copied configs/herdr/config.toml.tmpl, so a machine installing from
+# the archive rather than a clone silently had no herdr theming.
+foreach ($src in Get-ChildItem (Join-Path $Repo "configs") -Recurse -Filter *.tmpl) {
+    & $Install -Source $src.FullName -Destination (Join-Path $tmplDest $src.Name) | Out-Null
 }
 
 # Keep whatever theme was already chosen; only fall back on a fresh machine.

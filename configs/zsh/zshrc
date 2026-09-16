@@ -55,6 +55,11 @@ unset _fzf
 command -v fzf >/dev/null 2>&1 && eval "$(fzf --zsh 2>/dev/null)" || true
 
 # --- Tools ------------------------------------------------------------------
+# mise first: it manages the language versions, and without activation its
+# pins do nothing - the shell keeps resolving to whatever the distro ships.
+command -v mise >/dev/null 2>&1 && eval "$(mise activate zsh)"
+[ -x "$HOME/.local/bin/mise" ] && ! command -v mise >/dev/null 2>&1 \n  && eval "$("$HOME/.local/bin/mise" activate zsh)"
+
 command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
 command -v oh-my-posh >/dev/null 2>&1 && [ -f "$HOME/.config/oh-my-posh/poweruser.omp.json" ] \
   && eval "$(oh-my-posh init zsh --config $HOME/.config/oh-my-posh/poweruser.omp.json)"

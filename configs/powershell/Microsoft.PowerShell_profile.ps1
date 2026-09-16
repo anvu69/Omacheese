@@ -70,6 +70,18 @@ if ((Get-Command oh-my-posh -ErrorAction SilentlyContinue) -and (Test-Path -Lite
     oh-my-posh init pwsh --config $OmpTheme | Invoke-Expression
 }
 
+# --- mise -------------------------------------------------------------------
+# Without this line mise is only an installer: `mise use -g node@22` writes the
+# pin and a new shell still resolves `node` to whatever is on the machine PATH.
+# Activating puts mise's shims first, which is what makes the pin - and the
+# per-directory .mise.toml - actually take effect. Measured: 21 ms.
+#
+# Safe next to oh-my-posh: the pwsh activation adds shims to PATH and defines a
+# `mise` wrapper, and does not define prompt().
+if (Get-Command mise -ErrorAction SilentlyContinue) {
+    (& mise activate pwsh) -join "`n" | Invoke-Expression
+}
+
 # --- zoxide -----------------------------------------------------------------
 if (Get-Command zoxide -ErrorAction SilentlyContinue) {
     Invoke-Expression (& { (zoxide init powershell | Out-String) })

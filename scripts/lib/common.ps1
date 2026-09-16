@@ -334,6 +334,29 @@ function Install-ConfigLink {
       Write-Host ("  = {0} -> repo" -f $Destination) -ForegroundColor DarkGray
       return $true
     }
+
+    # Symlink creation needs Developer Mode or admin. Without either - which
+    # is most machines - the block below falls back to a copy, and then every
+    # later run found "not a symlink", backed the file up, deleted it and
+    # copied it again. Re-running this script produced a fresh 48-file backup
+    # directory and rewrote every config, unchanged or not.
+    #
+    # That is not just noise. komorebi WATCHES komorebi.json and reloads on
+    # write, and its reload path is where it crashed on this machine with
+    # STATUS_FATAL_USER_CALLBACK_EXCEPTION. An idempotent install means a
+    # no-op run does not touch the window manager at all.
+    if (-not $existing.PSIsContainer -and $existing.LinkType -ne "SymbolicLink") {
+      try {
+        if ((Get-FileHash -LiteralPath $src).Hash -eq (Get-FileHash -LiteralPath $Destination).Hash) {
+          Write-Host ("  = {0} (identical copy)" -f $Destination) -ForegroundColor DarkGray
+          return $true
+        }
+      } catch {
+        # Unreadable or locked: treat as different and replace it below.
+        Write-Verbose "Could not hash $Destination : $($_.Exception.Message)"
+      }
+    }
+
     $backup = Backup-ExistingItem -Path $Destination
     if ($backup) { Write-Host ("  ~ backed up") -ForegroundColor DarkYellow }
     Remove-Item -LiteralPath $Destination -Force -Recurse

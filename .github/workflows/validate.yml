@@ -363,6 +363,22 @@ jobs:
           }
           if ($bad) { exit 1 }
 
+      - name: Template file names are unique
+        shell: pwsh
+        run: |
+          # link-configs installs every configs/**/*.tmpl into one flat folder
+          # under the leaf name, and the theme script looks them up the same way.
+          # Two templates sharing a leaf would silently overwrite each other and
+          # one config would quietly stop being themed.
+          $leaves = Get-ChildItem configs -Recurse -Filter *.tmpl | Group-Object Name
+          if (-not $leaves) { Write-Host 'no templates found'; exit 1 }
+          $dupes = $leaves | Where-Object { $_.Count -gt 1 }
+          foreach ($d in $dupes) {
+            Write-Host "FAIL '$($d.Name)' is used by: $(($d.Group.FullName | ForEach-Object { Split-Path $_ -Parent | Split-Path -Leaf }) -join ', ')"
+          }
+          if ($dupes) { exit 1 }
+          Write-Host "ok   $($leaves.Count) templates, all distinct"
+
       - name: Every module installs a group that exists
         shell: pwsh
         run: |

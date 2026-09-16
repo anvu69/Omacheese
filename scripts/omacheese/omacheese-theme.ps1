@@ -169,6 +169,7 @@ $targets = @(
 )
 
 $written = 0
+$changed = @()
 foreach ($t in $targets) {
     if ($tmplSource -eq "repo") { $src = Join-Path $repoRoot $t.Repo }
     else { $src = Join-Path $tmplDir (Split-Path $t.Tmpl -Leaf) }
@@ -189,8 +190,30 @@ foreach ($t in $targets) {
 
     # Write without a BOM: komorebi and Alacritty both parse these, and a BOM in
     # front of a JSON or TOML document is not something either promises to skip.
-    [IO.File]::WriteAllText($t.Dest, $out, (New-Object Text.UTF8Encoding($false)))
-    Write-Host ("  + {0}" -f $t.Dest) -ForegroundColor Green
+    #
+    # And only write when the bytes actually change. komorebi WATCHES
+    # komorebi.json: every write, even a byte-identical one, makes it run
+    # ReloadStaticConfiguration. That path is where it crashed on this machine,
+    # twice, with STATUS_FATAL_USER_CALLBACK_EXCEPTION (0xc000041d) - an
+    # unhandled exception inside a window-event callback. Re-running
+    # link-configs.ps1 or the theme script used to reload the window manager
+    # every time even when nothing about the theme had changed.
+    $bytes = (New-Object Text.UTF8Encoding($false)).GetBytes($out)
+    $same = $false
+    if (Test-Path -LiteralPath $t.Dest) {
+        try {
+            $existing = [IO.File]::ReadAllBytes($t.Dest)
+            $same = ($existing.Length -eq $bytes.Length) -and
+                    (-not (Compare-Object $existing $bytes -SyncWindow 0))
+        } catch { $same = $false }
+    }
+    if ($same) {
+        Write-Host ("  = {0} (unchanged)" -f $t.Dest) -ForegroundColor DarkGray
+    } else {
+        [IO.File]::WriteAllBytes($t.Dest, $bytes)
+        Write-Host ("  + {0}" -f $t.Dest) -ForegroundColor Green
+        $changed += $t.Dest
+    }
     $written++
 }
 
@@ -214,15 +237,19 @@ Write-Host "Theme: $Set ($written configs rendered)" -ForegroundColor Cyan
 if ($NoRestart) { exit 0 }
 
 # yasb re-reads its stylesheet only on start; komorebi can be told.
-if (Get-Process yasb -ErrorAction SilentlyContinue) {
+$yasbCss = Join-Path $cfg "yasb\styles.css"
+if ($changed -notcontains $yasbCss) {
+    Write-Host "  yasb stylesheet unchanged; not restarting" -ForegroundColor DarkGray
+} elseif (Get-Process yasb -ErrorAction SilentlyContinue) {
     Get-Process yasb -ErrorAction SilentlyContinue | Stop-Process -Force
     Start-Sleep -Milliseconds 600
     Start-Process yasb.exe -WindowStyle Hidden -ErrorAction SilentlyContinue
     Write-Host "  yasb restarted" -ForegroundColor DarkGray
 }
-if (Get-Command komorebic -ErrorAction SilentlyContinue) {
-    komorebic reload-configuration 2>$null | Out-Null
-    Write-Host "  komorebi reloaded" -ForegroundColor DarkGray
-}
+# No komorebic reload-configuration here. komorebi watches komorebi.json and
+# reloads itself on write - measured: a byte-identical rewrite produced a
+# ReloadStaticConfiguration in its log with no command sent. Asking for a
+# second one only doubles the trips through a code path that has crashed.
+Write-Host "  komorebi reloads itself when the file changes" -ForegroundColor DarkGray
 Write-Host "  Alacritty picks it up on the next window" -ForegroundColor DarkGray
 Write-Host "  Raycast: ./scripts/omacheese/omacheese-raycast-theme.ps1" -ForegroundColor DarkGray
