@@ -247,6 +247,21 @@ docs/
 .github/workflows/validate.yml
 ```
 
+## Contributing
+
+Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) is
+mostly a list of the traps this repo keeps falling into - wrong names that
+fail silently, PATH that does not survive a process boundary, PowerShell 5.1,
+line endings - because knowing them first saves an evening.
+
+| | |
+|---|---|
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to work on this, and what breaks |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Contributor Covenant 2.1 |
+| [SECURITY.md](SECURITY.md) | Reporting a vulnerability privately |
+| [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) | What was borrowed, and under what licence |
+| [LICENSE](LICENSE) | MIT |
+
 ## Credits
 
 The keyboard model, the menu and the theme palettes come from
@@ -273,6 +288,11 @@ What was borrowed, and where it ended up:
 
 Where this departs from Omarchy it is deliberate, and
 [`docs/keybindings.md`](docs/keybindings.md) gives the reason in each case.
+
+The two palettes in `configs/theme/` are byte-identical copies of Omarchy's
+own, and MIT requires their notice to travel with them, so
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) reproduces it and lists
+everything else that was borrowed or ported.
 
 Also built on [komorebi](https://github.com/LGUG2Z/komorebi) and
 [whkd](https://github.com/LGUG2Z/whkd) by LGUG2Z,

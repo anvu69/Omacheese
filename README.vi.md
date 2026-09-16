@@ -244,6 +244,21 @@ docs/
 .github/workflows/validate.yml
 ```
 
+## Đóng góp
+
+Issue và pull request đều được hoan nghênh. [CONTRIBUTING.md](CONTRIBUTING.md) chủ yếu
+liệt kê các cái bẫy repo này hay dính — tên sai mà không báo lỗi, PATH không sống
+sót qua ranh giới process, PowerShell 5.1, line ending — vì biết trước thì
+tiết kiệm được cả buổi tối.
+
+| | |
+|---|---|
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Cách làm việc với repo, và những thứ hay vỡ |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Contributor Covenant 2.1 |
+| [SECURITY.md](SECURITY.md) | Báo lỗi bảo mật riêng tư |
+| [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) | Vay mượn những gì, theo giấy phép nào |
+| [LICENSE](LICENSE) | MIT |
+
 ## Ghi công
 
 Mô hình bàn phím, ý tưởng menu và các bảng màu đến từ

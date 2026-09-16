@@ -1,0 +1,66 @@
+name: Bug report
+description: Something does not work
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please paste the output of `./scripts/doctor.ps1` first. It answers most
+        of what would otherwise take a round trip, and it is how nearly every
+        bug in this repo has been diagnosed.
+
+  - type: textarea
+    id: doctor
+    attributes:
+      label: doctor.ps1 output
+      description: Run it in the shell where the problem happens.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead.
+      placeholder: |
+        Pressed SUPER+A. Expected a terminal with the agent in it.
+        Nothing opened at all.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part
+      options:
+        - Install (install.ps1 / setup.ps1)
+        - Hotkeys (whkd)
+        - Window manager (komorebi)
+        - Status bar (yasb)
+        - Menu or keybinding list
+        - Coding agents
+        - Agent panes (tmux or herdr)
+        - Theme
+        - WSL / AlmaLinux
+        - Local LLM
+        - Something else
+    validations:
+      required: true
+
+  - type: input
+    id: powershell
+    attributes:
+      label: PowerShell version
+      description: Output of $PSVersionTable.PSVersion, and whether that was pwsh 7 or Windows PowerShell 5.1.
+      placeholder: 7.6.6 (pwsh)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: machine
+    attributes:
+      label: Machine
+      options:
+        - label: This was a freshly installed Windows 11
+        - label: This machine already had some of these tools before I ran the setup

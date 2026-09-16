@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/anvu69/windows11-dev-poweruser/security/advisories/new
+    about: Report privately instead of opening a public issue.
+  - name: Keybinding reference
+    url: https://github.com/anvu69/windows11-dev-poweruser/blob/main/docs/keybindings.md
+    about: The full keymap, and the places it deviates from Omarchy on purpose.

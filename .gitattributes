@@ -1,0 +1,34 @@
+# Line endings are pinned, not normalised.
+#
+# This repo is genuinely mixed and that is fine: the files Windows tools read
+# are CRLF, the files bash and WSL read are LF. What is NOT fine is git
+# rewriting them on checkout, because both halves break in ways that are hard
+# to see:
+#
+#   a .sh or .zsh file with CRLF  -> bash reports "command not found" on a
+#                                    line that looks correct
+#   a .cmd file with LF           -> cmd.exe can mis-handle multi-line
+#                                    if/else blocks
+#   a BOM on anything WSL reads   -> "<BOM>printf: command not found"
+#
+# So: no automatic conversion anywhere, then force the endings that matter.
+* -text
+
+# --- must be LF: read by bash, zsh, or WSL ----------------------------------
+*.sh        text eol=lf
+*.zsh       text eol=lf
+*.conf      text eol=lf
+zshrc       text eol=lf
+aliases.zsh text eol=lf
+gitconfig   text eol=lf
+.wslconfig  text eol=lf
+
+# --- must be CRLF: read by cmd.exe ------------------------------------------
+*.cmd       text eol=crlf
+*.bat       text eol=crlf
+
+# --- GitHub language stats --------------------------------------------------
+# Without this the repo reads as mostly "Rich Text Format" or similar, because
+# .tmpl and config files outweigh the code.
+*.tmpl      linguist-language=TOML
+docs/**     linguist-documentation

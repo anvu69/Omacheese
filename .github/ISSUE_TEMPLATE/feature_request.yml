@@ -1,0 +1,28 @@
+name: Idea
+description: Suggest something
+labels: [idea]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is awkward today
+      description: Describe the situation you keep hitting, rather than the solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you would like instead
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Does it fit the constraints
+      description: See CONTRIBUTING.md. These decide whether something can be merged.
+      options:
+        - label: It works on a freshly installed Windows 11 with nothing else set up
+        - label: It needs no particular hardware, or it is optional and off by default if it does
+        - label: It backs up anything it would overwrite
