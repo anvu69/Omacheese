@@ -624,4 +624,10 @@ Write-Host ("  {0} passed   {1} warnings   {2} failures" -f $script:Pass, $scrip
     if ($script:Fail) { "Red" } elseif ($script:Warn) { "Yellow" } else { "Green" })
 Write-Host ("=" * 52)
 
+# Always exit explicitly. Without the `exit 0`, the process inherits
+# $LASTEXITCODE from whatever native command ran last - and doctor calls
+# wsl.exe, which returns -1 when the distro is missing. GitHub's pwsh shell
+# appends `exit $LASTEXITCODE`, so CI failed a step that had just printed
+# "0 failures". The exit code now says exactly one thing: did a check fail.
 if ($script:Fail) { exit 1 }
+exit 0
