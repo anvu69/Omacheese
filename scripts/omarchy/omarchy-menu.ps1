@@ -257,6 +257,7 @@ function Get-Menu {
             (New-Entry "Capture"    "Screenshot and recording" -Sub "capture")
             (New-Entry "Toggle"     "Flip a desktop setting"   -Sub "toggle")
             (New-Entry "Setup"      "Edit a config file"       -Sub "setup")
+            (New-Entry "Keybindings" "Every chord, searchable"  -Sub "keys")
             (New-Entry "Learn"      "Keybindings and docs"     -Sub "learn")
             (New-Entry "System"     "Lock, sleep, restart"     -Sub "system")
         ) }
@@ -357,8 +358,7 @@ function Get-Menu {
         ) }
 
         "learn" { @(
-            (New-Entry "Keybindings" "Every chord, searchable" -Action {
-                Start-HelperInTerminal (Join-Path $bin "omarchy-keybindings.ps1") })
+            (New-Entry "Keybindings" "Every chord, searchable" -Sub "keys")
             (New-Entry "komorebi docs" "lgug2z.github.io/komorebi" -Action { Start-Process "https://lgug2z.github.io/komorebi/" })
             (New-Entry "yasb docs" "github.com/amnweb/yasb/wiki" -Action { Start-Process "https://github.com/amnweb/yasb/wiki" })
             (New-Entry "Omarchy (the original)" "omarchy.org" -Action { Start-Process "https://omarchy.org" })
@@ -393,6 +393,69 @@ function Get-Menu {
                 $items += (New-Entry "komorebi is not running" "Start it with start-desktop.ps1" -Action { })
             }
             $items
+        }
+
+        "keys" {
+            # Parsed out of the live whkdrc rather than kept as a second copy
+            # that drifts. Same reading as the old fzf cheatsheet, but in the
+            # window everything else already uses.
+            $rc = Join-Path $cfg "whkdrc"
+            if (-not (Test-Path -LiteralPath $rc)) {
+                @((New-Entry "No whkdrc" "Expected at $rc" -Action { }))
+            } else {
+                $pretty = @{
+                    "oem_comma" = ","; "oem_period" = "."; "oem_minus" = "-"; "oem_plus" = "="
+                    "oem_1" = ";"; "oem_2" = "/"; "oem_3" = "``"; "oem_4" = "["
+                    "oem_5" = "\"; "oem_6" = "]"; "oem_7" = "'"
+                    "return" = "Enter"; "back" = "Backspace"; "snapshot" = "PrtSc"
+                    "escape" = "Esc"; "prior" = "PgUp"; "next" = "PgDn"
+                    "win" = "SUPER"; "control" = "CTRL"; "alt" = "ALT"; "shift" = "SHIFT"
+                }
+                function Format-Chord2 {
+                    param([string]$Chord)
+                    $parts = $Chord -split "\s*\+\s*" | ForEach-Object {
+                        $t = $_.Trim().ToLower()
+                        if ($pretty.ContainsKey($t)) { $pretty[$t] } else { $t.ToUpper() }
+                    }
+                    return ($parts -join " + ")
+                }
+                $rcLines = @(Get-Content -LiteralPath $rc)
+                $isRule  = { param($s) $s -match "^#\s*-{10,}\s*$" }
+                $section = "General"
+                $items = @()
+                for ($n = 0; $n -lt $rcLines.Count; $n++) {
+                    $line = $rcLines[$n]
+                    if ($line -match "^\s*#") {
+                        if ($n -gt 0 -and $n -lt $rcLines.Count - 1 -and
+                            (& $isRule $rcLines[$n - 1]) -and (& $isRule $rcLines[$n + 1]) -and
+                            $line -match "^#\s{1,4}(\S.*?)\s*$") {
+                            $section = ($Matches[1] -split "\s{2,}")[0].Trim()
+                        }
+                        continue
+                    }
+                    if ($line -match "^\.pause\s+(.+)$") {
+                        $items += (New-Entry (Format-Chord2 $Matches[1].Trim()) "Meta - pause and resume every hotkey" -Action { })
+                        continue
+                    }
+                    if ($line -match "^\s*([a-z0-9_+\s]+?)\s*:\s*(.+?)\s*$") {
+                        $chord = Format-Chord2 $Matches[1]
+                        $desc  = $Matches[2]
+                        # Read as actions, not as literal command lines.
+                        $desc = $desc -replace "^start ""[^""]*"" alacritty --class [a-z-]+,[a-z-]+ -e\s*", ""
+                        $desc = $desc -replace """[^""]*\\omarchy-(run|term)\.cmd""\s*", ""
+                        $desc = $desc -replace """[^""]*\\([a-z-]+)\.ps1""", '$1'
+                        $desc = $desc -replace """[^""]*\\([a-z-]+)\.cmd""", '$1'
+                        $desc = $desc -replace "pwsh -NoProfile -ExecutionPolicy Bypass -File\s*", ""
+                        $desc = $desc -replace "^start """"\s*", "launch "
+                        $desc = $desc -replace "^komorebic\s+", ""
+                        $desc = $desc -replace "\s+&&\s+komorebic\s+", " + "
+                        $desc = $desc -replace "rundll32\.exe user32\.dll,LockWorkStation", "lock session"
+                        $items += (New-Entry $chord "$section - $($desc.Trim())" -Action { })
+                    }
+                }
+                if (-not $items) { $items = @((New-Entry "Nothing parsed" "whkdrc has no bindings this understands" -Action { })) }
+                $items
+            }
         }
 
         default { @() }

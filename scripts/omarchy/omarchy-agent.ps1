@@ -60,11 +60,16 @@ if ($Pick -or -not $agentKey) {
     Set-DefaultAgent $agentKey | Out-Null
 }
 
-$agent = $script:Agents[$agentKey]
+# NOT $agent. omarchy-default-agent.ps1 declares param([string]$Agent), and
+# dot-sourcing it puts that variable - complete with its [string] type
+# constraint - into this scope. Assigning the hashtable to it silently
+# coerced it to the string "System.Collections.Hashtable", so every launch
+# printed an empty agent name and then died on `& $agent.Command`.
+$agentDef = $script:Agents[$agentKey]
 
 if (-not (Test-AgentInstalled $agentKey)) {
-    Write-Host "$($agent.Name) is not installed." -ForegroundColor Red
-    Write-Host "  $($agent.Install)" -ForegroundColor Cyan
+    Write-Host "$($agentDef.Name) is not installed." -ForegroundColor Red
+    Write-Host "  $($agentDef.Install)" -ForegroundColor Cyan
     Read-Host "`nEnter to close"
     return
 }
@@ -82,24 +87,24 @@ if (-not $Directory) {
 }
 
 $argv = @()
-if ($Yolo) { $argv += $agent.Yolo }
+if ($Yolo) { $argv += $agentDef.Yolo }
 if ($Prompt) { $argv += $Prompt }
 
 if ($Wsl) {
     # Run the Linux copy of the agent inside the distro, in the mapped path.
     $wslPath = (wsl.exe -d AlmaLinux-9 -- wslpath -a "$($Directory -replace '\\','/')" 2>$null)
-    $inner   = "cd '$wslPath' && $($agent.Command) $($argv -join ' ')"
-    Write-Host "Launching $($agent.Name) in AlmaLinux-9..." -ForegroundColor Cyan
+    $inner   = "cd '$wslPath' && $($agentDef.Command) $($argv -join ' ')"
+    Write-Host "Launching $($agentDef.Name) in AlmaLinux-9..." -ForegroundColor Cyan
     wsl.exe -d AlmaLinux-9 -- bash -lc $inner
     return
 }
 
-Write-Host "Launching $($agent.Name)$(if ($Yolo) { ' (yolo)' })" -ForegroundColor Cyan
+Write-Host "Launching $($agentDef.Name)$(if ($Yolo) { ' (yolo)' })" -ForegroundColor Cyan
 Write-Host "  in $Directory" -ForegroundColor DarkGray
 
 Push-Location $Directory
 try {
-    & $agent.Command @argv
+    & $agentDef.Command @argv
 } finally {
     Pop-Location
 }

@@ -226,7 +226,7 @@ Omarchy's three-magnitude resize on the `-` / `=` keys.
 
 | Keys | Action |
 |---|---|
-| `SUPER + /` | **Keybindings** (searchable) |
+| `SUPER + /` | **Keybindings** (searchable, in the menu window) |
 | `SUPER + SPACE` | Omarchy menu |
 | `SUPER + ESC` | System menu |
 | `SUPER + CTRL + L` | Lock |
@@ -268,8 +268,9 @@ registry (what Win+R uses), then the start menu shortcut (what you would click),
 then explicit fallbacks. That also picks the real `dbeaver.exe` rather than the
 `dbeaver-cli.exe` a directory scan finds first.
 
-The keybinding cheatsheet on `SUPER + /` is still fzf in a terminal - it is a
-reference table rather than a launcher, so a terminal suits it.
+`SUPER + /` shows the keybindings in the same window, parsed out of the live
+whkdrc rather than kept as a second list that drifts. `omarchy-keybindings.ps1`
+still exists for the terminal, but nothing is bound to it any more.
 
 ---
 

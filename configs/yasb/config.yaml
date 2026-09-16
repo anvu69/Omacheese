@@ -83,7 +83,7 @@ widgets:
       # still opens the keybinding cheatsheet in a terminal, because it is fzf.
       callbacks:
         on_left: "exec cmd.exe /c %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-menu.cmd"
-        on_right: "exec cmd.exe /c %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-term.cmd %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-keybindings.ps1"
+        on_right: "exec cmd.exe /c %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-menu.cmd keys"
 
   komorebi_workspaces:
     type: "komorebi.workspaces.WorkspaceWidget"

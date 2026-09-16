@@ -67,7 +67,7 @@ win + alt + a                : start "" alacritty --class omarchy-agent,omarchy-
 # SUPER+/ prints every binding below into a searchable fzf window. This is the
 # one binding worth memorising; it teaches you the rest.
 # (Omarchy puts this on SUPER+K. SUPER+/ reads as "help" and leaves K free.)
-win + oem_2                  : start "" alacritty --class omarchy-menu,omarchy-menu -e "%USERPROFILE%\.config\omarchy\bin\omarchy-run.cmd" "%USERPROFILE%\.config\omarchy\bin\omarchy-keybindings.ps1"
+win + oem_2                  : "%USERPROFILE%\.config\omarchy\bin\omarchy-menu.cmd" keys
 win + space                  : "%USERPROFILE%\.config\omarchy\bin\omarchy-menu.cmd"
 win + escape                 : "%USERPROFILE%\.config\omarchy\bin\omarchy-menu.cmd" -Menu system
 

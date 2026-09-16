@@ -109,6 +109,17 @@ function Set-DefaultAgent {
 
 # --- entry -------------------------------------------------------------------
 
+# Dot-sourced, this file is just a registry - omarchy-agent.ps1 loads it to
+# reuse the agent table. Without this guard the entry section ran too and
+# printed the current default into the caller output.
+#
+# Note for anyone dot-sourcing this: the param block above comes with it, so
+# a [string]-constrained $Agent lands in your scope. Assigning anything else
+# to a variable of that name is silently coerced to a string - which is
+# exactly how the agent launcher spent its life calling "& " on the text
+# "System.Collections.Hashtable".
+if ($MyInvocation.InvocationName -eq ".") { return }
+
 if ($List) {
     $current = Get-DefaultAgent
     foreach ($k in $script:Agents.Keys) {
