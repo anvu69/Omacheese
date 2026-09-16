@@ -166,7 +166,7 @@
       "matching_strategy": "Equals"
     }
   ],
-  "_comment_floating_menu": "The omarchy menu is matched by TITLE, not Class. Alacritty's --class flag is an X11/Wayland concept that does nothing on Windows: komorebi reports the class of every Alacritty window as the literal string 'Window Class', so a Class rule can never match it. --title does work, and omarchy-term.cmd sets it to 'omarchy'.",
+  "_comment_floating_menu": "The menu window is matched by TITLE, not Class. It is a WPF window that sets its title to 'omarchy' and stays out of the taskbar, which is usually enough on its own - this rule is the belt to that pair of braces. Class cannot be used: komorebi reports the class of every Alacritty window as the literal string 'Window Class', and --class is an X11 concept that does nothing on Windows anyway.",
   "ignore_rules": [
     {
       "kind": "Exe",

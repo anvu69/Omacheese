@@ -1,18 +1,28 @@
-# Bootstrap the Windows side straight from GitHub Raw, without cloning.
+# Bootstrap the Windows side straight from GitHub, without cloning.
 #
 #   $repo="https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main"
 #   irm "$repo/scripts/bootstrap-windows.ps1" | iex
 #
-# This downloads the repo's scripts and configs into a temp directory and then
-# runs the SAME install-windows.ps1 / link-configs.ps1 the cloned repo uses.
-# The previous version re-declared its own package list, which is how it ended
-# up shipping a yasb id that does not exist ("amnweb.yasb") and silently
-# skipping git, fzf, zoxide, eza and bat. There is now exactly one list:
-# configs/winget/packages.json.
+# It fetches the repo and then runs the SAME setup.ps1 the cloned repo uses, so
+# there is one install path and one experience.
+#
+# WHY A ZIP AND NOT A FILE LIST
+#
+# This used to enumerate every file it needed. That list went stale the moment
+# anything was added: by the time it was replaced it was missing 25 files,
+# including omarchy-menu.cmd - which is what SUPER+SPACE and the bar's menu
+# button actually run - the scroll daemon, the whole theme system and every
+# Raycast command. A no-clone install produced a desktop that looked installed
+# and was not.
+#
+# A list of files cannot be kept correct by discipline alone, so there is no
+# list. The archive is whatever is in the repo, which is also one request
+# instead of forty: measured at 1.6s for the lot.
 
 [CmdletBinding()]
 param(
     [string]$RepoRawBase = "",
+    [string]$Branch = "",
     [ValidateSet("minimal", "desktop", "full", "everything", "custom")]
     [string]$Preset,
     [string[]]$Modules,
@@ -21,6 +31,13 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# Windows PowerShell 5.1 on an untouched machine can still default to TLS 1.0,
+# which GitHub refuses.
+try {
+    [Net.ServicePointManager]::SecurityProtocol =
+        [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+} catch { }
 
 # `irm ... | iex` runs in the caller's scope, so $repo set at the prompt is
 # visible here. Fall back through the usual env vars too.
@@ -43,76 +60,79 @@ Set -RepoRawBase to your GitHub raw URL, for example:
 }
 
 $RepoRawBase = $RepoRawBase.TrimEnd("/")
-Write-Host "Repo raw base: $RepoRawBase" -ForegroundColor Green
+
+# Accept either the raw base the README documents or a plain repo URL, and work
+# out owner/repo/branch from it.
+$owner = $null; $name = $null; $ref = $Branch
+$m = [regex]::Match($RepoRawBase, '^https?://raw\.githubusercontent\.com/([^/]+)/([^/]+)/([^/]+)')
+if ($m.Success) {
+    $owner = $m.Groups[1].Value; $name = $m.Groups[2].Value
+    if (-not $ref) { $ref = $m.Groups[3].Value }
+} else {
+    $m2 = [regex]::Match($RepoRawBase, '^https?://github\.com/([^/]+)/([^/.]+)')
+    if ($m2.Success) {
+        $owner = $m2.Groups[1].Value; $name = $m2.Groups[2].Value
+        if (-not $ref) { $ref = "main" }
+    }
+}
+if (-not $owner) { throw "Could not work out the repository from '$RepoRawBase'." }
+
+Write-Host "Repository: $owner/$name@$ref" -ForegroundColor Green
 
 $WorkDir = Join-Path $env:TEMP "windows11-dev-poweruser-bootstrap"
 if (Test-Path -LiteralPath $WorkDir) { Remove-Item -LiteralPath $WorkDir -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $WorkDir | Out-Null
 
-function Get-RepoFile {
-    param([Parameter(Mandatory)][string]$Path)
-    $dest = Join-Path $WorkDir $Path
-    $dir  = Split-Path -Parent $dest
-    if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
-    Write-Host "  . $Path" -ForegroundColor DarkGray
-    Invoke-WebRequest -UseBasicParsing -Uri "$RepoRawBase/$Path" -OutFile $dest
+$RepoRoot = $null
+
+# --- 1. archive --------------------------------------------------------------
+$zip = Join-Path $WorkDir "repo.zip"
+$zipUrl = "https://codeload.github.com/$owner/$name/zip/refs/heads/$ref"
+Write-Host "Downloading $zipUrl" -ForegroundColor Cyan
+try {
+    $ProgressPreference = "SilentlyContinue"   # the progress bar makes this ~10x slower
+    Invoke-WebRequest -UseBasicParsing -Uri $zipUrl -OutFile $zip
+    Expand-Archive -LiteralPath $zip -DestinationPath $WorkDir -Force
+    Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue
+
+    # GitHub wraps everything in <repo>-<ref>/.
+    $inner = Get-ChildItem -LiteralPath $WorkDir -Directory | Select-Object -First 1
+    if ($inner -and (Test-Path -LiteralPath (Join-Path $inner.FullName "scripts\setup.ps1"))) {
+        $RepoRoot = $inner.FullName
+    }
+} catch {
+    Write-Host "  archive download failed: $($_.Exception.Message)" -ForegroundColor Yellow
 }
 
-# Everything install-windows.ps1 and link-configs.ps1 touch.
-$files = @(
-    "scripts/lib/common.ps1"
-    "scripts/lib/tui.ps1"
-    "scripts/lib/detect.ps1"
-    "scripts/lib/modules.ps1"
-    "scripts/setup.ps1"
-    "scripts/install-wsl.ps1"
-    "scripts/install-localllm.ps1"
-    "scripts/debloat-windows.ps1"
-    "scripts/install-windows.ps1"
-    "scripts/link-configs.ps1"
-    "scripts/start-desktop.ps1"
-    "scripts/doctor.ps1"
-    "scripts/omarchy/omarchy-menu.ps1"
-    "scripts/omarchy/omarchy-keybindings.ps1"
-    "scripts/omarchy/omarchy-scratchpad.ps1"
-    "scripts/omarchy/omarchy-stack-toggle.ps1"
-    "scripts/omarchy/omarchy-toggle-bar.ps1"
-    "scripts/omarchy/omarchy-restart-desktop.ps1"
-    "scripts/omarchy/omarchy-agent.ps1"
-    "scripts/omarchy/omarchy-default-agent.ps1"
-    "scripts/omarchy/omarchy-scrolling.ps1"
-    "scripts/omarchy/omarchy-run.cmd"
-    "scripts/omarchy/omarchy-term.cmd"
-    "configs/winget/packages.json"
-    "configs/alacritty/alacritty.toml"
-    "configs/alacritty/alacritty.wsl.toml"
-    "configs/komorebi/komorebi.json"
-    "configs/whkd/whkdrc"
-    "configs/yasb/config.yaml"
-    "configs/yasb/styles.css"
-    "configs/oh-my-posh/poweruser.omp.json"
-    "configs/powershell/Microsoft.PowerShell_profile.ps1"
-    "configs/git/gitconfig"
-    "configs/ssh/config.example"
-    "configs/wsl/.wslconfig"
-    "configs/wsl/wsl.conf"
-    "configs/wsl/ssh-agent-bridge.sh"
-    "configs/windows/debloat.json"
-    "configs/ai/docker-compose.vllm.yml"
-    "configs/ai/docker-compose.finetune.yml"
-    "configs/ai/.env.example"
-)
+# --- 2. git, if the archive did not work -------------------------------------
+if (-not $RepoRoot -and (Get-Command git -ErrorAction SilentlyContinue)) {
+    Write-Host "Falling back to git clone" -ForegroundColor Cyan
+    $clone = Join-Path $WorkDir "repo"
+    git clone --depth 1 --branch $ref "https://github.com/$owner/$name.git" $clone 2>&1 | Out-Null
+    if (Test-Path -LiteralPath (Join-Path $clone "scripts\setup.ps1")) { $RepoRoot = $clone }
+}
 
-Write-Host "`nDownloading repo files" -ForegroundColor Cyan
-foreach ($f in $files) { Get-RepoFile $f }
+if (-not $RepoRoot) {
+    throw @"
+Could not fetch the repository.
 
-# Hand over to the interactive setup, which detects the machine and offers
-# only the modules it can actually run. Everything below is one code path with
+Check the URL and your connection, or clone it yourself and run scripts/setup.ps1:
+
+  git clone https://github.com/$owner/$name.git
+  cd $name
+  ./scripts/setup.ps1
+"@
+}
+
+Write-Host "Fetched to $RepoRoot" -ForegroundColor Green
+
+# Hand over to the interactive setup, which detects the machine and offers only
+# the modules it can actually run. Everything below here is one code path with
 # the cloned-repo experience.
 $setupArgs = @{}
-if ($Preset)      { $setupArgs["Preset"]  = $Preset }
-if ($Modules)     { $setupArgs["Modules"] = $Modules }
-if ($Yes)         { $setupArgs["Yes"]     = $true }
-if ($DryRun)      { $setupArgs["DryRun"]  = $true }
+if ($Preset)  { $setupArgs["Preset"]  = $Preset }
+if ($Modules) { $setupArgs["Modules"] = $Modules }
+if ($Yes)     { $setupArgs["Yes"]     = $true }
+if ($DryRun)  { $setupArgs["DryRun"]  = $true }
 
-& (Join-Path $WorkDir "scripts/setup.ps1") @setupArgs
+& (Join-Path $RepoRoot "scripts\setup.ps1") @setupArgs

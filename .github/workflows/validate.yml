@@ -51,6 +51,36 @@ jobs:
           sys.exit(1 if bad else 0)
           PY
 
+      - name: Installer references only files that exist
+        shell: pwsh
+        run: |
+          # The installers name repo files as strings. When one gets renamed the
+          # script keeps running and simply installs less, which is how a
+          # no-clone install once produced a desktop missing its menu launcher,
+          # its scroll daemon and its whole theme system without erroring once.
+          $scripts = @(
+            "scripts/link-configs.ps1",
+            "scripts/start-desktop.ps1",
+            "scripts/install-windows.ps1",
+            "scripts/setup.ps1",
+            "scripts/doctor.ps1"
+          )
+          $bad = 0
+          foreach ($s in $scripts) {
+            $text = Get-Content -LiteralPath $s -Raw
+            # Quoted paths that look like repo-relative files under configs/,
+            # scripts/ or raycast/.
+            $hits = [regex]::Matches($text, '"((?:configs|scripts|raycast)[\\/][^"]*?\.[A-Za-z0-9]+)"')
+            foreach ($h in $hits) {
+              $rel = $h.Groups[1].Value -replace '\\', '/'
+              if (-not (Test-Path -LiteralPath $rel)) {
+                Write-Host "FAIL $s references missing $rel"
+                $bad++
+              }
+            }
+          }
+          if ($bad) { exit 1 } else { Write-Host "installer file references: all present" }
+
       - name: Validate whkdrc key names and chords
         shell: pwsh
         run: ./scripts/doctor.ps1 -Repo -Quick

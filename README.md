@@ -6,12 +6,24 @@ quản lý workspace port từ [Omarchy](https://omarchy.org).
 
 ## Cài
 
+Máy vừa cài Windows xong thì chưa có `git` để clone. Một dòng này là đủ:
+
+```powershell
+$repo="https://raw.githubusercontent.com/anvu69/windows11-dev-poweruser/main"; irm "$repo/scripts/bootstrap-windows.ps1" | iex
+```
+
+Nó tải cả repo dưới dạng zip rồi chạy đúng `setup.ps1` bên dưới — không cần
+git, không cần cài gì trước. Chi tiết và cách chỉ-cài-một-phần:
+[`docs/no-clone-install.md`](docs/no-clone-install.md).
+
+Đã clone rồi thì:
+
 ```powershell
 ./scripts/setup.ps1
 ```
 
-Một lệnh. TUI sẽ dò phần cứng, chỉ hiện module máy bạn **chạy được**, rồi
-theo dõi tiến trình từng bước.
+Cả hai đường đều vào cùng một TUI: dò phần cứng, chỉ hiện module máy bạn
+**chạy được**, rồi theo dõi tiến trình từng bước.
 
 ```text
 +- Modules ---------------------------------------------------------+
