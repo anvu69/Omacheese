@@ -274,6 +274,29 @@ still exists for the terminal, but nothing is bound to it any more.
 
 ---
 
+## How apps are launched
+
+App hotkeys go through `omacheese-open.cmd` rather than `start "" <name>`.
+
+`start` is a ShellExecute lookup: PATH first, then the App Paths registry. GUI
+installers usually register in neither, so the lookup fails and cmd opens an
+empty console window named after the app. Measured on a working install:
+
+| Command | Result |
+|---|---|
+| `start "" brave` | fails |
+| `start "" brave.exe` | launches (brave registers in App Paths) |
+| `start "" alacritty` | fails |
+| `start "" alacritty.exe` | fails (registers nowhere) |
+
+So the `.exe` suffix rescues some apps and not others. The resolver tries PATH,
+App Paths, the start menu shortcut, then the usual install folders, and caches
+what it finds in `~/.config/omacheese/app-paths.txt`. A cache hit launches in
+about 24ms without starting PowerShell, which matters on `SUPER + Enter`.
+
+URI protocols such as `ms-screenclip:` still use `start`, since ShellExecute
+handles those correctly.
+
 ## Where this deviates from Omarchy, and why
 
 Three bindings could not be copied literally.

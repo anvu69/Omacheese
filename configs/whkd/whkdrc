@@ -37,19 +37,19 @@
 # ----------------------------------------------------------------------------
 # Applications                                          SUPER+SHIFT+<letter>
 # ----------------------------------------------------------------------------
-win + return                 : start "" alacritty
-win + shift + return         : start "" brave
-win + alt + return           : start "" alacritty -e wsl.exe -d AlmaLinux-9 -- tmux new-session -A -s main
+win + return                 : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" alacritty
+win + shift + return         : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" brave
+win + alt + return           : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" alacritty -e wsl.exe -d AlmaLinux-9 -- tmux new-session -A -s main
 
-win + shift + b              : start "" brave
-win + shift + alt + b        : start "" brave --incognito
-win + shift + f              : start "" explorer
-win + shift + e              : start "" everything
-win + shift + n              : start "" alacritty -e wsl.exe -d AlmaLinux-9 -- nvim
-win + shift + g              : start "" electerm
-win + shift + d              : start "" dbeaver
-win + shift + oem_2          : start "" bitwarden
-win + shift + t              : start "" alacritty -e btop
+win + shift + b              : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" brave
+win + shift + alt + b        : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" brave --incognito
+win + shift + f              : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" explorer
+win + shift + e              : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" everything
+win + shift + n              : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" alacritty -e wsl.exe -d AlmaLinux-9 -- nvim
+win + shift + g              : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" electerm
+win + shift + d              : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" dbeaver
+win + shift + oem_2          : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" bitwarden
+win + shift + t              : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" alacritty -e btop
 
 # ----------------------------------------------------------------------------
 # Coding agents
@@ -57,9 +57,9 @@ win + shift + t              : start "" alacritty -e btop
 # SUPER+A launches whichever agent is set as default; SUPER+SHIFT+CTRL+A (the
 # chord Omarchy uses) opens the picker. Neither passes a skip-permissions flag
 # by default - add -Yolo in the picker menu when you want that.
-win + a                      : start "" alacritty --class omacheese-agent,omacheese-agent -e "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-agent.ps1"
-win + shift + control + a    : start "" alacritty --class omacheese-agent,omacheese-agent -e "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-agent.ps1" -Pick
-win + alt + a                : start "" alacritty --class omacheese-agent,omacheese-agent -e "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-agent.ps1" -Wsl
+win + a                      : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" alacritty --class omacheese-agent,omacheese-agent -e "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-agent.ps1"
+win + shift + control + a    : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" alacritty --class omacheese-agent,omacheese-agent -e "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-agent.ps1" -Pick
+win + alt + a                : "%USERPROFILE%\.config\omacheese\bin\omacheese-open.cmd" alacritty --class omacheese-agent,omacheese-agent -e "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-agent.ps1" -Wsl
 
 # ----------------------------------------------------------------------------
 # Menus and discovery
@@ -243,7 +243,7 @@ win + control + l            : rundll32.exe user32.dll,LockWorkStation
 win + control + b            : "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-toggle-bar.ps1"
 win + control + r            : "%USERPROFILE%\.config\omacheese\bin\omacheese-run.cmd" "%USERPROFILE%\.config\omacheese\bin\omacheese-restart-desktop.ps1"
 win + snapshot               : start "" ms-screenclip:
-win + shift + snapshot       : start "" snippingtool:
+win + shift + snapshot       : start "" ms-screensketch:
 
 # ----------------------------------------------------------------------------
 # OPTIONAL: Vim navigation overlay

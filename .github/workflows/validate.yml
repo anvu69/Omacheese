@@ -85,6 +85,30 @@ jobs:
         shell: pwsh
         run: ./scripts/doctor.ps1 -Repo -Quick
 
+      - name: whkdrc launches apps through the resolver, not bare names
+        shell: pwsh
+        run: |
+          # `start "" <name>` is a ShellExecute lookup: PATH, then App Paths.
+          # GUI installers register in neither, so this silently opened an empty
+          # console window instead of the app. Measured on a working install:
+          # `start "" brave` failed, `start "" brave.exe` worked, and alacritty
+          # failed both ways. Sixteen bindings were dead that way.
+          #
+          # Apps go through omacheese-open.cmd. A URI protocol (ms-screenclip:)
+          # is fine for `start`, since ShellExecute resolves those properly.
+          $rc = Get-Content -LiteralPath configs/whkd/whkdrc
+          $bad = 0
+          foreach ($line in $rc) {
+            if ($line -match '^\s*#') { continue }
+            $m = [regex]::Match($line, '^\s*([a-z0-9_+\s]+?)\s*:\s*start ""\s+(\S+)')
+            if (-not $m.Success) { continue }
+            $target = $m.Groups[2].Value
+            if ($target.EndsWith(':')) { continue }          # URI protocol, fine
+            Write-Host "FAIL $($m.Groups[1].Value.Trim()) launches '$target' with start; use omacheese-open.cmd"
+            $bad++
+          }
+          if ($bad) { exit 1 } else { Write-Host "whkdrc app launches: all go through the resolver" }
+
       - name: Validate Win11Debloat profile flags
         shell: pwsh
         run: |
