@@ -211,6 +211,12 @@ win + shift + r              : komorebic reload-configuration
 win + control + p            : komorebic toggle-pause
 win + shift + space          : komorebic toggle-workspace-layer
 
+# PaperWM-style horizontal scrolling: one window fills the screen and the
+# rest wait just off the edge, so you scroll sideways instead of splitting
+# the screen smaller. komorebi's `scrolling` layout with 1 column, plus
+# enough workspace padding that the neighbour peeks in. Press again for BSP.
+win + control + s            : "%USERPROFILE%\.config\omarchy\bin\omarchy-run.cmd" "%USERPROFILE%\.config\omarchy\bin\omarchy-scrolling.ps1"
+
 # ----------------------------------------------------------------------------
 # Resize                                  SUPER + minus/equals, three sizes
 # ----------------------------------------------------------------------------

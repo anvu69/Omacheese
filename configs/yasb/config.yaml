@@ -39,7 +39,7 @@ bars:
       windows_app_bar: true
     dimensions:
       width: "100%"
-      height: 34
+      height: 36
     padding:
       top: 0
       left: 8
@@ -89,7 +89,10 @@ widgets:
       label_workspace_active_btn: "{name}"
       label_default_name: "{index}"
       label_zero_index: false
-      hide_empty_workspaces: false
+      # Omarchy-style: the bar shows what is in use, not ten slots you
+      # might one day fill. The focused workspace stays visible even when
+      # empty, and SUPER+1..0 still reaches all ten regardless.
+      hide_empty_workspaces: true
       hide_if_offline: false
       enable_scroll_switching: true
       reverse_scroll_direction: false
@@ -128,7 +131,7 @@ widgets:
         columns: ""
         rows: ""
         grid: "󰝘"
-        scrolling: ""
+        scrolling: ""
         vertical_stack: ""
         horizontal_stack: ""
         ultrawide_vertical_stack: ""

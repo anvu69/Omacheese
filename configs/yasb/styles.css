@@ -50,23 +50,25 @@
     color: #c0caf5;
 }
 
-/* Nerd Font icons are drawn wider than one text cell. Without a right gap
-   they collide with the number that follows - which is what made the CPU and
-   memory readouts unreadable. */
+/* Nerd Font icons draw INK that is wider than the glyph's advance width. Qt
+   sizes the label from the advance, so with tight padding the ink gets sheared
+   off at the edges - that is the "clipped icon" look, and it is why shrinking
+   padding to 1px made it worse rather than better.
+   Padding on BOTH sides gives the ink somewhere to live. */
 .widget .icon {
     font-size: 14px;
     color: #7aa2f7;
-    padding-right: 6px;
-    padding-left: 1px;
+    padding-left: 4px;
+    padding-right: 7px;
 }
 
-/* An icon-only widget needs no trailing gap; that gap was what pushed the
-   power button past the right edge of the bar and clipped it. */
+/* Icon-only widgets: the trailing space is not separating an icon from a
+   value, but it still has to cover the ink overhang, so it stays generous. */
 .bluetooth-widget .icon,
 .wifi-widget .icon,
-.power-menu-widget .icon,
 .omarchy-menu-widget .icon {
-    padding-right: 1px;
+    padding-left: 5px;
+    padding-right: 5px;
 }
 
 /* --------------------------------------------------------------------------
@@ -140,18 +142,22 @@
    Active layout + focused window title
    -------------------------------------------------------------------------- */
 
+/* The layout glyph was both small and sheared. It is a single icon with no
+   text beside it, so it needs its own size bump and enough horizontal padding
+   to clear the ink overhang described above. */
 .komorebi-active-layout {
-    padding: 0 8px;
+    padding: 0 6px;
 }
 
 .komorebi-active-layout .label {
-    font-size: 14px;
+    font-size: 17px;
     color: #bb9af7;
+    padding: 0 7px;
 }
 
 .komorebi-active-layout .widget-container:hover {
     background-color: #292e42;
-    border-radius: 6px;
+    border-radius: 8px;
 }
 
 .komorebi-layout-menu .menu-item {
@@ -227,17 +233,17 @@
     color: #9ece6a;
 }
 
-/* Last widget on the bar: give it real room on the right so the glyph is not
-   sheared off by the bar edge. */
+/* Last widget on the bar: needs room on BOTH sides, the right one so the bar
+   edge does not shear the glyph, the left so it does not crowd the neighbour. */
 .power-menu-widget {
-    padding: 0 6px 0 10px;
-    margin-right: 2px;
+    padding: 0 4px 0 8px;
 }
 
 .power-menu-widget .label {
     color: #f7768e;
-    font-size: 14px;
-    padding-right: 0;
+    font-size: 15px;
+    padding-left: 5px;
+    padding-right: 5px;
 }
 
 .power-menu-widget:hover .label {

@@ -104,9 +104,42 @@ Omarchy's `SUPER + G` window grouping maps onto komorebi stacks.
 | `SUPER + SHIFT + ALT + L` | Previous layout |
 | `SUPER + J` | Flip layout horizontally |
 | `SUPER + SHIFT + J` | Flip layout vertically |
+| `SUPER + CTRL + S` | **Scrolling mode** (see below) |
 | `SUPER + R` | Retile |
 | `SUPER + SHIFT + R` | Reload komorebi config |
 | `SUPER + CTRL + P` | Pause tiling |
+
+## Scrolling mode
+
+`SUPER + CTRL + S`
+
+Omarchy has a mode (via hyprscroller) where windows sit in one horizontal
+strip: the focused window takes almost the whole screen and the rest wait just
+off the edge, so you scroll sideways instead of splitting the screen smaller
+and smaller.
+
+komorebi has this natively as the `scrolling` layout. Two settings give it the
+Omarchy shape, and `omarchy-scrolling.ps1` applies both:
+
+```
+komorebic change-layout scrolling
+komorebic scrolling-layout-columns 1   one window per screen
+komorebic workspace-padding 0 <ws> 40  pulls it in so the neighbour peeks
+```
+
+Measured on a 2560px monitor:
+
+| Workspace padding | Window width | Neighbour peek |
+|---|---|---|
+| 8 | 2530 px (98.8%) | none |
+| **40** | **2466 px (96.3%)** | **33 px** |
+| 70 | 2406 px (94.0%) | 63 px |
+
+40 is the default: about 96% with a visible sliver of what is behind you.
+Press the binding again to return to BSP. `SUPER + SPACE` -> Windows has a
+two-column variant.
+
+Tune it by editing the defaults in `scripts/omarchy/omarchy-scrolling.ps1`.
 
 ## Resize
 

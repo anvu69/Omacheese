@@ -72,6 +72,11 @@ $Menus = [ordered]@{
     }
 
     windows = [ordered]@{
+        "Scrolling mode (toggle)" = { & (Join-Path $bin "omarchy-scrolling.ps1") }
+        "Scrolling: 2 columns"    = {
+            komorebic change-layout scrolling
+            komorebic scrolling-layout-columns 2
+        }
         "Next layout"             = { komorebic cycle-layout next }
         "Previous layout"         = { komorebic cycle-layout previous }
         "BSP"                     = { komorebic change-layout bsp }

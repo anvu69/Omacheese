@@ -80,6 +80,8 @@ $files = @(
     "scripts/omarchy/omarchy-restart-desktop.ps1"
     "scripts/omarchy/omarchy-agent.ps1"
     "scripts/omarchy/omarchy-default-agent.ps1"
+    "scripts/omarchy/omarchy-scrolling.ps1"
+    "scripts/omarchy/omarchy-run.cmd"
     "configs/winget/packages.json"
     "configs/alacritty/alacritty.toml"
     "configs/alacritty/alacritty.wsl.toml"
