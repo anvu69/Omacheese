@@ -4,12 +4,12 @@
    Palette copied verbatim from omacom/omarchy themes/tokyo-night/colors.toml
    so the bar, the komorebi borders and Alacritty agree:
 
-     background        #1a1b26      foreground        #a9b1d6
-     lighter_bg        #24283b      bright_foreground #c0caf5
-     selection         #292e42      dark_foreground   #565f89
-     muted             #414868      accent / blue     #7aa2f7
-     red     #f7768e   yellow #e0af68   green  #9ece6a
-     magenta #bb9af7   cyan   #0db9d7   orange #ff9e64
+     background        {{background}}      foreground        {{foreground}}
+     lighter_bg        {{lighter_background}}      bright_foreground {{bright_foreground}}
+     selection         {{selection}}      dark_foreground   {{dark_foreground}}
+     muted             {{muted}}      accent / blue     {{accent}}
+     red     {{red}}   yellow {{yellow}}   green  {{green}}
+     magenta {{bright_magenta}}   cyan   {{bright_cyan}}   orange {{bright_yellow}}
 
    This is PyQt6 QSS, not a browser. No flexbox, no CSS variables, no
    descendant selectors beyond what Qt supports. Colours are therefore
@@ -28,11 +28,11 @@
                  "UbuntuMono Nerd Font", "Segoe UI", sans-serif;
     font-size: 12px;
     font-weight: 500;
-    color: #a9b1d6;
+    color: {{foreground}};
 }
 
 .yasb-bar {
-    background-color: #1a1b26;
+    background-color: {{background}};
     padding: 0;
     margin: 0;
 }
@@ -47,7 +47,7 @@
 }
 
 .widget .label.alt {
-    color: #c0caf5;
+    color: {{bright_foreground}};
 }
 
 /* ICON CLIPPING - use min-width, NOT padding.
@@ -67,7 +67,7 @@
    30px leaves ~22px of content and clears every glyph on the bar. */
 .widget .icon {
     font-size: 14px;
-    color: #7aa2f7;
+    color: {{accent}};
     min-width: 30px;
     padding-left: 2px;
     padding-right: 6px;
@@ -92,11 +92,11 @@
 
 .omarchy-menu-widget .label {
     font-size: 16px;
-    color: #7aa2f7;
+    color: {{accent}};
 }
 
 .omarchy-menu-widget:hover .label {
-    color: #bb9af7;
+    color: {{bright_magenta}};
 }
 
 /* --------------------------------------------------------------------------
@@ -116,7 +116,7 @@
 .komorebi-workspaces .ws-btn {
     font-size: 11px;
     min-width: 14px;
-    color: #414868;
+    color: {{muted}};
     background-color: transparent;
     margin: 0;
     padding: 0 4px;
@@ -124,29 +124,29 @@
 }
 
 .komorebi-workspaces .ws-btn.populated {
-    color: #7aa2f7;
+    color: {{accent}};
 }
 
 .komorebi-workspaces .ws-btn.active {
     font-size: 12px;
     font-weight: 600;
-    color: #1a1b26;
-    background-color: #7aa2f7;
+    color: {{background}};
+    background-color: {{accent}};
     padding: 0 10px;
 }
 
 .komorebi-workspaces .ws-btn:hover {
-    color: #c0caf5;
-    background-color: #292e42;
+    color: {{bright_foreground}};
+    background-color: {{selection}};
 }
 
 .komorebi-workspaces .ws-btn.active:hover {
-    color: #1a1b26;
-    background-color: #7da6ff;
+    color: {{background}};
+    background-color: {{bright_blue}};
 }
 
 .komorebi-workspaces .offline-status {
-    color: #565f89;
+    color: {{dark_foreground}};
     padding: 0 6px;
 }
 
@@ -163,7 +163,7 @@
 
 .komorebi-active-layout .label {
     font-size: 17px;
-    color: #bb9af7;
+    color: {{bright_magenta}};
     /* Lone icon rendered as .label, so it needs min-width too - see the note
        on icon clipping above. Scaled to the larger font-size. */
     min-width: 32px;
@@ -171,19 +171,19 @@
 }
 
 .komorebi-active-layout .widget-container:hover {
-    background-color: #292e42;
+    background-color: {{selection}};
     border-radius: 8px;
 }
 
 .komorebi-layout-menu .menu-item {
-    background-color: #1a1b26;
-    color: #a9b1d6;
+    background-color: {{background}};
+    color: {{foreground}};
     padding: 6px 14px;
 }
 
 .komorebi-layout-menu .menu-item:hover {
-    background-color: #292e42;
-    color: #c0caf5;
+    background-color: {{selection}};
+    color: {{bright_foreground}};
 }
 
 .active-window-widget {
@@ -191,7 +191,7 @@
 }
 
 .active-window-widget .label {
-    color: #565f89;
+    color: {{dark_foreground}};
     font-weight: 400;
 }
 
@@ -200,7 +200,7 @@
    -------------------------------------------------------------------------- */
 
 .clock-widget .label {
-    color: #c0caf5;
+    color: {{bright_foreground}};
     font-weight: 600;
     font-size: 13px;
 }
@@ -209,12 +209,12 @@
    Right: system readouts
    -------------------------------------------------------------------------- */
 
-.cpu-widget .label       { color: #9ece6a; }
-.memory-widget .label    { color: #e0af68; }
-.volume-widget .label    { color: #0db9d7; }
-.wifi-widget .label      { color: #7aa2f7; }
-.bluetooth-widget .label { color: #7aa2f7; }
-.battery-widget .label   { color: #9ece6a; }
+.cpu-widget .label       { color: {{green}}; }
+.memory-widget .label    { color: {{yellow}}; }
+.volume-widget .label    { color: {{bright_cyan}}; }
+.wifi-widget .label      { color: {{accent}}; }
+.bluetooth-widget .label { color: {{accent}}; }
+.battery-widget .label   { color: {{green}}; }
 
 /* --------------------------------------------------------------------------
    Bluetooth popup
@@ -231,8 +231,8 @@
    -------------------------------------------------------------------------- */
 
 .bluetooth-menu {
-    background-color: #1a1b26;
-    border: 1px solid #292e42;
+    background-color: {{background}};
+    border: 1px solid {{selection}};
     border-radius: 12px;
     min-width: 340px;
 
@@ -251,14 +251,14 @@
 }
 
 .bluetooth-menu .header {
-    color: #c0caf5;
+    color: {{bright_foreground}};
     font-size: 14px;
     font-weight: 600;
     padding: 14px 16px 10px 16px;
 }
 
 .bluetooth-menu .title {
-    color: #c0caf5;
+    color: {{bright_foreground}};
     font-size: 14px;
     font-weight: 600;
 }
@@ -269,7 +269,7 @@
 }
 
 .bluetooth-menu .section-title {
-    color: #7aa2f7;
+    color: {{accent}};
     font-size: 11px;
     font-weight: 600;
     padding: 10px 16px 6px 16px;
@@ -291,16 +291,16 @@
 }
 
 .bluetooth-menu .bluetooth-item:hover {
-    background-color: #292e42;
+    background-color: {{selection}};
 }
 
 .bluetooth-menu .name {
-    color: #c0caf5;
+    color: {{bright_foreground}};
     font-size: 13px;
 }
 
 .bluetooth-menu .status {
-    color: #565f89;
+    color: {{dark_foreground}};
     font-size: 11px;
 }
 
@@ -309,13 +309,13 @@
 .bluetooth-menu .battery-icon {
     font-family: "Segoe Fluent Icons", "Segoe MDL2 Assets", "JetBrainsMono NF";
     font-size: 17px;
-    color: #7aa2f7;
+    color: {{accent}};
     min-width: 28px;
     padding: 0 6px 0 2px;
 }
 
 .bluetooth-menu .battery {
-    color: #9ece6a;
+    color: {{green}};
     font-size: 11px;
 }
 
@@ -324,9 +324,9 @@
 .bluetooth-menu .connect,
 .bluetooth-menu .settings-button,
 .bluetooth-menu .power-button {
-    background-color: #24283b;
-    color: #c0caf5;
-    border: 1px solid #292e42;
+    background-color: {{lighter_background}};
+    color: {{bright_foreground}};
+    border: 1px solid {{selection}};
     border-radius: 6px;
     padding: 0 14px;
     margin: 0;
@@ -341,9 +341,9 @@
 .bluetooth-menu .scan-icon {
     font-family: "Segoe Fluent Icons", "Segoe MDL2 Assets", "JetBrainsMono NF";
     font-size: 15px;
-    color: #7aa2f7;
-    background-color: #24283b;
-    border: 1px solid #292e42;
+    color: {{accent}};
+    background-color: {{lighter_background}};
+    border: 1px solid {{selection}};
     border-radius: 6px;
     padding: 0;
     margin: 0;
@@ -356,17 +356,17 @@
 .bluetooth-menu .settings-button:hover,
 .bluetooth-menu .power-button:hover,
 .bluetooth-menu .scan-icon:hover {
-    background-color: #292e42;
-    border: 1px solid #7aa2f7;
+    background-color: {{selection}};
+    border: 1px solid {{accent}};
 }
 
 .bluetooth-menu .footer {
-    border-top: 1px solid #292e42;
+    border-top: 1px solid {{selection}};
     padding: 10px 16px;
 }
 
 .bluetooth-menu .error-message {
-    color: #f7768e;
+    color: {{red}};
     font-size: 12px;
     padding: 8px 16px;
 }
@@ -381,21 +381,21 @@
    -------------------------------------------------------------------------- */
 
 .audio-menu {
-    background-color: #1a1b26;
-    border: 1px solid #292e42;
+    background-color: {{background}};
+    border: 1px solid {{selection}};
     border-radius: 12px;
     min-width: 300px;
 }
 
 .audio-menu .header {
-    color: #c0caf5;
+    color: {{bright_foreground}};
     font-size: 14px;
     font-weight: 600;
     padding: 14px 16px 10px 16px;
 }
 
 .audio-menu .device {
-    color: #a9b1d6;
+    color: {{foreground}};
     background-color: transparent;
     border: none;
     border-radius: 8px;
@@ -404,12 +404,12 @@
 }
 
 .audio-menu .device:hover {
-    background-color: #292e42;
-    color: #c0caf5;
+    background-color: {{selection}};
+    color: {{bright_foreground}};
 }
 
 .audio-menu .device.selected {
-    color: #9ece6a;
+    color: {{green}};
 }
 
 /* A QSlider draws nothing but its sub-controls, so without ::groove and
@@ -421,25 +421,25 @@
 }
 
 .audio-menu .volume-slider::groove:horizontal {
-    background-color: #292e42;
+    background-color: {{selection}};
     height: 4px;
     border-radius: 2px;
 }
 
 .audio-menu .volume-slider::sub-page:horizontal {
-    background-color: #7aa2f7;
+    background-color: {{accent}};
     height: 4px;
     border-radius: 2px;
 }
 
 .audio-menu .volume-slider::add-page:horizontal {
-    background-color: #292e42;
+    background-color: {{selection}};
     height: 4px;
     border-radius: 2px;
 }
 
 .audio-menu .volume-slider::handle:horizontal {
-    background-color: #c0caf5;
+    background-color: {{bright_foreground}};
     border: none;
     width: 12px;
     height: 12px;
@@ -448,7 +448,7 @@
 }
 
 .audio-menu .volume-slider::handle:horizontal:hover {
-    background-color: #c0caf5;
+    background-color: {{bright_foreground}};
 }
 
 .audio-menu .system-volume-container,
@@ -464,7 +464,7 @@
 }
 
 .power-menu-widget .label {
-    color: #f7768e;
+    color: {{red}};
     font-size: 15px;
     min-width: 28px;
     padding-left: 2px;
@@ -472,7 +472,7 @@
 }
 
 .power-menu-widget:hover .label {
-    color: #ff7a93;
+    color: {{bright_red}};
 }
 
 /* --------------------------------------------------------------------------
@@ -491,8 +491,8 @@
 }
 
 .power-menu-popup {
-    background-color: #1a1b26;
-    border: 1px solid #292e42;
+    background-color: {{background}};
+    border: 1px solid {{selection}};
     border-radius: 16px;
     padding: 8px;
 }
@@ -503,8 +503,8 @@
 }
 
 .power-menu-popup .button {
-    background-color: #24283b;
-    border: 1px solid #292e42;
+    background-color: {{lighter_background}};
+    border: 1px solid {{selection}};
     border-radius: 12px;
     padding: 18px 10px;
     margin: 7px;
@@ -513,37 +513,37 @@
 }
 
 .power-menu-popup .button:hover {
-    background-color: #292e42;
-    border: 1px solid #7aa2f7;
+    background-color: {{selection}};
+    border: 1px solid {{accent}};
 }
 
 .power-menu-popup .button .icon {
     font-size: 40px;
-    color: #7aa2f7;
+    color: {{accent}};
     min-width: 56px;
     padding: 0;
     margin-bottom: 8px;
 }
 
 .power-menu-popup .button .label {
-    color: #c0caf5;
+    color: {{bright_foreground}};
     font-size: 13px;
     font-weight: 500;
     padding: 0;
 }
 
 /* Colour the destructive actions so they are not one undifferentiated grid. */
-.power-menu-popup .button.shutdown .icon { color: #f7768e; }
-.power-menu-popup .button.restart .icon  { color: #ff9e64; }
-.power-menu-popup .button.lock .icon     { color: #9ece6a; }
-.power-menu-popup .button.sleep .icon    { color: #bb9af7; }
-.power-menu-popup .button.cancel .icon   { color: #565f89; }
+.power-menu-popup .button.shutdown .icon { color: {{red}}; }
+.power-menu-popup .button.restart .icon  { color: {{bright_yellow}}; }
+.power-menu-popup .button.lock .icon     { color: {{green}}; }
+.power-menu-popup .button.sleep .icon    { color: {{bright_magenta}}; }
+.power-menu-popup .button.cancel .icon   { color: {{dark_foreground}}; }
 
-.power-menu-popup .button.shutdown:hover { border: 1px solid #f7768e; }
-.power-menu-popup .button.restart:hover  { border: 1px solid #ff9e64; }
+.power-menu-popup .button.shutdown:hover { border: 1px solid {{red}}; }
+.power-menu-popup .button.restart:hover  { border: 1px solid {{bright_yellow}}; }
 
 .power-menu-popup .uptime {
-    color: #565f89;
+    color: {{dark_foreground}};
     font-size: 12px;
     padding: 6px 0 12px 0;
 }
@@ -553,15 +553,15 @@
    -------------------------------------------------------------------------- */
 
 .context-menu {
-    background-color: #1a1b26;
-    border: 1px solid #292e42;
+    background-color: {{background}};
+    border: 1px solid {{selection}};
     border-radius: 8px;
 }
 
 .tooltip {
-    background-color: #24283b;
-    color: #c0caf5;
-    border: 1px solid #414868;
+    background-color: {{lighter_background}};
+    color: {{bright_foreground}};
+    border: 1px solid {{muted}};
     border-radius: 6px;
     padding: 4px 8px;
 }

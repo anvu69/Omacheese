@@ -1,0 +1,187 @@
+{
+  "$schema": "https://raw.githubusercontent.com/LGUG2Z/komorebi/master/schema.json",
+  "app_specific_configuration_path": "$Env:USERPROFILE/.config/komorebi/applications.json",
+  "default_workspace_padding": 8,
+  "default_container_padding": 6,
+  "border": true,
+  "border_width": 2,
+  "border_offset": -1,
+  "border_style": "Rounded",
+  "border_colours": {
+    "single": "{{accent}}",
+    "stack": "{{bright_magenta}}",
+    "monocle": "{{green}}",
+    "floating": "{{yellow}}",
+    "unfocused": "{{muted}}",
+    "unfocused_locked": "{{red}}"
+  },
+  "stackbar": {
+    "mode": "OnStack",
+    "height": 30,
+    "label": "Title",
+    "tabs": {
+      "width": 220,
+      "font_family": "JetBrainsMono NF",
+      "font_size": 12,
+      "background": "{{background}}",
+      "focused_text": "{{bright_foreground}}",
+      "unfocused_text": "{{dark_foreground}}"
+    }
+  },
+  "animation": {
+    "enabled": true,
+    "duration": 160,
+    "fps": 60,
+    "style": "EaseOutQuart"
+  },
+  "mouse_follows_focus": false,
+  "window_hiding_behaviour": "Cloak",
+  "cross_monitor_move_behaviour": "Insert",
+  "unmanaged_window_operation_behaviour": "Op",
+  "monitors": [
+    {
+      "workspaces": [
+        {
+          "name": "term",
+          "layout": "BSP",
+          "layout_options": {
+            "scrolling": {
+              "columns": 1
+            }
+          }
+        },
+        {
+          "name": "web",
+          "layout": "BSP",
+          "layout_options": {
+            "scrolling": {
+              "columns": 1
+            }
+          }
+        },
+        {
+          "name": "code",
+          "layout": "BSP",
+          "layout_options": {
+            "scrolling": {
+              "columns": 1
+            }
+          }
+        },
+        {
+          "name": "ssh",
+          "layout": "BSP",
+          "layout_options": {
+            "scrolling": {
+              "columns": 1
+            }
+          }
+        },
+        {
+          "name": "db",
+          "layout": "BSP",
+          "layout_options": {
+            "scrolling": {
+              "columns": 1
+            }
+          }
+        },
+        {
+          "name": "docs",
+          "layout": "BSP",
+          "layout_options": {
+            "scrolling": {
+              "columns": 1
+            }
+          }
+        },
+        {
+          "name": "chat",
+          "layout": "BSP",
+          "layout_options": {
+            "scrolling": {
+              "columns": 1
+            }
+          }
+        },
+        {
+          "name": "monitor",
+          "layout": "BSP",
+          "layout_options": {
+            "scrolling": {
+              "columns": 1
+            }
+          }
+        },
+        {
+          "name": "media",
+          "layout": "BSP",
+          "layout_options": {
+            "scrolling": {
+              "columns": 1
+            }
+          }
+        },
+        {
+          "name": "scratch",
+          "layout": "BSP",
+          "layout_options": {
+            "scrolling": {
+              "columns": 1
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "floating_applications": [
+    {
+      "kind": "Exe",
+      "id": "Bitwarden.exe",
+      "matching_strategy": "Equals"
+    },
+    {
+      "kind": "Exe",
+      "id": "electerm.exe",
+      "matching_strategy": "Equals"
+    },
+    {
+      "kind": "Exe",
+      "id": "dbeaver.exe",
+      "matching_strategy": "Equals"
+    },
+    {
+      "kind": "Exe",
+      "id": "Everything.exe",
+      "matching_strategy": "Equals"
+    },
+    {
+      "kind": "Exe",
+      "id": "PowerToys.exe",
+      "matching_strategy": "Equals"
+    },
+    {
+      "kind": "Title",
+      "id": "omarchy",
+      "matching_strategy": "Equals"
+    }
+  ],
+  "_comment_floating_menu": "The omarchy menu is matched by TITLE, not Class. Alacritty's --class flag is an X11/Wayland concept that does nothing on Windows: komorebi reports the class of every Alacritty window as the literal string 'Window Class', so a Class rule can never match it. --title does work, and omarchy-term.cmd sets it to 'omarchy'.",
+  "ignore_rules": [
+    {
+      "kind": "Exe",
+      "id": "SnippingTool.exe",
+      "matching_strategy": "Equals"
+    },
+    {
+      "kind": "Exe",
+      "id": "ScreenClippingHost.exe",
+      "matching_strategy": "Equals"
+    },
+    {
+      "kind": "Exe",
+      "id": "yasb.exe",
+      "matching_strategy": "Equals"
+    }
+  ]
+}

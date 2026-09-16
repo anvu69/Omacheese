@@ -134,13 +134,43 @@ if (Test-Path -LiteralPath $raycastSrc) {
     Write-Host "  point Raycast at: $raycastDir" -ForegroundColor DarkGray
 }
 
-# The theme lives one level up, NOT in the scanned script directory - Raycast
-# walks that folder looking for commands and a stray .json there is just noise.
-$themeSrc = Join-Path $Repo "configs\raycast\omarchy-tokyo-night.json"
-if (Test-Path -LiteralPath $themeSrc) {
-    & $Install -Source $themeSrc `
-               -Destination (Join-Path $cfg "omarchy\omarchy-tokyo-night.json") | Out-Null
-    Write-Host "  theme: ./scripts/omarchy/omarchy-raycast-theme.ps1" -ForegroundColor DarkGray
+# --- theme -------------------------------------------------------------------
+# Palettes and templates go in first, then the colours get rendered from them.
+# komorebi.json, styles.css and alacritty.toml were copied above; this rewrites
+# their colours for whichever theme is active, so the copies act as defaults and
+# the palette has the last word.
+Write-Host "`n[theme]" -ForegroundColor Magenta
+$themeHome = Join-Path $cfg "omarchy\theme"
+$palDest   = Join-Path $themeHome "palettes"
+$tmplDest  = Join-Path $themeHome "templates"
+Ensure-Dir $palDest
+Ensure-Dir $tmplDest
+
+foreach ($p in Get-ChildItem (Join-Path $Repo "configs\theme") -Filter *.toml -ErrorAction SilentlyContinue) {
+    & $Install -Source $p.FullName -Destination (Join-Path $palDest $p.Name) | Out-Null
+}
+foreach ($t in @("configs\komorebi\komorebi.json.tmpl",
+                 "configs\yasb\styles.css.tmpl",
+                 "configs\alacritty\alacritty.toml.tmpl")) {
+    $src = Join-Path $Repo $t
+    if (Test-Path -LiteralPath $src) {
+        & $Install -Source $src -Destination (Join-Path $tmplDest (Split-Path $t -Leaf)) | Out-Null
+    }
+}
+
+# Keep whatever theme was already chosen; only fall back on a fresh machine.
+$activeFile = Join-Path $themeHome "active"
+$activeTheme = "tokyo-night"
+if (Test-Path -LiteralPath $activeFile) {
+    $n = (Get-Content -LiteralPath $activeFile -Raw).Trim()
+    if ($n) { $activeTheme = $n }
+}
+
+$themeScript = Join-Path $Repo "scripts\omarchy\omarchy-theme.ps1"
+if (Test-Path -LiteralPath $themeScript) {
+    & $themeScript -Set $activeTheme -NoRestart
+} else {
+    Write-Host "  omarchy-theme.ps1 missing - colours left as shipped" -ForegroundColor Yellow
 }
 
 # --- komorebi application-specific config ------------------------------------

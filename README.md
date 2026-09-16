@@ -145,6 +145,7 @@ Xem thêm [`docs/no-clone-install.md`](docs/no-clone-install.md).
 │   ├── wsl/             .wslconfig, wsl.conf, ssh-agent-bridge.sh
 │   ├── tmux/            tmux.conf
 │   ├── zsh/             zshrc, aliases.zsh
+│   ├── theme/           palette (tokyo-night, catppuccin)
 │   ├── winget/          packages.json  (nguồn app duy nhất)
 │   ├── windows/         debloat.json   (profile Win11Debloat)
 │   ├── ai/              compose vLLM + fine-tune
@@ -156,6 +157,7 @@ Xem thêm [`docs/no-clone-install.md`](docs/no-clone-install.md).
 │   ├── ai-stack.md               agents, Docker/GPU, vLLM
 │   ├── windows-tuning.md         debloat + taskbar
 │   ├── raycast.md                script commands (tuỳ chọn)
+│   ├── theming.md                một palette cho cả desktop
 │   ├── aliases-and-shell.md
 │   ├── ssh-bitwarden-electerm.md agent → WSL
 │   ├── jump-server.md

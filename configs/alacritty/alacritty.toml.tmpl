@@ -1,0 +1,102 @@
+# Alacritty - Windows host shell (PowerShell 7).
+#
+# For the WSL variant see alacritty.wsl.toml in this directory; scripts install
+# it next to this file so you can switch with:
+#   alacritty --config-file %APPDATA%\alacritty\alacritty.wsl.toml
+#
+# Colours are Omarchy's Tokyo Night (themes/tokyo-night/colors.toml) so the
+# terminal, the komorebi borders and the yasb bar are one palette.
+
+[terminal.shell]
+program = "pwsh.exe"
+args = ["-NoLogo"]
+
+# FONT FAMILY NAME, not the package name. winget's
+# DEVCOM.JetBrainsMonoNerdFont installs files called
+# JetBrainsMonoNerdFont-*.ttf, but the family registers as:
+#   JetBrainsMono NF    variable-width icons
+#   JetBrainsMono NFM   Mono - icons forced to one cell  <- terminals want this
+#   JetBrainsMono NFP   Propo
+# "JetBrainsMono Nerd Font" does NOT exist and silently falls back to a font
+# with no icons at all. Check yours with:
+#   [Drawing.Text.InstalledFontCollection]::new().Families | ? Name -like '*NF*'
+[font]
+size = 11.5
+
+[font.normal]
+family = "JetBrainsMono NFM"
+style = "Regular"
+
+[font.bold]
+family = "JetBrainsMono NFM"
+style = "Bold"
+
+[font.italic]
+family = "JetBrainsMono NFM"
+style = "Italic"
+
+[window]
+decorations = "Full"
+dynamic_padding = false
+startup_mode = "Windowed"
+opacity = 1.0
+
+[window.padding]
+x = 8
+y = 6
+
+[scrolling]
+history = 50000
+
+[selection]
+save_to_clipboard = true
+
+[cursor]
+style = { shape = "Block", blinking = "Off" }
+
+[keyboard]
+bindings = [
+  { key = "N", mods = "Control|Shift", action = "CreateNewWindow" },
+  { key = "V", mods = "Control|Shift", action = "Paste" },
+  { key = "C", mods = "Control|Shift", action = "Copy" },
+  { key = "F", mods = "Control|Shift", action = "SearchForward" },
+  { key = "Equals", mods = "Control", action = "IncreaseFontSize" },
+  { key = "Minus", mods = "Control", action = "DecreaseFontSize" },
+  { key = "Key0", mods = "Control", action = "ResetFontSize" },
+]
+
+# --- Omarchy Tokyo Night --------------------------------------------------
+
+[colors.primary]
+background = "{{background}}"
+foreground = "{{foreground}}"
+dim_foreground = "{{dark_foreground}}"
+bright_foreground = "{{bright_foreground}}"
+
+[colors.cursor]
+text = "{{background}}"
+cursor = "{{blue}}"
+
+[colors.selection]
+text = "CellForeground"
+background = "{{selection}}"
+
+[colors.normal]
+black = "{{background}}"
+red = "{{red}}"
+green = "{{green}}"
+yellow = "{{yellow}}"
+blue = "{{blue}}"
+magenta = "{{magenta}}"
+cyan = "{{cyan}}"
+white = "{{foreground}}"
+
+[colors.bright]
+black = "{{muted}}"
+red = "{{bright_red}}"
+green = "{{bright_green}}"
+yellow = "{{bright_yellow}}"
+blue = "{{bright_blue}}"
+magenta = "{{bright_magenta}}"
+cyan = "{{bright_cyan}}"
+white = "{{bright_foreground}}"

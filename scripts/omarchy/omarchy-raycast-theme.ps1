@@ -1,12 +1,12 @@
-# Apply the repo's Tokyo Night palette to Raycast.
+# Apply the active palette to Raycast.
 #
 #   omarchy-raycast-theme.ps1              import it into Raycast
 #   omarchy-raycast-theme.ps1 -ShowUrl     print the link instead
 #
 # Raycast has no "import theme from file" - a theme travels as a deep link, so
-# this builds one from configs/raycast/omarchy-tokyo-night.json and hands it to
-# the shell. The JSON stays the single source of truth; nothing here hardcodes a
-# colour, so the link cannot drift from the file.
+# this builds one from the theme omarchy-theme.ps1 rendered. Nothing here
+# hardcodes a colour, so Raycast follows whatever the rest of the desktop is
+# wearing rather than being a second place to change.
 #
 # The format is the one themes.ray.so itself uses (lib/url.ts in
 # raycast/theme-explorer): every field except `colors` becomes a query
@@ -23,18 +23,12 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Installed copy first, then the repo, so this works both from a clone and from
-# ~/.config where link-configs.ps1 puts it.
-$candidates = @(
-    (Join-Path $env:USERPROFILE ".config\omarchy\omarchy-tokyo-night.json"),
-    (Join-Path $PSScriptRoot "..\..\configs\raycast\omarchy-tokyo-night.json")
-)
-$themeFile = $null
-foreach ($c in $candidates) {
-    if (Test-Path -LiteralPath $c) { $themeFile = (Resolve-Path -LiteralPath $c).Path; break }
-}
-if (-not $themeFile) {
-    Write-Host "Theme file not found. Run ./scripts/link-configs.ps1" -ForegroundColor Red
+# omarchy-theme.ps1 writes this whenever a theme is set.
+$themeFile = Join-Path $env:USERPROFILE ".config\omarchy\raycast-theme.json"
+if (-not (Test-Path -LiteralPath $themeFile)) {
+    Write-Host "No rendered theme yet. Pick one first:" -ForegroundColor Red
+    Write-Host "  ./scripts/omarchy/omarchy-theme.ps1 -List" -ForegroundColor Cyan
+    Write-Host "  ./scripts/omarchy/omarchy-theme.ps1 -Set tokyo-night" -ForegroundColor Cyan
     exit 1
 }
 

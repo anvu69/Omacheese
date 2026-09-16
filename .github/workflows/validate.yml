@@ -79,6 +79,57 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Theme templates render back to the committed configs
+        shell: pwsh
+        run: |
+          # Two things can rot here: a template drifting from the config it is
+          # supposed to produce, and a token that only some palettes define.
+          function Read-Palette($path) {
+            $m = @{}
+            foreach ($line in Get-Content -LiteralPath $path) {
+              $x = [regex]::Match($line, '^\s*(\w+)\s*=\s*"([^"]*)"')
+              if ($x.Success) { $m[$x.Groups[1].Value] = $x.Groups[2].Value }
+            }
+            return $m
+          }
+
+          $pals = @{}
+          foreach ($f in Get-ChildItem configs/theme -Filter *.toml) {
+            $pals[[IO.Path]::GetFileNameWithoutExtension($f.Name)] = Read-Palette $f.FullName
+          }
+          if ($pals.Count -eq 0) { Write-Host "no palettes"; exit 1 }
+
+          $pairs = @(
+            @{ T = "configs/komorebi/komorebi.json.tmpl";   C = "configs/komorebi/komorebi.json" }
+            @{ T = "configs/yasb/styles.css.tmpl";          C = "configs/yasb/styles.css" }
+            @{ T = "configs/alacritty/alacritty.toml.tmpl"; C = "configs/alacritty/alacritty.toml" }
+          )
+
+          $bad = 0
+          foreach ($p in $pairs) {
+            $tmpl = [IO.File]::ReadAllText($p.T)
+
+            # Every token must exist in every palette, or switching theme leaves
+            # a literal {{token}} in a config.
+            $tokens = [regex]::Matches($tmpl, '\{\{(\w+)\}\}') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
+            foreach ($name in $pals.Keys) {
+              $miss = $tokens | Where-Object { -not $pals[$name].ContainsKey($_) }
+              if ($miss) { Write-Host "FAIL $($p.T): palette '$name' lacks $($miss -join ', ')"; $bad++ }
+            }
+
+            # tokyo-night is what the committed files are rendered from.
+            $rendered = [regex]::Replace($tmpl, '\{\{(\w+)\}\}', {
+              param($m) $pals["tokyo-night"][$m.Groups[1].Value] })
+            $committed = [IO.File]::ReadAllText($p.C)
+            if ($rendered -ne $committed) {
+              Write-Host "FAIL $($p.C) is not render($($p.T), tokyo-night)"
+              $bad++
+            } else {
+              Write-Host "ok   $($p.C)"
+            }
+          }
+          if ($bad) { exit 1 }
+
       - name: Raycast script command metadata
         shell: pwsh
         run: |

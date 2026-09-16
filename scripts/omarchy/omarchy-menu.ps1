@@ -296,14 +296,14 @@ function Get-Menu {
 
 # --- window -----------------------------------------------------------------
 
-[xml]$xamlDoc = @'
+$xamlSource = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="omarchy" WindowStyle="None" AllowsTransparency="True"
         Background="Transparent" ShowInTaskbar="False" Topmost="True"
         ResizeMode="NoResize" Width="780" Height="620"
         FontFamily="Segoe UI Variable Text, Segoe UI">
-  <Border Background="#FF1A1B26" CornerRadius="14" BorderBrush="#FF414868" BorderThickness="1">
+  <Border Background="{{background}}" CornerRadius="14" BorderBrush="{{muted}}" BorderThickness="1">
     <Grid>
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto"/>
@@ -311,22 +311,22 @@ function Get-Menu {
         <RowDefinition Height="Auto"/>
       </Grid.RowDefinitions>
 
-      <Border Grid.Row="0" Padding="24,18,24,16" BorderBrush="#FF2A2E42" BorderThickness="0,0,0,1">
+      <Border Grid.Row="0" Padding="24,18,24,16" BorderBrush="{{selection}}" BorderThickness="0,0,0,1">
         <Grid>
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
           </Grid.ColumnDefinitions>
-          <TextBlock x:Name="Crumb" Grid.Column="0" Text="omarchy" Foreground="#FF7AA2F7"
+          <TextBlock x:Name="Crumb" Grid.Column="0" Text="omarchy" Foreground="{{accent}}"
                      FontSize="21" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0"/>
-          <TextBox x:Name="Search" Grid.Column="1" Background="Transparent" Foreground="#FFC0CAF5"
-                   BorderThickness="0" FontSize="21" CaretBrush="#FF7AA2F7"
+          <TextBox x:Name="Search" Grid.Column="1" Background="Transparent" Foreground="{{bright_foreground}}"
+                   BorderThickness="0" FontSize="21" CaretBrush="{{accent}}"
                    VerticalContentAlignment="Center" Padding="0"/>
         </Grid>
       </Border>
 
       <ListBox x:Name="List" Grid.Row="1" Background="Transparent" BorderThickness="0"
-               Foreground="#FFC0CAF5" Padding="8,10,8,10"
+               Foreground="{{bright_foreground}}" Padding="8,10,8,10"
                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                ScrollViewer.VerticalScrollBarVisibility="Auto">
         <ListBox.Resources>
@@ -343,7 +343,7 @@ function Get-Menu {
                         <Thumb>
                           <Thumb.Template>
                             <ControlTemplate TargetType="Thumb">
-                              <Border Background="#FF3B4261" CornerRadius="4" Margin="2,0"/>
+                              <Border Background="{{muted}}" CornerRadius="4" Margin="2,0"/>
                             </ControlTemplate>
                           </Thumb.Template>
                         </Thumb>
@@ -375,10 +375,10 @@ function Get-Menu {
                   </Border>
                   <ControlTemplate.Triggers>
                     <Trigger Property="IsMouseOver" Value="True">
-                      <Setter TargetName="Bd" Property="Background" Value="#FF20243A"/>
+                      <Setter TargetName="Bd" Property="Background" Value="{{selection}}"/>
                     </Trigger>
                     <Trigger Property="IsSelected" Value="True">
-                      <Setter TargetName="Bd" Property="Background" Value="#FF283457"/>
+                      <Setter TargetName="Bd" Property="Background" Value="{{muted}}"/>
                     </Trigger>
                   </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -394,26 +394,60 @@ function Get-Menu {
                 <ColumnDefinition Width="Auto"/>
               </Grid.ColumnDefinitions>
               <StackPanel Grid.Column="0">
-                <TextBlock Text="{Binding Label}" FontSize="17" Foreground="#FFC0CAF5"
+                <TextBlock Text="{Binding Label}" FontSize="17" Foreground="{{bright_foreground}}"
                            TextTrimming="CharacterEllipsis"/>
-                <TextBlock Text="{Binding Desc}" FontSize="12.5" Foreground="#FF6B7394"
+                <TextBlock Text="{Binding Desc}" FontSize="12.5" Foreground="{{dark_foreground}}"
                            Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
               </StackPanel>
-              <TextBlock Grid.Column="1" Text="{Binding Chevron}" FontSize="19" Foreground="#FF565F89"
+              <TextBlock Grid.Column="1" Text="{Binding Chevron}" FontSize="19" Foreground="{{dark_foreground}}"
                          VerticalAlignment="Center" Margin="14,0,4,0"/>
             </Grid>
           </DataTemplate>
         </ListBox.ItemTemplate>
       </ListBox>
 
-      <Border Grid.Row="2" Padding="24,12,24,14" BorderBrush="#FF2A2E42" BorderThickness="0,1,0,0">
-        <TextBlock x:Name="Hint" Foreground="#FF565F89" FontSize="12.5"
+      <Border Grid.Row="2" Padding="24,12,24,14" BorderBrush="{{selection}}" BorderThickness="0,1,0,0">
+        <TextBlock x:Name="Hint" Foreground="{{dark_foreground}}" FontSize="12.5"
                    Text="Type to filter    Enter run    Esc back    click or scroll with the mouse"/>
       </Border>
     </Grid>
   </Border>
 </Window>
 '@
+
+# Colours come from the active palette, not from literals in here - the whole
+# desktop is themed from one file (see omarchy-theme.ps1). Falls back to Tokyo
+# Night so the menu still renders on a machine that has never set a theme.
+$fallback = @{
+    background = "#1a1b26"; lighter_background = "#24283b"; selection = "#292e42"
+    muted = "#414868"; accent = "#7aa2f7"
+    bright_foreground = "#c0caf5"; dark_foreground = "#565f89"
+}
+$palette = $fallback.Clone()
+try {
+    $themeHome = Join-Path $cfg "omarchy\theme"
+    $active = "tokyo-night"
+    $activeFile = Join-Path $themeHome "active"
+    if (Test-Path -LiteralPath $activeFile) {
+        $n = (Get-Content -LiteralPath $activeFile -Raw).Trim()
+        if ($n) { $active = $n }
+    }
+    $palFile = Join-Path $themeHome "palettes\$active.toml"
+    if (Test-Path -LiteralPath $palFile) {
+        foreach ($line in Get-Content -LiteralPath $palFile) {
+            $mm = [regex]::Match($line, '^\s*(\w+)\s*=\s*"([^"]*)"')
+            if ($mm.Success) { $palette[$mm.Groups[1].Value] = $mm.Groups[2].Value }
+        }
+    }
+} catch { }
+
+$xamlText = [regex]::Replace($xamlSource, '\{\{(\w+)\}\}', {
+    param($mm)
+    $k = $mm.Groups[1].Value
+    if ($palette.ContainsKey($k)) { return $palette[$k] }
+    return "#1a1b26"
+})
+[xml]$xamlDoc = $xamlText
 
 $reader = New-Object System.Xml.XmlNodeReader $xamlDoc
 $win    = [Windows.Markup.XamlReader]::Load($reader)

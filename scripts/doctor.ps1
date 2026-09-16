@@ -456,6 +456,40 @@ if (Get-Command wsl -ErrorAction SilentlyContinue) {
     }
 }
 
+Section "theme"
+# A leftover {{token}} in a rendered config means the palette is missing a key -
+# komorebi refuses the file outright, yasb just draws the element black.
+$themeHome = Join-Path $env:USERPROFILE ".config\omarchy\theme"
+$activeName = "tokyo-night"
+$activeFile = Join-Path $themeHome "active"
+if (Test-Path -LiteralPath $activeFile) {
+    $n = (Get-Content -LiteralPath $activeFile -Raw).Trim()
+    if ($n) { $activeName = $n }
+}
+$palFile = Join-Path $themeHome "palettes\$activeName.toml"
+if (-not (Test-Path -LiteralPath $palFile)) {
+    Warn "palette '$activeName' not installed - run ./scripts/link-configs.ps1"
+} else {
+    Ok "theme '$activeName'"
+    $rendered = @(
+        (Join-Path $env:USERPROFILE ".config\komorebi\komorebi.json"),
+        (Join-Path $env:USERPROFILE ".config\yasb\styles.css"),
+        (Join-Path $env:APPDATA "alacritty\alacritty.toml")
+    )
+    $stray = 0
+    foreach ($f in $rendered) {
+        if (-not (Test-Path -LiteralPath $f)) { continue }
+        $txt = Get-Content -LiteralPath $f -Raw
+        $m = [regex]::Matches($txt, '\{\{(\w+)\}\}')
+        if ($m.Count -gt 0) {
+            $names = ($m | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique) -join ', '
+            Bad "$(Split-Path $f -Leaf): unresolved $names"
+            $stray++
+        }
+    }
+    if ($stray -eq 0) { Ok "rendered configs have no unresolved tokens" }
+}
+
 Section "raycast script commands"
 # These are inert without Raycast, but a malformed metadata header means the
 # command silently never appears - so validate the header rather than the app.
@@ -476,12 +510,12 @@ if (-not (Test-Path -LiteralPath $rcDir)) {
                 $meta[$m.Groups[1].Value] = $m.Groups[2].Value
             }
             $missing = @("schemaVersion", "title", "mode") | Where-Object { -not $meta.ContainsKey($_) }
-            if ($missing) { Fail "$($f.Name): missing @raycast.$($missing -join ', ')"; $rcBad++; continue }
-            if ($validModes -notcontains $meta["mode"]) { Fail "$($f.Name): bad mode '$($meta['mode'])'"; $rcBad++; continue }
+            if ($missing) { Bad "$($f.Name): missing @raycast.$($missing -join ', ')"; $rcBad++; continue }
+            if ($validModes -notcontains $meta["mode"]) { Bad "$($f.Name): bad mode '$($meta['mode'])'"; $rcBad++; continue }
             $argBad = $false
             foreach ($k in $meta.Keys) {
                 if ($k -notlike "argument*") { continue }
-                try { $null = $meta[$k] | ConvertFrom-Json } catch { Fail "$($f.Name): $k is not valid JSON"; $argBad = $true }
+                try { $null = $meta[$k] | ConvertFrom-Json } catch { Bad "$($f.Name): $k is not valid JSON"; $argBad = $true }
             }
             if ($argBad) { $rcBad++ }
         }
