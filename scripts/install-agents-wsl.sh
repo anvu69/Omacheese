@@ -26,8 +26,16 @@ have() {
   case "$p" in /mnt/*) return 1 ;; *) return 0 ;; esac
 }
 
+# mise first: it is the one version manager this setup uses, it needs no sudo,
+# and a node it installs is the same node the Windows side gets. nodesource is
+# the fallback for a distro that has not run the mise install yet.
 ensure_node() {
   have node && return 0
+  if have mise; then
+    say "Installing Node.js via mise"
+    mise use -g node@lts && return 0
+    warn "mise could not install node; falling back to nodesource"
+  fi
   say "Installing Node.js 22 (nodesource)"
   curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash - || {
     warn "nodesource failed; falling back to the distro stream"
@@ -36,15 +44,30 @@ ensure_node() {
   sudo dnf install -y nodejs || return 1
 }
 
+ensure_mise() {
+  have mise && return 0
+  say "Installing mise"
+  curl -fsSL https://mise.run | sh || return 1
+  export PATH="$HOME/.local/bin:$PATH"
+}
+
+# Claude Code keeps its own installer: it is a native binary and needs no Node.
 install_claude() {
   curl -fsSL https://claude.ai/install.sh | bash
 }
-install_codex()    { ensure_node && npm install -g @openai/codex; }
-install_gemini()   { ensure_node && npm install -g @google/gemini-cli; }
-install_opencode() { curl -fsSL https://opencode.ai/install | bash; }
-install_copilot()  { ensure_node && npm install -g @github/copilot; }
-install_crush()    { ensure_node && npm install -g @charmland/crush; }
+
+# The rest go through mise, the same way they do on the Windows side, so both
+# halves of this setup manage agent versions with one tool.
+install_codex()    { ensure_mise && mise use -g codex; }
+install_opencode() { ensure_mise && mise use -g opencode; }
+install_copilot()  { ensure_mise && mise use -g copilot; }
+install_crush()    { ensure_mise && mise use -g crush; }
 install_cursor()   { curl https://cursor.com/install -fsS | bash; }
+
+# gemini is the exception. Its only mise backend is npm, and gemini-cli pulls
+# node-pty, which compiles native code on install. So mise supplies node and
+# npm does the rest.
+install_gemini()   { ensure_mise && ensure_node && npm install -g @google/gemini-cli; }
 
 # claude first: it is the default agent and the only one with no prerequisite.
 ALL="claude codex gemini opencode"

@@ -133,7 +133,7 @@
       ]
     },
     "agents": {
-      "description": "Coding agents and the runtimes they need. Managed by scripts/omacheese/omacheese-default-agent.ps1.",
+      "description": "Coding agents and the runtimes they need. Node comes from mise (the 'langs' module), not a second version manager. Managed by scripts/omacheese/omacheese-default-agent.ps1.",
       "packages": [
         {
           "id": "Anthropic.ClaudeCode",
@@ -142,10 +142,6 @@
         {
           "id": "OpenAI.Codex",
           "note": "Codex"
-        },
-        {
-          "id": "Schniz.fnm",
-          "note": "fast node version manager - for npm-installed agents"
         },
         {
           "id": "astral-sh.uv",

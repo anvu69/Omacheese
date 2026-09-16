@@ -96,7 +96,7 @@ Once it finishes, `SUPER + /` lists every keybinding.
 | Terminal multiplexer | tmux |
 | Editor | LazyVim / Neovim |
 | Runtimes | Visual C++ 2015-2022, .NET 10 desktop runtime |
-| Language versions | mise, one manager for node, python, go, rust and dart |
+| Language versions | mise, and only mise: node, python, go, rust, dart, and most of the agents |
 | CLI | fzf, ripgrep, fd, eza, bat, zoxide, delta, lazygit, gh, jq |
 | File search | Everything |
 | Browser | Brave + Vimium C |
@@ -104,7 +104,7 @@ Once it finishes, `SUPER + /` lists every keybinding.
 | Database | DBeaver Community |
 | SSH GUI | electerm |
 | SSH keys / vault | Bitwarden Desktop SSH Agent, bridged into WSL |
-| Coding agents | Claude Code, Codex, Gemini, OpenCode |
+| Coding agents | Claude Code, Codex, Gemini, OpenCode, Copilot, Crush - installed through mise |
 | Agent panes | tmux layouts in WSL; herdr on Windows, optional |
 | Local LLM | Ollama anywhere, or vLLM + GPU when the VRAM is there |
 | Debloat | Win11Debloat with a pinned, version-controlled profile |

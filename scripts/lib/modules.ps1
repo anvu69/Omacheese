@@ -82,7 +82,7 @@ function Get-SetupModules {
         -Available $wingetOk -Note "needs winget" -Est "5-10 min" `
         -Action { param($ctx) & $ctx.InstallWindows -Groups @("desktop") }))
 
-    $mods.Add((New-Mod -Key "agents" -Description "Claude Code, Codex, fnm, uv + the agent launcher" `
+    $mods.Add((New-Mod -Key "agents" -Description "Claude Code, Codex, uv + the agent launcher" `
         -Available $wingetOk -Note "needs winget" -Est "2-4 min" `
         -Action { param($ctx) & $ctx.InstallWindows -Groups @("agents") }))
 

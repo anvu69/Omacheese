@@ -250,6 +250,28 @@ jobs:
               if (-not $script:Agents[$k][$field]) { Write-Host "FAIL ${k}: no $field"; $bad++ }
             }
           }
+          # An agent whose install line drives mise must name the same tool in
+          # its Mise field, and vice versa. They are read by different code -
+          # the field by the launcher, the line by a human copying it - so they
+          # drift silently if nothing compares them.
+          foreach ($k in $script:Agents.Keys) {
+            $a = $script:Agents[$k]
+            $fromLine = $null
+            foreach ($line in @($a.Install, $a.LinuxInstall)) {
+              # '@' is in the class so node@lts is captured whole - without it
+              # the match was 'node', which never equalled the value being
+              # excluded and made gemini fail a check it should not be in.
+              $m = [regex]::Match([string]$line, 'mise use -g ([A-Za-z0-9._@-]+)')
+              # node is a language mise supplies, not the agent being installed.
+              if ($m.Success -and $m.Groups[1].Value -notlike 'node*') { $fromLine = $m.Groups[1].Value; break }
+            }
+            if ($fromLine -and -not $a.Mise) {
+              Write-Host "FAIL ${k}: installs with 'mise use -g $fromLine' but has no Mise field"; $bad++
+            } elseif ($a.Mise -and $fromLine -and $a.Mise -ne $fromLine) {
+              Write-Host "FAIL ${k}: Mise says '$($a.Mise)' but the install line says '$fromLine'"; $bad++
+            }
+          }
+
           Write-Host "$($script:Agents.Count) agents checked"
           if ($bad) { exit 1 }
 

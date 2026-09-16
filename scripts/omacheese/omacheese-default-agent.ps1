@@ -29,6 +29,13 @@ $StateFile = Join-Path $env:USERPROFILE ".config\omacheese\defaults\agent"
 #
 # Flags marked "verified" were checked against the installed CLI's --help.
 #
+# `Mise` names the tool in mise's registry, where mise can install the agent
+# directly. That is the preferred route now that mise is the only version
+# manager here: it is one command on both operating systems and it keeps the
+# agent upgradable with `mise up`. Verified on Windows, mise 2026.9.5 - the
+# aqua-backed ones install in about 20 seconds each; the npm-backed ones do
+# not work when the package compiles native code.
+#
 # `Install` is the Windows line, `LinuxInstall` the one for -Wsl. They are not
 # the same command and could not be: winget does not exist inside AlmaLinux,
 # and Claude Code ships a native Linux installer that needs no Node at all,
@@ -39,6 +46,7 @@ $script:Agents = [ordered]@{
         Command = "claude"
         Yolo    = @("--dangerously-skip-permissions")   # verified
         Winget  = "Anthropic.ClaudeCode"
+        Mise    = "claude"                              # aqua:anthropics/claude-code
         Install = "winget install --id Anthropic.ClaudeCode -e"
         LinuxInstall = "curl -fsSL https://claude.ai/install.sh | bash"
     }
@@ -47,29 +55,37 @@ $script:Agents = [ordered]@{
         Command = "codex"
         Yolo    = @("--dangerously-bypass-approvals-and-sandbox")  # verified
         Winget  = "OpenAI.Codex"
+        Mise    = "codex"                               # aqua:openai/codex
         Install = "winget install --id OpenAI.Codex -e"
-        LinuxInstall = "npm install -g @openai/codex"
+        LinuxInstall = "mise use -g codex"
     }
     gemini = @{
         Name    = "Gemini CLI"
         Command = "gemini"
         Yolo    = @("--yolo")                            # verified
-        Install = "npm install -g @google/gemini-cli"
-        LinuxInstall = "npm install -g @google/gemini-cli"
+        # The one agent mise cannot install on Windows: its only backend is
+        # npm, and gemini-cli pulls node-pty, whose install script compiles
+        # native code. Measured: mise install gemini fails with "lifecycle
+        # script install failed for node-pty". So mise supplies node and npm
+        # does the rest - which is exactly the job fnm used to have.
+        Install = "mise use -g node@lts; npm install -g @google/gemini-cli"
+        LinuxInstall = "mise use -g node@lts && npm install -g @google/gemini-cli"
     }
     opencode = @{
         Name    = "OpenCode"
         Command = "opencode"
         Yolo    = @()   # no documented non-interactive approval flag on the TUI
-        Install = "npm install -g opencode-ai"
-        LinuxInstall = "curl -fsSL https://opencode.ai/install | bash"
+        Mise    = "opencode"                            # aqua:anomalyco/opencode
+        Install = "mise use -g opencode"
+        LinuxInstall = "mise use -g opencode"
     }
     copilot = @{
         Name    = "GitHub Copilot CLI"
         Command = "copilot"
         Yolo    = @("--allow-all")                       # unverified - not installed here
-        Install = "npm install -g @github/copilot"
-        LinuxInstall = "npm install -g @github/copilot"
+        Mise    = "copilot"                             # aqua:github/copilot-cli
+        Install = "mise use -g copilot"
+        LinuxInstall = "mise use -g copilot"
     }
     cursor = @{
         Name    = "Cursor CLI"
@@ -82,8 +98,9 @@ $script:Agents = [ordered]@{
         Name    = "Crush"
         Command = "crush"
         Yolo    = @("--yolo")                            # unverified - not installed here
-        Install = "npm install -g @charmland/crush"
-        LinuxInstall = "npm install -g @charmland/crush"
+        Mise    = "crush"                               # aqua:charmbracelet/crush
+        Install = "mise use -g crush"
+        LinuxInstall = "mise use -g crush"
     }
 }
 

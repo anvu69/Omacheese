@@ -13,7 +13,8 @@ Port từ `omarchy-agent` / `omarchy-default-agent` của Omarchy: chọn một 
 mặc định, rồi một phím mở nó.
 
 ```powershell
-./scripts/install-windows.ps1 -Groups agents      # Claude Code, Codex, fnm, uv
+./scripts/install-windows.ps1 -Groups agents      # Claude Code, Codex, uv
+./scripts/install-windows.ps1 -Groups langs       # mise: node + 4 other languages
 omacheese-default-agent.ps1 -List               # xem có gì
 omacheese-default-agent.ps1 claude              # đặt mặc định
 ```

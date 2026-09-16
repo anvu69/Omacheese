@@ -30,59 +30,128 @@ runtimes and toolchains
   PASS  mise 2026.9.5 windows-x64
 ```
 
-## Language versions: `mise`, in the `langs` module
+## Language versions: mise, and only mise
 
-One binary handles all five, rather than five managers each shimming their own
-executable onto PATH and arguing about order:
+One binary handles every language, and the coding agents too. This is the model
+Omarchy uses - it installs each agent through mise rather than through npm - and
+the reason to copy it is that five version managers each shimming their own
+executable onto PATH is a fight nobody wins.
 
 ```powershell
-mise use node@22          # in this directory
-mise use -g python@3.13   # everywhere
-mise ls                   # what is pinned
+mise use -g node@lts       # globally
+mise use python@3.13       # just this directory, written to .mise.toml
+mise ls                    # what is installed
+mise up                    # upgrade everything
 ```
 
-Verified on Windows, not assumed - `mise ls-remote` resolves on every one of
-them, and an actual `mise install node@22` finished in 13 seconds and produced
-a working `node --version`:
+`mise use` writes the version into a config file, so the next person to clone
+the repo gets the same one. `mise install` only downloads.
 
-| | versions available on Windows |
-|---|---|
-| node | 865 |
-| python | 125 |
-| go | 289 |
-| rust | 154 |
-| dart | 179 |
+### Quick install
 
-Installing mise installs no language. It is 35 MB and sits there until you ask
-for something, which is why it can be on by default without costing anyone a
-download they did not want.
+```powershell
+# the whole module (this is what the installer does)
+./scripts/install-windows.ps1 -Groups langs
 
-mise also reads `.tool-versions` and `.mise.toml`, so a repo that pins its
-versions gets them automatically when you `cd` into it.
+# or just mise, by hand
+winget install --id jdx.mise -e
 
-### mise and fnm
+# then, in a new terminal
+mise use -g node@lts python@3.13 go@latest rust@latest
+mise use -g dart@latest
+```
 
-`fnm` is still installed by the `agents` module, because the npm-based coding
-agents need a node and fnm is 3 MB. Both can manage node, and if you activate
-both, whichever is earlier on PATH wins.
+Inside WSL:
 
-Pick one for node. If you want mise to own it, `mise use -g node@lts` and let
-fnm just sit there for the agents; if you prefer fnm, do not `mise use node`.
-This is a real conflict rather than a theoretical one, which is why it is
-written down here.
+```bash
+curl -fsSL https://mise.run | sh
+echo 'eval "$(mise activate zsh)"' >> ~/.zshrc
+```
 
-### Rust
+### Verified on Windows, not assumed
 
-mise can install rust, and that is what the `langs` module gives you. If you
-would rather have the canonical toolchain manager, `rustup` is one command
-away and the two can coexist as long as only one is on PATH:
+mise's own docs only promise that support "varies by platform", so this was
+measured against mise 2026.9.5:
+
+| | versions offered | real install |
+|---|---|---|
+| node | 865 | 13s, `node --version` works |
+| python | 125 | |
+| go | 289 | |
+| rust | 154 | |
+| dart | 179 | |
+| crush | 185 | 22s, `crush version v0.94.2` |
+| copilot | 134 | 24s, `GitHub Copilot CLI 1.0.83` |
+| opencode | 868 | 19s, `1.18.31` |
+
+One thing does not work, and it is worth knowing before you try it:
+
+```text
+mise install gemini
+  ERROR ... lifecycle script install failed for node-pty@1.0.0
+```
+
+`gemini-cli` is only available through mise's **npm** backend, and it depends on
+`node-pty`, which compiles native code at install time. The aqua backend - which
+downloads a prebuilt binary - is what the other agents use, and that works
+fine. So gemini is installed the old way, with mise supplying the node:
+
+```powershell
+mise use -g node@lts
+npm install -g @google/gemini-cli
+```
+
+That is precisely the job `fnm` used to do here, which is why fnm is gone.
+
+### fnm is no longer installed
+
+It was in the `agents` module to give the npm-based agents a node. mise does
+that and four other languages, so keeping both meant two managers shimming
+`node` with PATH order deciding the winner.
+
+If a previous install of this repo put fnm on your machine, nothing here
+removes it - uninstall it yourself if you want it gone, and make sure mise is
+earlier on PATH until you do:
+
+```powershell
+winget uninstall --id Schniz.fnm -e
+```
+
+### Rust, if you want rustup as well
+
+`mise use -g rust@latest` is enough for most work. If you want the canonical
+toolchain manager - `rustup toolchain`, nightly, cross targets - install it
+alongside and keep only one of the two on PATH:
 
 ```powershell
 winget install --id Rustlang.Rustup -e
 ```
 
-Inside WSL, `install-almalinux.sh` already installs rustup - that side is
+Inside WSL, `install-almalinux.sh` already installs rustup; that side is
 unchanged.
+
+### mise's own documentation
+
+This repo installs and configures mise; it does not wrap it. For anything
+beyond the above, go to the source:
+
+| | |
+|---|---|
+| [Getting started](https://mise.jdx.dev/getting-started.html) | install, activate, first tool |
+| [Dev tools](https://mise.jdx.dev/dev-tools/) | how `use` / `install` / `up` actually behave |
+| [Configuration](https://mise.jdx.dev/configuration.html) | `.mise.toml`, `.tool-versions`, config precedence |
+| [Registry](https://mise.jdx.dev/registry.html) | every tool mise knows, and which backend serves it |
+| [`mise use`](https://mise.jdx.dev/cli/use.html) | the one command you will type most |
+| [Environments](https://mise.jdx.dev/environments/) | per-directory env vars, secrets |
+| [IDE integration](https://mise.jdx.dev/ide-integration.html) | making VS Code and JetBrains see mise versions |
+| [FAQ](https://mise.jdx.dev/faq.html) | including the Windows notes |
+
+Per language: [node](https://mise.jdx.dev/lang/node.html),
+[python](https://mise.jdx.dev/lang/python.html),
+[go](https://mise.jdx.dev/lang/go.html),
+[rust](https://mise.jdx.dev/lang/rust.html). Dart has no page of its own; it is
+served from the [registry](https://mise.jdx.dev/registry.html) like the other
+community-backed tools.
 
 ## The .NET SDK is separate
 

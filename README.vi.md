@@ -101,6 +101,8 @@ Cài xong, `SUPER + /` liệt kê toàn bộ keybinding.
 | SSH GUI | electerm |
 | SSH key / vault | Bitwarden Desktop SSH Agent, nối cầu vào WSL |
 | Coding agents | Claude Code, Codex, Gemini, OpenCode |
+| Runtime | Visual C++ 2015-2022, .NET 10 desktop runtime |
+| Version ngôn ngữ | chỉ một mise: node, python, go, rust, dart, và phần lớn agent |
 | Pane cho agent | Layout tmux trong WSL; herdr trên Windows, tùy chọn |
 | Local LLM | Ollama cho mọi máy, hoặc vLLM + GPU khi đủ VRAM |
 | Debloat | Win11Debloat với profile pin và version-control |
