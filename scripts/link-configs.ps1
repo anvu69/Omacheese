@@ -231,10 +231,31 @@ if (-not $NoAutostart) {
     Write-Host "`n[autostart]" -ForegroundColor Magenta
     $startup  = [Environment]::GetFolderPath("Startup")
     $lnk      = Join-Path $startup "komorebi-desktop.lnk"
+    # The target has to be a path that still exists after PowerShell updates
+    # itself, because this shortcut outlives every one of them.
+    #
+    # Get-Command pwsh.exe resolves the Store package to its VERSIONED install
+    # directory - measured here:
+    #   C:\Program Files\WindowsApps\Microsoft.PowerShell_7.6.6.0_x64__...\pwsh.exe
+    # That directory is replaced wholesale on the next update, and a Startup
+    # shortcut pointing into it fails silently at login: no komorebi, no whkd,
+    # no bar, and nothing to say why. Prefer the two stable spellings first -
+    # the MSI location, then the Store execution alias - and only fall back to
+    # whatever PATH resolves.
+    #
     # No ?. here: this script has to parse under Windows PowerShell 5.1, which
     # is all a freshly installed Windows 11 has until winget brings pwsh 7.
-    $pwshCmd = Get-Command pwsh.exe -ErrorAction SilentlyContinue
-    if ($pwshCmd) { $target = $pwshCmd.Source } else { $target = (Get-Command powershell.exe).Source }
+    $target = $null
+    foreach ($candidate in @(
+        (Join-Path $env:ProgramFiles "PowerShell\7\pwsh.exe"),
+        (Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps\pwsh.exe")
+    )) {
+        if ($candidate -and (Test-Path -LiteralPath $candidate)) { $target = $candidate; break }
+    }
+    if (-not $target) {
+        $pwshCmd = Get-Command pwsh.exe -ErrorAction SilentlyContinue
+        if ($pwshCmd) { $target = $pwshCmd.Source } else { $target = (Get-Command powershell.exe).Source }
+    }
 
     try {
         $shell = New-Object -ComObject WScript.Shell
