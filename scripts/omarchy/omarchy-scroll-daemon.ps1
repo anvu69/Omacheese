@@ -25,25 +25,36 @@
 # leaves over on each side is exactly what you see of them. The window keeps one
 # width - only its position moves:
 #
-#   slack = monitor_width * (100 - WindowPercent) / 100     total, both sides
-#
-#   focused is FIRST    left 0        -> nothing left, `slack` on the right
-#   focused is MIDDLE   left slack/2  -> centred, slack/2 each side
-#   focused is LAST     left slack    -> `slack` on the left, nothing right
-#
 # workspace-work-area-offset takes LEFT and RIGHT where RIGHT is the TOTAL
 # horizontal reduction, not the right inset - `komorebic workspace-work-area-offset
 # --help` hints at this with "set right to left * 2 to maintain right padding".
-# So RIGHT stays at `slack` in all three cases and only LEFT moves. Measured on
-# 2560x1440 at 90%, window 2302px throughout:
+# So RIGHT is fixed and only LEFT moves. Writing ws for workspace padding and
+# cont for container padding, all of it measured rather than assumed:
 #
-#   L=0    R=256   focused x=1     peek 255px right, 0 left
-#   L=128  R=256   focused x=129   peek 127px each side
-#   L=256  R=256   focused x=257   peek 255px left,  0 right
+#   window  = (monitor_width - R) - 2 * (ws + cont)
+#   gap     = 2 * cont                      between adjacent windows
+#   margin  = ws + cont                     top, bottom, and outer edge
+#   peekL   = L + ws - cont
+#   peekR   = R + ws - cont - L
 #
-# Padding is set to 0 in Scrolling mode: workspace padding is symmetric, so it
-# can only ever re-centre what the offset just biased, and container padding is
-# the gap BETWEEN windows, which comes off the peek twice.
+# R follows from the width you want, and L from where the focus is:
+#
+#   R = monitor_width * (100 - WindowPercent) / 100 - 2 * (ws + cont)
+#
+#   focused is FIRST    L = cont - ws       peekL 0, everything on the right
+#   focused is MIDDLE   L = R / 2           centred
+#   focused is LAST     L = R + ws - cont   peekR 0, everything on the left
+#
+# Padding is deliberately NOT zeroed. An earlier version set both to 0 to buy a
+# few more pixels of peek, and the strip came out with the windows touching each
+# other and the screen edge - no gap anywhere, unlike every other layout. The
+# padding komorebi.json already defines is used instead, so scrolling mode is
+# spaced like BSP and only the horizontal offset is special. Measured on
+# 2560x1440 at 90% with the stock 8/6 padding, window 2302px throughout:
+#
+#   L=0    R=228   gap 14  margin 15   peek    1px left, 229px right
+#   L=114  R=228   gap 14  margin 15   peek  115px each side
+#   L=230  R=228   gap 14  margin 15   peek  231px left,   0px right
 #
 # A workspace holding one window gets no offset at all - there is no neighbour
 # to reveal, so spending 10% of the screen on it would be pure waste.
@@ -131,10 +142,13 @@ function Get-LayoutName {
 # ones that are wrong. Takes a state object so it can be fed either from
 # `komorebic state` or straight out of an event payload.
 function Get-StripPlan {
-    param($State, [int]$Percent)
+    param($State, [int]$Percent, $Padding)
 
     $plan = @()
     if (-not $State -or -not $State.monitors) { return $plan }
+    if (-not $Padding) { $Padding = Get-DefaultPadding }
+    $wsPad   = [int]$Padding.Workspace
+    $contPad = [int]$Padding.Container
 
     for ($mi = 0; $mi -lt $State.monitors.elements.Count; $mi++) {
         $mon = $State.monitors.elements[$mi]
@@ -154,15 +168,21 @@ function Get-StripPlan {
                 $slack = 0
                 $left  = 0
                 if ($n -gt 1) {
-                    $slack = [int][math]::Round($width * (100 - $Percent) / 100.0)
+                    # The padding sits inside the offset, so it has to come out
+                    # of the slack or the window ends up narrower than asked.
+                    $slack = [int][math]::Round($width * (100 - $Percent) / 100.0) - 2 * ($wsPad + $contPad)
+                    if ($slack -lt 0) { $slack = 0 }
+                    $bias = $wsPad - $contPad
                     $f = [int]$ws.containers.focused
-                    if     ($f -le 0)      { $left = 0 }
-                    elseif ($f -ge $n - 1) { $left = $slack }
+                    if     ($f -le 0)      { $left = [math]::Max(0, -$bias) }
+                    elseif ($f -ge $n - 1) { $left = $slack + $bias }
                     else                   { $left = [int][math]::Round($slack / 2.0) }
+                    if ($left -lt 0) { $left = 0 }
                 }
 
                 $wrong = ($curL -ne $left) -or ($curR -ne $slack) -or
-                         ([int]$ws.workspace_padding -ne 0) -or ([int]$ws.container_padding -ne 0)
+                         ([int]$ws.workspace_padding -ne $wsPad) -or
+                         ([int]$ws.container_padding -ne $contPad)
 
                 # Settings agreeing is not the same as the windows being right.
                 # A layout pass that lands after we set the offset re-tiles to
@@ -175,7 +195,7 @@ function Get-StripPlan {
                     if ($fi -ge 0 -and $fi -lt $n) {
                         $fwin = $ws.containers.elements[$fi].windows.elements[0]
                         if ($fwin -and $fwin.rect) {
-                            $expected = $width - $slack
+                            $expected = $width - $slack - 2 * ($wsPad + $contPad)
                             if ([math]::Abs([int]$fwin.rect.right - $expected) -gt 8) { $wrong = $true }
                         }
                     }
@@ -183,7 +203,8 @@ function Get-StripPlan {
 
                 if ($wrong) {
                     $plan += @{ Monitor = $mi; Workspace = $wi; Scrolling = $true
-                                Left = $left; Slack = $slack }
+                                Left = $left; Slack = $slack
+                                WsPad = $wsPad; ContPad = $contPad }
                 }
             }
             elseif ($curL -ne 0 -or $curR -ne 0) {
@@ -206,9 +227,11 @@ function Invoke-StripPlan {
         $mi = $item.Monitor; $wi = $item.Workspace
         if ($item.Scrolling) {
             # Each of these re-tiles on its own, so no explicit retile is needed.
+            # The padding is the same as every other layout uses - only the
+            # offset is particular to the strip.
             komorebic workspace-work-area-offset $mi $wi $item.Left 0 $item.Slack 0 2>$null | Out-Null
-            komorebic workspace-padding $mi $wi 0 2>$null | Out-Null
-            komorebic container-padding $mi $wi 0 2>$null | Out-Null
+            komorebic workspace-padding $mi $wi $item.WsPad 2>$null | Out-Null
+            komorebic container-padding $mi $wi $item.ContPad 2>$null | Out-Null
         } else {
             komorebic workspace-work-area-offset $mi $wi 0 0 0 0 2>$null | Out-Null
             komorebic workspace-padding $mi $wi $pad.Workspace 2>$null | Out-Null
@@ -220,7 +243,7 @@ function Invoke-StripPlan {
 function Sync-Strip {
     try { $state = komorebic state 2>$null | ConvertFrom-Json } catch { return }
     if (-not $state) { return }
-    Invoke-StripPlan (Get-StripPlan -State $state -Percent (Get-WindowPercent))
+    Invoke-StripPlan (Get-StripPlan -State $state -Percent (Get-WindowPercent) -Padding (Get-DefaultPadding))
 }
 
 # ---------------------------------------------------------------------------
@@ -274,6 +297,9 @@ function Request-Apply {
         -ArgumentList "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$Self`"", "-Once" `
         -WindowStyle Hidden -ErrorAction SilentlyContinue
 }
+
+# Read once: the watcher must not touch the disk on every event either.
+$padDefaults = Get-DefaultPadding
 
 $server    = $null
 $pending   = $null
@@ -352,7 +378,7 @@ while ($true) {
         }
 
         if ($state) {
-            $plan = Get-StripPlan -State $state -Percent (Get-WindowPercent)
+            $plan = Get-StripPlan -State $state -Percent (Get-WindowPercent) -Padding $padDefaults
             # Throttle: an apply produces events of its own, and the state in
             # this payload is already a moment old.
             if ($plan.Count -gt 0 -and

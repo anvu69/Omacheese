@@ -127,32 +127,43 @@ where the focused window sits in it.
 komorebi centres the focused window inside the work area and parks the
 neighbours immediately outside it, so whatever the work area leaves over on each
 side is exactly what you see of them. The window keeps one width; only its
-position moves:
+position moves. Writing `ws` for workspace padding and `cont` for container
+padding:
 
 ```
-slack = monitor_width * (100 - window_percent) / 100    total, both sides
+window = (monitor_width - R) - 2 * (ws + cont)
+gap    = 2 * cont                    between adjacent windows
+margin = ws + cont                   top, bottom, outer edge
+peekL  = L + ws - cont
+peekR  = R + ws - cont - L
 
-focused is FIRST    left 0        nothing left, all the slack on the right
-focused is MIDDLE   left slack/2  centred, half the slack each side
-focused is LAST     left slack    all the slack on the left, nothing right
+R = monitor_width * (100 - window_percent) / 100 - 2 * (ws + cont)
+
+focused is FIRST    L = cont - ws        peekL 0, everything on the right
+focused is MIDDLE   L = R / 2            centred
+focused is LAST     L = R + ws - cont    peekR 0, everything on the left
 ```
 
 So the ends of the strip do not waste their outer margin on empty screen - the
 first window sits flush left and shows more of what comes next, the last sits
-flush right. Measured on a 2560px monitor at the default 90%, window 2302px in
-every position:
+flush right.
 
-| Focused | Offset | Window at | Neighbour peek |
-|---|---|---|---|
-| first | `L0 / R256` | x=1 | 255 px right |
-| middle | `L128 / R256` | x=129 | 127 px each side |
-| last | `L256 / R256` | x=257 | 255 px left |
+Padding is **not** zeroed. The spacing komorebi.json already defines is used, so
+the strip has the same gap between windows and the same margins as BSP, and only
+the horizontal offset is particular to scrolling. Measured on a 2560px monitor at
+the default 90% with the stock 8/6 padding, window 2302px in every position:
+
+| Focused | Offset | Gap | Margin | Neighbour peek |
+|---|---|---|---|---|
+| first | `L0 / R228` | 14 px | 15 px | 229 px right |
+| middle | `L114 / R228` | 14 px | 15 px | 115 px each side |
+| last | `L230 / R228` | 14 px | 15 px | 231 px left |
 
 Two things that were wrong before, and why the sliver used to be invisible:
 
-- **`container_padding` is the gap between windows and comes off the peek
-  twice.** Scrolling mode sets it to 0, along with workspace padding - which is
-  symmetric and would only re-centre what the offset just biased.
+- **`container_padding` is the gap between windows and comes off the peek.** It
+  is subtracted from the slack up front so the window still lands on the width
+  you asked for, instead of quietly eating into it.
 - **A fixed padding is a different fraction of every screen.** 40px is 3% of a
   1366px laptop but 1.6% of a 2560px monitor. The slack is computed from the
   monitor's work area instead, so it looks the same on every machine.
