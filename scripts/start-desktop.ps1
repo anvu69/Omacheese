@@ -54,25 +54,42 @@ if (Get-Process komorebi -ErrorAction SilentlyContinue) {
     Write-Host "komorebi is already running (use -Restart)." -ForegroundColor DarkYellow
 } else {
     Write-Host "Starting komorebi + whkd..." -ForegroundColor Cyan
-    komorebic start --whkd | Out-Null
 
-    # Wait for the named pipe to answer instead of sleeping a fixed amount.
+    # Fire and forget, in its own window, and do NOT wait.
+    #
+    # komorebic spawns komorebi.exe and whkd.exe as long-lived background
+    # processes. Anything that makes this shell hold on to their output
+    # handles never returns, because a window manager does not exit:
+    #   komorebic start --whkd | Out-Null        hangs (pipeline stays open)
+    #   Start-Process -NoNewWindow -Wait         hangs (children inherit the
+    #                                            redirected stdout handle)
+    # Readiness is established by polling the named pipe below instead.
+    Start-Process -FilePath "komorebic.exe" -ArgumentList "start", "--whkd" `
+        -WindowStyle Hidden -ErrorAction SilentlyContinue
+
+    # Poll the named pipe rather than sleeping a fixed amount. 30s, because a
+    # cold start here measured around 10s - the previous 5s budget declared
+    # failure on a komorebi that was simply still starting.
     $ready = $false
-    foreach ($i in 1..20) {
-        Start-Sleep -Milliseconds 250
+    foreach ($i in 1..60) {
+        Start-Sleep -Milliseconds 500
         komorebic state 2>$null | Out-Null
         if ($LASTEXITCODE -eq 0) { $ready = $true; break }
     }
     if ($ready) {
         Write-Host "komorebi is up." -ForegroundColor Green
     } else {
-        Write-Host "komorebi did not answer in 5s. Try: komorebic start --whkd" -ForegroundColor Red
+        Write-Host "komorebi did not answer in 30s. Try: komorebic start --whkd" -ForegroundColor Red
     }
 }
 
 # whkd dies silently on a bad key name, so say so rather than leaving the user
-# to discover that no hotkey works.
-Start-Sleep -Milliseconds 300
+# to discover that no hotkey works. komorebic starts it a moment after
+# komorebi itself, so give it a beat before declaring it dead.
+foreach ($i in 1..20) {
+    if (Get-Process whkd -ErrorAction SilentlyContinue) { break }
+    Start-Sleep -Milliseconds 250
+}
 if (-not (Get-Process whkd -ErrorAction SilentlyContinue)) {
     Write-Host "whkd is NOT running - every hotkey is dead." -ForegroundColor Red
     Write-Host "Usually a bad key name in whkdrc. Check with:" -ForegroundColor Yellow

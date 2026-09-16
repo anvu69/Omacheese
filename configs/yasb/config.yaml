@@ -30,7 +30,8 @@ bars:
     class_name: "yasb-bar"
     alignment:
       position: "top"
-      center: false
+      # `center: false` was deprecated in 2.0.x in favour of `align`.
+      align: "left"
     blur_effect:
       enabled: false
     window_flags:
@@ -56,6 +57,7 @@ bars:
         - "cpu"
         - "memory"
         - "volume"
+        - "bluetooth"
         - "wifi"
         - "battery"
         - "power_menu"
@@ -69,9 +71,11 @@ widgets:
       label: "󰜿"
       label_alt: "󰜿"
       class_name: "omarchy-menu-widget"
+      # Goes through omarchy-run.cmd, like whkdrc does, so the bar still works
+      # on a machine where PowerShell 7 was never installed.
       callbacks:
-        on_left: "exec alacritty --class omarchy-menu,omarchy-menu -e pwsh -NoProfile -ExecutionPolicy Bypass -File %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-menu.ps1"
-        on_right: "exec alacritty --class omarchy-menu,omarchy-menu -e pwsh -NoProfile -ExecutionPolicy Bypass -File %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-keybindings.ps1"
+        on_left: "exec alacritty --class omarchy-menu,omarchy-menu -e %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-run.cmd %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-menu.ps1"
+        on_right: "exec alacritty --class omarchy-menu,omarchy-menu -e %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-run.cmd %USERPROFILE%\\.config\\omarchy\\bin\\omarchy-keybindings.ps1"
 
   komorebi_workspaces:
     type: "komorebi.workspaces.WorkspaceWidget"
@@ -167,14 +171,17 @@ widgets:
     type: "yasb.volume.VolumeWidget"
     options:
       label: "<span>{icon}</span> {level}"
-      label_alt: "{volume}"
-      volume_icons:
-        - ""
-        - ""
-        - ""
-        - ""
-        - ""
+      label_alt: "{icon} {level}"
+      # `volume_icons` as a list was deprecated in 2.0.x. The dict form keys
+      # on the upper bound of each volume band.
+      icons:
+        muted: ""
+        "10": ""
+        "30": ""
+        "60": ""
+        "100": ""
       callbacks:
+        on_left: "toggle_volume_menu"
         on_right: "exec cmd.exe /c start ms-settings:sound"
 
   wifi:
@@ -187,11 +194,33 @@ widgets:
         on_left: "toggle_label"
         on_right: "exec cmd.exe /c start ms-settings:network"
 
+  bluetooth:
+    type: "yasb.bluetooth.BluetoothWidget"
+    options:
+      label: "<span>{icon}</span>"
+      label_alt: "<span>{icon}</span> {device_name}"
+      label_no_device: ""
+      label_device_separator: ", "
+      max_length: 16
+      max_length_ellipsis: "…"
+      tooltip: true
+      icons:
+        bluetooth_on: ""
+        bluetooth_off: ""
+        bluetooth_connected: ""
+      callbacks:
+        on_left: "toggle_menu"
+        on_right: "exec cmd.exe /c start ms-settings:bluetooth"
+
   battery:
     type: "yasb.battery.BatteryWidget"
     options:
       label: "<span>{icon}</span> {percent}%"
       label_alt: "{icon} {percent}% | {time_remaining}"
+      # Default is already true; stated explicitly because it is what makes
+      # this config portable - the widget removes itself on a desktop instead
+      # of showing a meaningless 0%.
+      hide_unsupported: true
       charging_options:
         icon_format: "{charging_icon}"
 

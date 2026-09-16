@@ -167,12 +167,44 @@
    Right: system readouts
    -------------------------------------------------------------------------- */
 
-.cpu-widget .label    { color: #9ece6a; }
-.memory-widget .label { color: #e0af68; }
-.volume-widget .label { color: #7dcfff; }
-.wifi-widget .label   { color: #7aa2f7; }
+.cpu-widget .label       { color: #9ece6a; }
+.memory-widget .label    { color: #e0af68; }
+.volume-widget .label    { color: #7dcfff; }
+.wifi-widget .label      { color: #7aa2f7; }
+.bluetooth-widget .label { color: #7aa2f7; }
+.battery-widget .label   { color: #9ece6a; }
 
-.battery-widget .label { color: #9ece6a; }
+/* The bluetooth and volume flyouts */
+.bluetooth-menu,
+.audio-menu {
+    background-color: #1a1b26;
+    border: 1px solid #292e42;
+    border-radius: 12px;
+}
+
+.bluetooth-menu .header,
+.audio-menu .header {
+    color: #c0caf5;
+    font-weight: 600;
+    padding: 8px 12px;
+}
+
+.bluetooth-menu .device,
+.audio-menu .device {
+    color: #a9b1d6;
+    padding: 8px 12px;
+    border-radius: 8px;
+}
+
+.bluetooth-menu .device:hover,
+.audio-menu .device:hover {
+    background-color: #292e42;
+    color: #c0caf5;
+}
+
+.bluetooth-menu .device.connected {
+    color: #9ece6a;
+}
 
 .power-menu-widget {
     padding: 0 10px 0 8px;
