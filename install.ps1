@@ -24,7 +24,16 @@ param(
     [string]$Repo = "anvu69/windows11-dev-poweruser",
     [string]$Branch = "main",
 
-    [ValidateSet("minimal", "desktop", "full", "everything", "custom")]
+    # No [ValidateSet] here, deliberately. `irm | iex` - the command at the top
+    # of this file - runs the text in the CALLER's scope, so param() declares
+    # $Preset there. [string] turns $null into "", ValidateSet then rejects "",
+    # and the whole script dies before running a line of itself:
+    #
+    #   Invoke-Expression: The attribute cannot be added because variable
+    #   Preset with value  would no longer be valid.
+    #
+    # A default value would also fix it, but then this picks a preset nobody
+    # asked for. The set is checked in the body instead.
     [string]$Preset,
     [string[]]$Modules,
     [switch]$Yes,
@@ -39,6 +48,13 @@ try {
     [Net.ServicePointManager]::SecurityProtocol =
         [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 } catch { }
+
+# Validated here rather than with [ValidateSet] on the parameter: see the note
+# in the param block. The error is better anyway - it names the valid presets.
+$knownPresets = @("minimal", "desktop", "full", "everything", "custom")
+if ($Preset -and $knownPresets -notcontains $Preset) {
+    throw "-Preset must be one of: $($knownPresets -join ', ')"
+}
 
 if ($Repo -notmatch '^[^/\s]+/[^/\s]+$') {
     throw "-Repo must be owner/name, for example anvu69/windows11-dev-poweruser"

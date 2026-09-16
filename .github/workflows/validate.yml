@@ -253,6 +253,56 @@ jobs:
           Write-Host "$($script:Agents.Count) agents checked"
           if ($bad) { exit 1 }
 
+      - name: Every irm-pipe-iex entry point survives iex
+        shell: pwsh
+        run: |
+          # `irm URL | iex` runs the text in the CALLER's scope, so a param()
+          # block declares its variables there. [ValidateSet] on a [string]
+          # with no default then rejects the empty string that [string] made
+          # from $null, and the script dies before running a line of itself.
+          # That shipped: install.ps1 and bootstrap-windows.ps1 were both
+          # broken this way, which is to say the documented install command
+          # did not work at all.
+          #
+          # Entry points are discovered from the docs, so a new one is covered
+          # the moment it is documented. No backslashes anywhere below on
+          # purpose - [char]92 instead - because they do not survive every
+          # editing path into this file.
+          $sep = [char]92
+          $entry = @{}
+          foreach ($doc in Get-ChildItem -Recurse -Include *.md, *.ps1 -File) {
+            if ($doc.FullName.Contains('.github')) { continue }
+            foreach ($line in Get-Content -LiteralPath $doc.FullName) {
+              if ($line -notmatch 'iex') { continue }
+              foreach ($m in [regex]::Matches($line, '[^ "''`|]+[.]ps1')) {
+                $parts = $m.Value.Replace($sep, '/') -split '/'
+                for ($i = 0; $i -lt $parts.Count; $i++) {
+                  $cand = ($parts[$i..($parts.Count - 1)]) -join '/'
+                  if (Test-Path -LiteralPath $cand -PathType Leaf) { $entry[$cand] = $true; break }
+                }
+              }
+            }
+          }
+          if ($entry.Count -eq 0) { Write-Host 'no irm|iex entry points found in the docs'; exit 1 }
+
+          $bad = 0
+          foreach ($rel in $entry.Keys | Sort-Object) {
+            $text = Get-Content -LiteralPath $rel -Raw
+            $pi = $text.IndexOf('param(')
+            if ($pi -lt 0) { Write-Host "ok   $rel (no param block)"; continue }
+            $end = $text.IndexOf("`n)", $pi)
+            if ($end -lt 0) { Write-Host "FAIL ${rel}: could not find the end of param()"; $bad++; continue }
+            # Param surface only: the body of these downloads and installs.
+            $stub = $text.Substring(0, $end + 2) + "`n'ok'"
+            try {
+              $null = Invoke-Expression $stub
+              Write-Host "ok   $rel"
+            } catch {
+              Write-Host "FAIL ${rel}: $($_.Exception.Message)"; $bad++
+            }
+          }
+          if ($bad) { exit 1 }
+
       - name: README repo-layout trees name real paths
         shell: pwsh
         run: |

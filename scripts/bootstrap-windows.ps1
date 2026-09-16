@@ -16,7 +16,10 @@ param(
     [string]$Repo = "anvu69/windows11-dev-poweruser",
     [string]$Branch = "main",
 
-    [ValidateSet("minimal", "desktop", "full", "everything", "custom")]
+    # No [ValidateSet]: this file is fetched with `irm | iex` too, and under
+    # iex the param block runs in the caller's scope, where [string] makes
+    # $Preset "" and ValidateSet then rejects it. install.ps1 has the same
+    # note and the same fix; the value is checked below instead.
     [string]$Preset,
     [string[]]$Modules,
     [switch]$Yes,
@@ -24,6 +27,11 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+$knownPresets = @("minimal", "desktop", "full", "everything", "custom")
+if ($Preset -and $knownPresets -notcontains $Preset) {
+    throw "-Preset must be one of: $($knownPresets -join ', ')"
+}
 
 try {
     [Net.ServicePointManager]::SecurityProtocol =
