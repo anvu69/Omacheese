@@ -76,51 +76,45 @@ which of these actually install where.
 
 ### Verified on Windows, not assumed
 
-mise's own docs only promise that support "varies by platform", so this was
-measured against mise 2026.9.5:
+mise's own docs only promise that support "varies by platform", so every row
+below was installed and run on this machine, mise 2026.9.5. Nothing here is
+copied from a registry listing.
 
-| | versions offered | real install |
-|---|---|---|
-| node | 865 | 13s, `node --version` works |
-| python | 125 | |
-| go | 289 | |
-| rust | 154 | |
-| dart | 179 | |
-| crush | 185 | 22s, `crush version v0.94.2` |
-| copilot | 134 | 24s, `GitHub Copilot CLI 1.0.83` |
-| opencode | 868 | 19s, `1.18.31` |
+| language | backend | install | reports |
+|---|---|---|---|
+| node | `core` | 13s | `v22.23.2` |
+| go | `core` | 25s | `go1.27.1 windows/amd64` |
+| rust | `core` | 72s | `rustc 1.98.1` |
+| java | `core` | 22s | `openjdk 27` |
+| ruby | `core` | 19s | `ruby 4.0.7 [x64-mingw-ucrt]` |
+| zig | `core` | 102s | `0.16.0` |
+| deno | `core` | 13s | `2.9.6` |
+| bun | `core` | 10s | `1.4.2` |
+| python | `core` | 19s | `3.13.15` |
+| dart | `http` | 50s | `Dart SDK 3.13.4` |
+| flutter | `http` | 364s | `Flutter 3.47.4 • stable` |
+| kotlin | `github` | 23s | `kotlinc-jvm 2.4.20` |
+| **php** | `vfox` | **fails** | `post_install.lua:79: Failed to run buildconf` |
+| **lua** | `vfox` | **fails** | `Failed to build Lua: make failed` |
 
-One thing does not work, and it is worth knowing before you try it:
+The two failures say exactly what is wrong: a `vfox` plugin builds from source,
+and that wants a Unix toolchain. Nothing about the language is the problem - PHP
+and Lua install fine inside WSL. On Windows, take them from winget instead.
 
-```text
-mise install gemini
-  ERROR ... lifecycle script install failed for node-pty@1.0.0
-```
+Each language brings its own package manager, so there is nothing else to
+install:
 
-`gemini-cli` is only available through mise's **npm** backend, and it depends on
-`node-pty`, which compiles native code at install time. The aqua backend - which
-downloads a prebuilt binary - is what the other agents use, and that works
-fine. So gemini is installed the old way, with mise supplying the node:
-
-```powershell
-mise use -g node@lts
-npm install -g @google/gemini-cli
-```
-
-That is precisely the job `fnm` used to do here, which is why fnm is gone.
-
-### Package managers, same tool
-
-The native package manager arrives with its language and needs nothing extra:
-
-| `mise use -g ...` | you also get |
+| `mise use -g ...` | measured |
 |---|---|
+| `rust` | `cargo 1.98.1` |
+| `go` | `go env GOMODCACHE` answers |
+| `java` | `jar 27` |
+| `ruby` | `gem 4.0.20` |
 | `node` | `npm`, `npx` |
-| `rust` | `cargo` |
-| `go` | `go mod` |
-| `dart` | `pub` |
 
-The alternatives are separate tools, and mise installs those too:
+### Alternative package managers
+
+The ones that are separate tools, rather than shipping with the language:
 
 ```powershell
 mise use -g pnpm yarn bun deno    # node ecosystem
@@ -138,7 +132,7 @@ Not everything does, and the predictor is the **backend**, not the tool. Run
 | `aqua:` | downloads a prebuilt binary | works, **if** the upstream aqua entry declares Windows |
 | `ubi:`, `github:` | downloads a release asset | usually works |
 | `npm:` | resolves an npm package | fails when the package compiles native code |
-| `vfox:`, `asdf:` | runs a plugin script | generally fails on Windows |
+| `vfox:`, `asdf:` | runs a plugin script that builds from source | fails on Windows: measured on php, lua and poetry |
 
 Measured on mise 2026.9.5, this machine:
 
