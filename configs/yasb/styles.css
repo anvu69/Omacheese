@@ -235,6 +235,19 @@
     border: 1px solid #292e42;
     border-radius: 12px;
     min-width: 340px;
+
+    /* POPUP HEIGHT - tune here.
+       Room for about three and a half rows: ~44px header + 3.5 x 44px rows
+       + ~50px footer.
+
+       This belongs on the POPUP, not on .bluetooth-list. The list is a frame
+       inside a scroll area, and forcing a height there squeezed the rows
+       instead of lengthening the popup. bluetooth_widgets.py adds the list
+       with stretch 1, so height given to the popup lands on the list and the
+       rows keep their natural size.
+
+       Delete this line to let the popup size itself to its contents again. */
+    min-height: 260px;
 }
 
 .bluetooth-menu .header {
@@ -265,10 +278,6 @@
 .bluetooth-menu .bluetooth-list {
     background-color: transparent;
     padding: 0 8px 8px 8px;
-    /* ~3.5 rows: a row is 10px padding + ~20px content + 10px padding + 4px
-       margin = 44px, so 154px shows three and a half and makes it obvious the
-       list continues. */
-    min-height: 154px;
 }
 
 /* No min-height here. Setting one on rows inside a Qt layout that is already
