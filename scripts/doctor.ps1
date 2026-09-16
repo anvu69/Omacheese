@@ -266,6 +266,26 @@ $pwshCmd = Get-Command pwsh.exe -ErrorAction SilentlyContinue
 if (-not $pwshCmd) {
     Warn "PowerShell 7 not installed - the shipped profile needs it (-Groups core)"
 } else {
+    # Version, not just presence. install-windows.ps1 SKIPS a package that is
+    # already installed, so a machine that came with an older pwsh 7 keeps it
+    # and nothing says so. -Force is what re-runs winget and upgrades.
+    $pwshVer = (& $pwshCmd.Source -NoProfile -Command '$PSVersionTable.PSVersion.ToString()' 2>$null | Select-Object -First 1)
+    if ($pwshVer) { $pwshVer = "$pwshVer".Trim() }
+    if (-not $Quick -and $pwshVer -and (Get-Command winget -ErrorAction SilentlyContinue)) {
+        # Version numbers are digits in every locale; the column headers are
+        # not, so read the numbers and ignore the labels. Two of them means
+        # winget is showing Version and Available side by side.
+        $listed = (winget list --id Microsoft.PowerShell -e --disable-interactivity 2>$null | Out-String)
+        $vers = [regex]::Matches($listed, '\b\d+\.\d+\.\d+(\.\d+)?\b') | ForEach-Object { $_.Value }
+        if ($vers.Count -ge 2) {
+            Warn "pwsh $pwshVer installed, winget offers $($vers[-1]) (./scripts/install-windows.ps1 -Groups core -Force)"
+        } else {
+            Ok "pwsh $pwshVer (winget has nothing newer)"
+        }
+    } elseif ($pwshVer) {
+        Ok "pwsh $pwshVer"
+    }
+
     $wanted = @("PSReadLine", "Terminal-Icons", "PSFzf", "posh-git", "CompletionPredictor")
     $found = & $pwshCmd.Source -NoProfile -Command "
         foreach (`$m in @('$($wanted -join "','")')) {

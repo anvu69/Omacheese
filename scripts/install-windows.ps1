@@ -3,6 +3,13 @@
 #   ./scripts/install-windows.ps1                 # everything
 #   ./scripts/install-windows.ps1 -Groups core,wm # a subset
 #   ./scripts/install-windows.ps1 -SkipModules
+#   ./scripts/install-windows.ps1 -Groups core -Force   # upgrade, not skip
+#
+# By default a package that is already installed is SKIPPED, not upgraded:
+# provisioning a machine should not silently move versions under someone who
+# is already using it. -Force re-runs winget install across the selection, so
+# anything with a newer version gets it. That is how you reach the latest
+# PowerShell on a machine that already shipped with an older pwsh 7.
 #
 # Packages come from configs/winget/packages.json so this script and
 # bootstrap-windows.ps1 can never drift apart again. Every id in that file is
