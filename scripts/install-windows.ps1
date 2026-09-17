@@ -72,34 +72,49 @@ if (-not $Groups -or $Groups -contains "langs") {
                 [Environment]::GetEnvironmentVariable("Path", "User")
     $mise = Get-Command mise -ErrorAction SilentlyContinue
     if ($mise) {
+        # Every language whose mise backend is `core:` - mise downloads a
+        # prebuilt toolchain and nothing is compiled, which is what makes them
+        # safe on Windows. Measured here, mise 2026.9.5, cold cache:
+        #
+        #   node@lts     24.21.0    8s     python@3      3.14.7   13s
+        #   go@latest     1.27.1   12s     rust@latest   1.98.1   34s
+        #   java@lts     25.0.2    11s     ruby@latest    4.0.7   32s
+        #
+        # dart, php and lua are deliberately absent: their backends are `http:`
+        # and `vfox:`, and a vfox plugin builds from source, which fails on
+        # Windows. docs/runtimes-and-languages.md has the measurements and the
+        # winget alternatives.
+        $langs = @("node@lts", "python@3", "go@latest", "rust@latest", "java@lts", "ruby@latest")
+
         # Never overwrite a pin that is already there: a machine pinned to
-        # node@latest, or to whatever a project needs, did not ask for lts.
+        # node@latest, or to whatever version a project needs, did not ask for
+        # this list.
         #
         # Read the global config rather than asking `mise ls -g`: run from a
         # directory that has its own mise.toml, that command prints NOTHING for
         # a tool the local file overrides, so the check said "no node pinned"
         # on a machine that had one and overwrote the pin.
         $globalCfg = Join-Path $env:USERPROFILE ".config\mise\config.toml"
-        $pinnedNode = $null
-        if (Test-Path -LiteralPath $globalCfg) {
-            $m = [regex]::Match((Get-Content -LiteralPath $globalCfg -Raw), '(?m)^\s*node\s*=\s*"?([^"\r\n]+)"?')
-            if ($m.Success) { $pinnedNode = $m.Groups[1].Value }
-        }
-        if ($pinnedNode) {
-            Write-Host ""
-            Write-Host "node already pinned in mise: node@$pinnedNode" -ForegroundColor DarkGray
-        } else {
-            Write-Host ""
-            Write-Host "Installing node through mise (mise use -g node@lts)..." -ForegroundColor Cyan
-            & $mise.Source use -g node@lts
+        $cfgText = ""
+        if (Test-Path -LiteralPath $globalCfg) { $cfgText = Get-Content -LiteralPath $globalCfg -Raw }
+
+        Write-Host ""
+        foreach ($spec in $langs) {
+            $tool = $spec.Split("@")[0]
+            $m = [regex]::Match($cfgText, ('(?m)^\s*{0}\s*=\s*"?([^"\r\n]+)"?' -f [regex]::Escape($tool)))
+            if ($m.Success) {
+                Write-Host ("  = {0,-7} already pinned: {0}@{1}" -f $tool, $m.Groups[1].Value) -ForegroundColor DarkGray
+                continue
+            }
+            Write-Host ("  + {0,-7} mise use -g {1}" -f $tool, $spec) -ForegroundColor Cyan
+            & $mise.Source use -g $spec
             if ($LASTEXITCODE -ne 0) {
-                Write-Host "  mise could not install node - run 'mise use -g node@lts' by hand." -ForegroundColor Yellow
+                Write-Host ("    mise could not install {0} - run 'mise use -g {1}' by hand." -f $tool, $spec) -ForegroundColor Yellow
             }
         }
-        # Only node. python, go, rust and dart are one command each and most
-        # machines want a different set; see docs/runtimes-and-languages.md.
+        Write-Host "  open a new terminal for these to be on PATH" -ForegroundColor DarkGray
     } else {
-        Write-Host "  mise not on PATH yet - open a new terminal, then: mise use -g node@lts" -ForegroundColor Yellow
+        Write-Host "  mise not on PATH yet - open a new terminal, then: mise use -g node@lts python@3" -ForegroundColor Yellow
     }
 }
 

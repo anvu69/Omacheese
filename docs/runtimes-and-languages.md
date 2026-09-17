@@ -49,6 +49,10 @@ the repo gets the same one. `mise install` only downloads.
 
 ### Quick install
 
+The `langs` module installs mise **and the languages**. Installing the version
+manager on its own is how a finished setup ended up with no `node` on it, while
+`packages.json` told the agents group that node comes from mise.
+
 ```powershell
 # the whole module (this is what the installer does)
 ./scripts/install-windows.ps1 -Groups langs
@@ -56,12 +60,31 @@ the repo gets the same one. `mise install` only downloads.
 # or just mise, by hand
 winget install --id jdx.mise -e
 
-# then, in a new terminal: languages
-mise use -g node@lts python@3.13 go@latest rust@latest dart@latest
+# then, in a new terminal, what that module pins:
+mise use -g node@lts python@3 go@latest rust@latest java@lts ruby@latest
 
 # and the package managers you want on top
 mise use -g pnpm yarn bun deno
 ```
+
+An existing global pin is never overwritten - a machine on `node@latest`, or on
+the version a project needs, keeps it. Measured on this machine, mise 2026.9.5,
+cold cache:
+
+| pin | resolved | install |
+|---|---|---|
+| `node@lts` | 24.21.0 | 8s |
+| `python@3` | 3.13.15 | 13s |
+| `go@latest` | 1.27.1 | 12s |
+| `rust@latest` | 1.98.1 | 34s |
+| `java@lts` | 25.0.2 | 11s |
+| `ruby@latest` | 4.0.7 | 32s |
+
+and each one runs afterwards: `node -v`, `python -V`, `go version`,
+`cargo --version`, `java -version`, `ruby -v`, `npm -v`.
+
+dart, php and lua are **not** in that list. Their backends are `http:` and
+`vfox:`, and a vfox plugin builds from source - see the backend table below.
 
 Inside WSL:
 

@@ -60,12 +60,15 @@ function Get-SetupModules {
         -Available $wingetOk -Note "needs winget" -Est "3-5 min" `
         -Action { param($ctx) & $ctx.InstallWindows -Groups @("cli") }))
 
-    # One binary that manages node, python, go, rust and dart versions, so a
-    # project can pin its own without five separate managers fighting over
-    # PATH. node comes with it, because the agents and every npm-shaped repo
-    # need one; the rest are a command each (`mise use python@3.13`).
-    $mods.Add((New-Mod -Key "langs" -Description "mise + node (python, go, rust, dart on request)" `
-        -Available $wingetOk -Note "needs winget" -Est "1-2 min" `
+    # One binary that manages every language version, so a project can pin its
+    # own without five separate managers fighting over PATH. The languages come
+    # with it: installing a version manager and no version is how a finished
+    # setup ended up with no node on it. The list is every language whose mise
+    # backend is `core:` - a prebuilt toolchain, nothing compiled - which is
+    # what makes it safe on Windows; dart, php and lua are not, and
+    # docs/runtimes-and-languages.md says what to do instead.
+    $mods.Add((New-Mod -Key "langs" -Description "mise + node, python, go, rust, java, ruby" `
+        -Available $wingetOk -Note "needs winget; ~1 GB of toolchains" -Est "2-4 min" `
         -Action { param($ctx) & $ctx.InstallWindows -Groups @("langs") }))
 
     # Separate from the runtime in core because the SDK is four times the size

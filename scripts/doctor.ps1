@@ -644,7 +644,7 @@ if (-not (Test-WslPresent)) {
     #
     # WSL also prints noise on stderr ("your 131072x1 screen size is bogus"),
     # so the payload is tagged and pulled back out by marker.
-    $probeBody = "printf 'W11PROBE|%s|%s|%s|%s\n' `"`$(ps -p 1 -o comm=)`" `"`$(command -v docker || echo -)`" `"`$(command -v nvidia-ctk || echo -)`" `"`$([ -e /dev/dxg ] && echo dxg || echo -)`"`n"
+    $probeBody = "printf 'W11PROBE|%s|%s|%s|%s|%s\n' `"`$(ps -p 1 -o comm=)`" `"`$(command -v docker || echo -)`" `"`$(command -v nvidia-ctk || echo -)`" `"`$([ -e /dev/dxg ] && echo dxg || echo -)`" `"`$(docker ps -a --filter name=vllm --format '{{.State}}' 2>/dev/null | head -1 || echo -)`"`n"
     $probeFile = Join-Path $env:TEMP "w11-doctor-probe.sh"
     [System.IO.File]::WriteAllText($probeFile, ($probeBody -replace "`r`n", "`n"),
         (New-Object System.Text.UTF8Encoding($false)))
@@ -673,11 +673,16 @@ if (-not (Test-WslPresent)) {
         if ($parts[2] -ne "-") { Ok "nvidia-container-toolkit installed" } else { Warn "nvidia-container-toolkit missing - GPU containers will not work" }
         if ($parts[3] -eq "dxg") { Ok "/dev/dxg present (GPU passthrough)" } else { Warn "/dev/dxg missing - no GPU in WSL" }
 
-        # Only ask about the model server on a machine where the local-LLM
-        # module actually ran - docker in the distro is that evidence. A
-        # running container proves nothing on its own: vLLM binds port 8000
-        # only once the weights are loaded onto the GPU.
-        if ($parts[1] -ne "-" -and $parts[1] -notlike "/mnt/*") {
+        # Only ask about the model server where there is one to ask about: the
+        # container has to exist. A stopped one is a choice - that GPU also
+        # draws the desktop, and handing ~13 GB of VRAM back is the reason to
+        # stop it - so it is reported, not complained about. And a running one
+        # proves nothing on its own: vLLM binds port 8000 only once the weights
+        # are loaded onto the GPU.
+        $vllmState = ""
+        if ($parts.Count -ge 5) { $vllmState = $parts[4] }
+
+        if ($vllmState -eq "running") {
             $served = $false
             try {
                 # 127.0.0.1, not localhost: localhost resolves to ::1 first and
@@ -688,7 +693,10 @@ if (-not (Test-WslPresent)) {
                            -UseBasicParsing -TimeoutSec 10).StatusCode -eq 200
             } catch { }
             if ($served) { Ok "vLLM answering at http://127.0.0.1:8000/v1" }
-            else { Warn "nothing answers on :8000 (wsl -d $distro -- docker logs vllm)" }
+            else { Warn "vllm container is up but :8000 is silent (wsl -d $distro -- docker logs vllm)" }
+        }
+        elseif ($vllmState -and $vllmState -ne "-") {
+            Ok "vLLM container $vllmState - start it with: wsl -d $distro -- docker start vllm"
         }
     } else {
         Warn "could not probe $distro (not installed, or a different name)"

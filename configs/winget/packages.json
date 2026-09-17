@@ -45,7 +45,7 @@
       ]
     },
     "langs": {
-      "description": "One version manager for node, python, go, rust and dart.",
+      "description": "One version manager, and the languages it installs cleanly on Windows: node, python, go, rust, java, ruby.",
       "packages": [
         {
           "id": "jdx.mise",
