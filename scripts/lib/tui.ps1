@@ -102,8 +102,65 @@ function Get-TuiWidth {
     return $w
 }
 
+# --- frames ------------------------------------------------------------------
+# Every line used to be its own Write-Host, on top of a full ESC[2J clear. So
+# one keypress in the checklist blanked the screen and then repainted 24 lines,
+# one console write at a time, and what that looks like is the whole list
+# flashing every time you move the cursor.
+#
+# A frame is built in memory and written once instead. The screen is never
+# blanked: the cursor goes home, each line clears itself to the right with
+# ESC[K as it is drawn, and one ESC[0J at the end removes anything the previous
+# frame left below. An identical frame is not written at all, which covers the
+# keys the loops do not handle and the board refreshing with nothing new.
+$script:TuiBuf       = $null
+$script:TuiLastFrame = ""
+$script:TuiLastWidth = 0
+
+function Reset-TuiFrame { $script:TuiLastFrame = "" }
+
+function Start-TuiFrame {
+    param([int]$Width = 0)
+    # A resized window leaves the old borders standing, and a frame that only
+    # clears the columns it draws cannot remove them - so that one case still
+    # wants a full clear.
+    if ($Width -gt 0 -and $Width -ne $script:TuiLastWidth) {
+        $script:TuiLastWidth = $Width
+        Clear-Tui
+    }
+    $script:TuiBuf = New-Object System.Text.StringBuilder
+}
+
+function Stop-TuiFrame {
+    if ($null -eq $script:TuiBuf) { return }
+    $frame = $script:TuiBuf.ToString()
+    $script:TuiBuf = $null
+    if ($frame -eq $script:TuiLastFrame) { return }
+    $script:TuiLastFrame = $frame
+    # Formatted first, on its own line: inside a method call's parentheses the
+    # comma separates ARGUMENTS, so [Console]::Out.Write("..." -f $a, $b) binds
+    # to Write(string format, object arg0) and dies with "Index (zero based)
+    # must be greater than or equal to zero and less than the size of the
+    # argument list".
+    $out = "{0}[H{1}{0}[0J" -f $script:E, $frame
+    [Console]::Out.Write($out)
+}
+
+# Inside a frame, buffer the line; outside one, behave exactly as before, so
+# the scripts that print plain lines between frames keep working.
+function Write-TuiOut {
+    param([string]$Text = "")
+    if ($null -ne $script:TuiBuf) {
+        [void]$script:TuiBuf.Append($Text).Append($script:E).Append("[K").Append("`n")
+    } else {
+        Reset-TuiFrame
+        Write-Host $Text
+    }
+}
+
 function Clear-Tui {
     $e = [char]27
+    Reset-TuiFrame
     Write-Host ("{0}[2J{0}[H" -f $e) -NoNewline
 }
 
@@ -122,7 +179,7 @@ function Write-TuiLine {
     if ($Width -le 0) { $Width = Get-TuiWidth }
     $pad = $Width - 4 - (Get-TuiLen $Text)
     if ($pad -lt 0) { $pad = 0 }
-    Write-Host ("{0}|{1} {2}{3} {0}|{1}" -f $script:Tui.Dim, $script:Tui.Reset, $Text, (" " * $pad))
+    Write-TuiOut ("{0}|{1} {2}{3} {0}|{1}" -f $script:Tui.Dim, $script:Tui.Reset, $Text, (" " * $pad))
 }
 
 function Write-TuiTop {
@@ -131,20 +188,20 @@ function Write-TuiTop {
     $t = " $Title "
     $rest = $Width - 3 - $t.Length
     if ($rest -lt 0) { $rest = 0 }
-    Write-Host ("{0}+-{1}{2}{3}{0}{4}+{5}" -f `
+    Write-TuiOut ("{0}+-{1}{2}{3}{0}{4}+{5}" -f `
         $script:Tui.Dim, $script:Tui.Bright, $t, $script:Tui.Dim, ("-" * $rest), $script:Tui.Reset)
 }
 
 function Write-TuiSep {
     param([int]$Width = 0)
     if ($Width -le 0) { $Width = Get-TuiWidth }
-    Write-Host ("{0}+{1}+{2}" -f $script:Tui.Dim, ("-" * ($Width - 2)), $script:Tui.Reset)
+    Write-TuiOut ("{0}+{1}+{2}" -f $script:Tui.Dim, ("-" * ($Width - 2)), $script:Tui.Reset)
 }
 
 function Write-TuiBottom {
     param([int]$Width = 0)
     if ($Width -le 0) { $Width = Get-TuiWidth }
-    Write-Host ("{0}+{1}+{2}" -f $script:Tui.Dim, ("-" * ($Width - 2)), $script:Tui.Reset)
+    Write-TuiOut ("{0}+{1}+{2}" -f $script:Tui.Dim, ("-" * ($Width - 2)), $script:Tui.Reset)
 }
 
 function Read-TuiKey {
@@ -195,7 +252,7 @@ function Show-TuiChecklist {
     try {
         while ($true) {
             $w = Get-TuiWidth
-            Clear-Tui
+            Start-TuiFrame -Width $w
             Write-TuiTop $Title $w
 
             foreach ($h in $HeaderLines) { Write-TuiLine $h $w }
@@ -232,6 +289,7 @@ function Show-TuiChecklist {
             Write-TuiLine ("{0}{1} selected{2}   {3}space{2} toggle  {3}a{2} all  {3}n{2} none  {3}enter{2} start  {3}q{2} quit" -f `
                 $T.Green, $n, $T.Reset, $T.Accent) $w
             Write-TuiBottom $w
+            Stop-TuiFrame
 
             $key = Read-TuiKey
             $ch = $key.Char.ToLower()
@@ -281,7 +339,7 @@ function Show-TuiMenu {
     try {
         while ($true) {
             $w = Get-TuiWidth
-            Clear-Tui
+            Start-TuiFrame -Width $w
             Write-TuiTop $Title $w
             foreach ($h in $HeaderLines) { Write-TuiLine $h $w }
             if ($HeaderLines.Count) { Write-TuiSep $w }
@@ -300,6 +358,7 @@ function Show-TuiMenu {
             Write-TuiSep $w
             Write-TuiLine ("{0}enter{1} choose  {0}q{1} back" -f $T.Accent, $T.Reset) $w
             Write-TuiBottom $w
+            Stop-TuiFrame
 
             $key = Read-TuiKey
             $ch = $key.Char.ToLower()
@@ -350,7 +409,7 @@ function Write-TuiBoard {
 
     $T = $script:Tui
     $w = Get-TuiWidth
-    Clear-Tui
+    Start-TuiFrame -Width $w
     Write-TuiTop $Title $w
 
     foreach ($s in $Steps) {
@@ -371,6 +430,7 @@ function Write-TuiBoard {
         foreach ($f in $FooterLines) { Write-TuiLine $f $w }
     }
     Write-TuiBottom $w
+    Stop-TuiFrame
 }
 
 function Write-TuiBanner {

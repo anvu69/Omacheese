@@ -168,6 +168,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The TUI draws one frame per keypress and skips a frame that has not
+      # changed. Nothing about that is visible except in the bytes it writes,
+      # and the first version of it threw on every frame while still looking
+      # perfectly healthy in a benchmark. Run on both hosts: the installer
+      # meets 5.1 on a fresh machine and pwsh 7 everywhere after that.
+      - name: TUI frames
+        shell: pwsh
+        run: ./scripts/lib/tui.tests.ps1
+
+      - name: TUI frames (Windows PowerShell 5.1)
+        shell: powershell
+        run: ./scripts/lib/tui.tests.ps1
+
       - name: Theme templates render back to the committed configs
         shell: pwsh
         run: |
