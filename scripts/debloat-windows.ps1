@@ -336,6 +336,21 @@ if ($DryRun) {
 }
 
 Write-Host ""
+
+# Our strictness is not Win11Debloat's to obey. Set-StrictMode is inherited by
+# every child scope, so dot-sourcing scripts\lib\tui.ps1 for the checklist put
+# StrictMode 2.0 on this script AND on the upstream code called below, which is
+# not written to it:
+#
+#   Resolve-UserProfilePath.ps1:29
+#     if (-not $script:ResolvedUserSidCache) { $script:ResolvedUserSidCache = @{} }
+#
+# Reading a variable that has never been set is exactly what strict mode
+# forbids, so a run that got as far as the first per-user registry write died
+# with "The variable '$script:ResolvedUserSidCache' cannot be retrieved because
+# it has not been set". Measured: a child script reading an unset variable
+# throws under an inherited StrictMode 2.0 and is fine after Set-StrictMode -Off.
+Set-StrictMode -Off
 & $entry @w11
 
 # --- Tweaks Win11Debloat does not cover --------------------------------------
