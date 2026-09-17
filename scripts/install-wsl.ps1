@@ -15,6 +15,15 @@ param(
 
 $ErrorActionPreference = "Continue"
 
+# For Invoke-BoundedCommand: every call into wsl.exe gets a deadline, because a
+# wedged WSL service answers nothing and this script would wait for it forever.
+# detect.ps1 turns StrictMode on for whatever dot-sources it; this script is not
+# written to it, so turn it back off rather than fail in an elevated window that
+# has nowhere to print.
+$RepoRoot = Split-Path -Parent $PSScriptRoot
+. (Join-Path $RepoRoot "scripts\lib\detect.ps1")
+Set-StrictMode -Off
+
 function Info { param($m) Write-Host "  $m" -ForegroundColor Cyan }
 function Good { param($m) Write-Host "  $m" -ForegroundColor Green }
 function Warn { param($m) Write-Host "  $m" -ForegroundColor Yellow }
@@ -44,21 +53,39 @@ if ($cpu.PSObject.Properties.Name -contains "VirtualizationFirmwareEnabled" -and
 Good "virtualisation available"
 
 # --- features ----------------------------------------------------------------
+# Ask WSL whether it runs, instead of asking DISM whether two feature names are
+# on. The Store build of WSL (2.4 and later, which is what Windows installs now)
+# needs VirtualMachinePlatform and nothing else: the legacy
+# Microsoft-Windows-Subsystem-Linux feature can sit Disabled on a machine where
+# `wsl --version` answers and distros run.
+#
+# Enabling it there was not free. Measured on this machine, with WSL 2.7.14
+# working and no distro installed: 628s of DISM, then exit 3010 - and setup.ps1
+# reads 3010 as "reboot first", so it skipped the local-LLM step and the distro
+# install below never ran either. The machine needed neither.
 $needReboot = $false
-foreach ($feature in @("Microsoft-Windows-Subsystem-Linux", "VirtualMachinePlatform")) {
-    $state = (Get-WindowsOptionalFeature -Online -FeatureName $feature -ErrorAction SilentlyContinue).State
-    if ($state -eq "Enabled") {
-        Good "$feature already enabled"
-    } else {
-        Info "enabling $feature..."
-        $r = Enable-WindowsOptionalFeature -Online -FeatureName $feature -All -NoRestart -ErrorAction SilentlyContinue
-        # Do not wait to be told. VirtualMachinePlatform needs a reboot whether
-        # or not DISM sets RestartNeeded, and treating "just enabled" as "ready"
-        # is what made the distro install, and then everything downstream of it,
-        # fail on a machine that was only a restart away from working.
-        $needReboot = $true
-        if ($r -and $r.RestartNeeded) { Info "  restart flagged by DISM" }
-        Good "$feature enabled"
+
+$probe = Invoke-BoundedCommand -FilePath "wsl.exe" -ArgumentList @("--version") `
+         -TimeoutMs 8000 -StdoutEncoding ([System.Text.Encoding]::Unicode)
+
+if ($probe.ExitCode -eq 0) {
+    Good "WSL already runs - leaving the Windows features alone"
+} else {
+    foreach ($feature in @("Microsoft-Windows-Subsystem-Linux", "VirtualMachinePlatform")) {
+        $state = (Get-WindowsOptionalFeature -Online -FeatureName $feature -ErrorAction SilentlyContinue).State
+        if ($state -eq "Enabled") {
+            Good "$feature already enabled"
+        } else {
+            Info "enabling $feature..."
+            $r = Enable-WindowsOptionalFeature -Online -FeatureName $feature -All -NoRestart -ErrorAction SilentlyContinue
+            # Do not wait to be told. VirtualMachinePlatform needs a reboot whether
+            # or not DISM sets RestartNeeded, and treating "just enabled" as "ready"
+            # is what made the distro install, and then everything downstream of it,
+            # fail on a machine that was only a restart away from working.
+            $needReboot = $true
+            if ($r -and $r.RestartNeeded) { Info "  restart flagged by DISM" }
+            Good "$feature enabled"
+        }
     }
 }
 
@@ -108,10 +135,14 @@ if ($installed -contains $Distro) {
 Write-Host ""
 Good "WSL is ready."
 Write-Host ""
-Write-Host "  Next, inside the distro (it will ask you to create a user):" -ForegroundColor Cyan
-Write-Host "    wsl -d $Distro"
-Write-Host "    bash scripts/install-almalinux.sh"
+# --cd takes a Windows path and lands the shell there. Without it these lines
+# told you to open the distro and run `bash scripts/install-almalinux.sh` from
+# your Linux home directory, where the repo is not: the clone lives on the
+# Windows side, reachable under /mnt.
+Write-Host "  Next, set up the distro (installed with --no-launch, so no user was"
+Write-Host "  created and you are root until you make one):" -ForegroundColor Cyan
+Write-Host "    wsl -d $Distro --cd `"$RepoRoot`" -- bash scripts/install-almalinux.sh"
 Write-Host ""
-Write-Host "  Then install the per-distro config:" -ForegroundColor Cyan
-Write-Host "    sudo cp ~/.config/wsl/wsl.conf /etc/wsl.conf && exit"
+Write-Host "  Then the per-distro config (metadata on /mnt, no Windows PATH leak):" -ForegroundColor Cyan
+Write-Host "    wsl -d $Distro --cd `"$RepoRoot`" -- sudo cp configs/wsl/wsl.conf /etc/wsl.conf"
 Write-Host "    wsl --shutdown"
