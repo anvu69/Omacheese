@@ -89,16 +89,26 @@ if command -v zsh >/dev/null 2>&1 && [ "${SHELL:-}" != "$(command -v zsh)" ]; th
   chsh -s "$(command -v zsh)" || true
 fi
 
+# Run from a clone, the configs are right here, so install them rather than
+# printing "cp configs/zsh/zshrc ~/.zshrc etc." and leaving the rest to the
+# reader - the step after it (sudo cp ~/.config/wsl/wsl.conf /etc/wsl.conf)
+# depends on a file that copying never produced. Under bootstrap-almalinux.sh
+# this script arrives alone in a temp directory, so the guard is false there
+# and the bootstrap does the copying itself.
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -d "$REPO_DIR/configs" ]; then
+  say "Installing the Linux configs from $REPO_DIR"
+  bash "$REPO_DIR/scripts/install-configs-wsl.sh" "$REPO_DIR"
+fi
+
 cat <<'EOF'
 
 AlmaLinux packages installed.
 
 Next:
-  1. Copy the configs:   bash scripts/bootstrap-almalinux.sh --repo <raw-url> --skip-install
-     (or, from a clone:  cp configs/zsh/zshrc ~/.zshrc  etc.)
-  2. Install wsl.conf:   sudo cp ~/.config/wsl/wsl.conf /etc/wsl.conf
-  3. From Windows:       wsl --shutdown
-  4. Reopen Alacritty.
+  1. Install wsl.conf:   sudo cp ~/.config/wsl/wsl.conf /etc/wsl.conf
+  2. From Windows:       wsl --shutdown
+  3. Reopen Alacritty.
 
 For SSH keys from Bitwarden inside WSL you also need, on Windows:
   winget install --id albertony.npiperelay -e

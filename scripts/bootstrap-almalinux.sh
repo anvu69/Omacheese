@@ -59,46 +59,14 @@ if [ "$SKIP_CONFIGS" -eq 0 ]; then
     "configs/oh-my-posh/poweruser.omp.json" \
     "configs/ai/docker-compose.vllm.yml" \
     "configs/ai/docker-compose.finetune.yml" \
-    "configs/ai/.env.example"
+    "configs/ai/.env.example" \
+    "scripts/install-configs-wsl.sh"
   do
     download "$f" "$WORKDIR/$f"
   done
 
-  backup() {
-    [ -e "$1" ] && cp -a "$1" "$1.$(date +%Y%m%d-%H%M%S).bak" && echo "  ~ backed up $1"
-    return 0
-  }
-
-  mkdir -p "$HOME/.config/zsh" "$HOME/.config/wsl" "$HOME/.config/oh-my-posh" "$HOME/.config/ai"
-
-  backup "$HOME/.zshrc";     cp "$WORKDIR/configs/zsh/zshrc"        "$HOME/.zshrc"
-  backup "$HOME/.tmux.conf"; cp "$WORKDIR/configs/tmux/tmux.conf"   "$HOME/.tmux.conf"
-  backup "$HOME/.gitconfig"; cp "$WORKDIR/configs/git/gitconfig"    "$HOME/.gitconfig"
-
-  cp "$WORKDIR/configs/zsh/aliases.zsh"              "$HOME/.config/zsh/aliases.zsh"
-  cp "$WORKDIR/configs/zsh/agent-layouts.zsh"        "$HOME/.config/zsh/agent-layouts.zsh"
-  cp "$WORKDIR/configs/wsl/ssh-agent-bridge.sh"      "$HOME/.config/wsl/ssh-agent-bridge.sh"
-  cp "$WORKDIR/configs/wsl/wsl.conf"                 "$HOME/.config/wsl/wsl.conf"
-  cp "$WORKDIR/configs/oh-my-posh/poweruser.omp.json" "$HOME/.config/oh-my-posh/poweruser.omp.json"
-  chmod +x "$HOME/.config/wsl/ssh-agent-bridge.sh"
-
-  # AI stack. .env is never overwritten - it holds the HF token.
-  cp "$WORKDIR/configs/ai/docker-compose.vllm.yml"     "$HOME/.config/ai/"
-  cp "$WORKDIR/configs/ai/docker-compose.finetune.yml" "$HOME/.config/ai/"
-  cp "$WORKDIR/configs/ai/.env.example"                "$HOME/.config/ai/"
-  [ -f "$HOME/.config/ai/.env" ] || cp "$WORKDIR/configs/ai/.env.example" "$HOME/.config/ai/.env"
-
-  cat <<'EOF'
-
-Linux configs installed.
-
-Still to do (needs root, and a restart of the distro):
-  sudo cp ~/.config/wsl/wsl.conf /etc/wsl.conf
-  # then, from Windows:
-  wsl --shutdown
-
-Set your git identity (deliberately not shipped in the repo):
-  git config --global user.name  "Your Name"
-  git config --global user.email "you@example.com"
-EOF
+  # The copying lives in one place, shared with the clone path, so the two
+  # cannot drift: install-almalinux.sh runs the same script when it finds a
+  # configs/ directory next to itself.
+  bash "$WORKDIR/scripts/install-configs-wsl.sh" "$WORKDIR"
 fi
