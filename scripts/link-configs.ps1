@@ -307,5 +307,11 @@ if ($legacyRoot -and (Test-Path -LiteralPath $legacyRoot) -and
 Write-Host ""
 Write-Host "  Review ~/.ssh/config.example before renaming it to config." -ForegroundColor Yellow
 Write-Host "  Inside WSL: sudo cp ~/.config/wsl/wsl.conf /etc/wsl.conf && wsl --shutdown" -ForegroundColor Yellow
-Write-Host ""
-Write-Host "  Then: ./scripts/doctor.ps1" -ForegroundColor Cyan
+
+# Run the check instead of printing "Then: ./scripts/doctor.ps1". Left to
+# setup.ps1 when this is one of its steps - it runs doctor once, last. Its own
+# process, so doctor gets its own ErrorActionPreference rather than this one's.
+if (-not $env:OMACHEESE_SETUP_RUN) {
+    Write-Host ""
+    & (Get-Process -Id $PID).Path -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Repo "scripts\doctor.ps1")
+}

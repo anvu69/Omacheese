@@ -125,11 +125,20 @@ if (-not $SkipModules) {
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Green
 Write-Host "  1. ./scripts/link-configs.ps1        install configs + Omacheese helpers"
-Write-Host "  2. ./scripts/doctor.ps1              verify everything landed"
-Write-Host "  3. ./scripts/start-desktop.ps1       start komorebi + whkd + yasb"
+Write-Host "  2. ./scripts/start-desktop.ps1       start komorebi + whkd + yasb"
 Write-Host ""
-Write-Host "  WSL:      wsl --install -d AlmaLinux-9   then  bash scripts/install-almalinux.sh"
+Write-Host "  WSL:      wsl --install -d AlmaLinux-9"
+Write-Host "            wsl -d AlmaLinux-9 --cd `"$Repo`" -- bash scripts/install-almalinux.sh"
 Write-Host "  Bitwarden: enable the SSH agent, and set the Windows service"
 Write-Host "             'OpenSSH Authentication Agent' to Disabled."
 
+# What landed, checked now rather than left as a step to remember. Left to
+# setup.ps1 when this is one of its steps - it runs doctor once, last. Its own
+# process, so doctor's exit code and preferences stay out of this script's.
+if (-not $env:OMACHEESE_SETUP_RUN) {
+    Write-Host ""
+    & (Get-Process -Id $PID).Path -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Repo "scripts\doctor.ps1")
+}
+
 if ($result.Failed.Count) { exit 1 }
+exit 0

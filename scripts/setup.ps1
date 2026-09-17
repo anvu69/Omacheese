@@ -41,6 +41,13 @@ $RunDir = Join-Path $env:TEMP "w11-setup-$stamp"
 New-Item -ItemType Directory -Force -Path $RunDir | Out-Null
 $MainLog = Join-Path $RunDir "setup.log"
 
+# Steps that run doctor.ps1 for you when started on their own (link-configs,
+# debloat, install-windows, start-desktop) check this and leave it to the setup,
+# which runs it once, last. Inherited by every step started from here; the
+# elevated ones get it written into their command line, since a process started
+# through UAC does not reliably inherit this one's environment.
+$env:OMACHEESE_SETUP_RUN = $RunDir
+
 function Write-SetupLog {
     param([string]$Message)
     $line = "[{0}] {1}" -f (Get-Date -Format "HH:mm:ss"), $Message
@@ -114,7 +121,9 @@ if ($Modules) {
             "",
             ("{0}[-]{1} means the machine cannot run it; the reason is shown underneath." -f $T.Dim, $T.Reset)
         )
-        $selectedKeys = Show-TuiChecklist -Items $allModules -Title "Modules" -HeaderLines $checkHeader
+        # verify is not offered: it always runs, last. See below.
+        $selectedKeys = Show-TuiChecklist -Items @($allModules | Where-Object { $_.Key -ne "verify" }) `
+            -Title "Modules" -HeaderLines $checkHeader
         if ($null -eq $selectedKeys) { Clear-Tui; Write-Host "Cancelled."; return }
     } else {
         $selectedKeys = @($allModules | Where-Object { $_.Selected } | ForEach-Object { $_.Key })
@@ -157,6 +166,16 @@ if (($steps | Where-Object { $_.Key -eq "debloat" }) -and -not $Yes -and -not $D
         }
     }
 }
+
+# --- verify: always, last ----------------------------------------------------
+# It used to be a module like any other - untickable, left out of Custom, and
+# run with -Quick when it did run - and the summary then told you to go and run
+# ./scripts/doctor.ps1 yourself for the full check. Nobody should have to finish
+# an installer by hand. The full check costs ~21s against ~8s for -Quick, on a
+# run measured in minutes, and what it finds is printed in the summary.
+$verifyStep = $allModules | Where-Object { $_.Key -eq "verify" } | Select-Object -First 1
+$steps = @($steps | Where-Object { $_.Key -ne "verify" })
+if ($verifyStep) { $steps += $verifyStep }
 
 # --- plan --------------------------------------------------------------------
 Clear-Tui
@@ -313,8 +332,8 @@ function Invoke-Step {
         # it - debloat did - reported "see debloat.log" against a file that was
         # never written. Start-Transcript is the only redirection available to
         # a process this one cannot pipe.
-        $inner = "Start-Transcript -LiteralPath '{0}' -Force | Out-Null; try {{ & '{1}'{2}; exit `$LASTEXITCODE }} finally {{ try {{ Stop-Transcript | Out-Null }} catch {{ }} }}" -f `
-            $log.Replace("'", "''"), $File.Replace("'", "''"), $(if ($Arguments -and $Arguments.Count) { " " + ($Arguments -join " ") } else { "" })
+        $inner = "`$env:OMACHEESE_SETUP_RUN = '{3}'; Start-Transcript -LiteralPath '{0}' -Force | Out-Null; try {{ & '{1}'{2}; exit `$LASTEXITCODE }} finally {{ try {{ Stop-Transcript | Out-Null }} catch {{ }} }}" -f `
+            $log.Replace("'", "''"), $File.Replace("'", "''"), $(if ($Arguments -and $Arguments.Count) { " " + ($Arguments -join " ") } else { "" }), $RunDir.Replace("'", "''")
         $elevArgs = '-NoProfile -ExecutionPolicy Bypass -Command "{0}"' -f $inner.Replace('"', '\"')
 
         try {
@@ -415,7 +434,7 @@ $ctx = @{
         # (say, configs without the window manager) is expected rather than an
         # error in this run. Report its own tally instead of a bare exit code,
         # and only treat real failures as a failed step.
-        $code = Invoke-Step -Key "verify" -File (Join-Path $RepoRoot "scripts\doctor.ps1") -Arguments @("-Quick")
+        $code = Invoke-Step -Key "verify" -File (Join-Path $RepoRoot "scripts\doctor.ps1") -Arguments @()
 
         $log = Join-Path $RunDir "verify.log"
         if (Test-Path -LiteralPath $log) {
@@ -623,7 +642,38 @@ if ($didWsl -and -not $script:RebootRequired) {
 # from the shell this was launched from, which is why a fresh machine looked
 # like it needed a full restart to run anything.
 $footer += "  {0}open a NEW terminal{1}            this one still has the old PATH" -f $T.Cyan, $T.Reset
-$footer += "  {0}./scripts/doctor.ps1{1}          full check including winget ids" -f $T.Cyan, $T.Reset
+
+# What the verify step found, printed here instead of "run ./scripts/doctor.ps1"
+# - it has just been run, in full, so the answer is already on disk.
+$verifyLog = Join-Path $RunDir "verify.log"
+if (Test-Path -LiteralPath $verifyLog) {
+    $left = @(Get-Content -LiteralPath $verifyLog |
+        ForEach-Object { $_ -replace ("{0}\[[0-9;]*m" -f [char]27), "" } |
+        Where-Object { $_ -match '^\s*(WARN|FAIL)\s+(.+)$' } |
+        ForEach-Object { [pscustomobject]@{ Level = $Matches[1]; Text = $Matches[2].Trim() } })
+
+    $footer += ""
+    if ($left.Count) {
+        $footer += "{0}Still to look at{1} ({2}):" -f $T.Bright, $T.Reset, $script:DoctorSummary
+        # Write-TuiLine pads but cannot truncate, so cut the plain text first;
+        # doctor lines carry a remedy in brackets and can run long.
+        $room = (Get-TuiWidth) - 14
+        $shown = 0
+        foreach ($l in ($left | Sort-Object { if ($_.Level -eq "FAIL") { 0 } else { 1 } })) {
+            if ($shown -ge 10) { break }
+            $txt = $l.Text
+            if ($txt.Length -gt $room) { $txt = $txt.Substring(0, $room - 3) + "..." }
+            $col = if ($l.Level -eq "FAIL") { $T.Red } else { $T.Yellow }
+            $footer += "  {0}{1}{2}  {3}" -f $col, $l.Level, $T.Reset, $txt
+            $shown++
+        }
+        if ($left.Count -gt $shown) {
+            $footer += "  {0}...and {1} more in verify.log{2}" -f $T.Dim, ($left.Count - $shown), $T.Reset
+        }
+    } else {
+        $footer += "{0}Verified: {1}.{2}" -f $T.Green, $script:DoctorSummary, $T.Reset
+    }
+}
 
 Write-TuiBoard -Steps $steps -Title "Done" -FooterLines $footer
 Write-Host ""

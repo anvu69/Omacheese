@@ -348,7 +348,21 @@ if (-not $SkipTweaks) {
 }
 
 Write-Host ""
-Write-Host "Done. Verify with: ./scripts/doctor.ps1" -ForegroundColor Green
+Write-Host "Done." -ForegroundColor Green
+
+# Run the check instead of printing "Verify with: ./scripts/doctor.ps1". Left to
+# setup.ps1 when this is one of its steps - it runs doctor once, last. Its own
+# process on purpose: this script runs under ErrorActionPreference=Stop, and the
+# checklist may have dot-sourced StrictMode into it; doctor is written to
+# neither, and in-process it would inherit both - the Win11Debloat failure
+# again.
+if (-not $env:OMACHEESE_SETUP_RUN) {
+    Write-Host ""
+    & (Get-Process -Id $PID).Path -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Repo "scripts\doctor.ps1")
+    # doctor exits 1 for anything it finds anywhere on the machine; that is
+    # not this script failing.
+    $global:LASTEXITCODE = 0
+}
 
 # Only set by the elevated relaunch: without it that window closes the instant
 # it finishes and nobody ever sees what it did.
