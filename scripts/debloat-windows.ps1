@@ -1,8 +1,9 @@
 # Strip Windows 11 back to something a tiling desktop can live in.
 #
-#   ./scripts/debloat-windows.ps1 -DryRun      # show what would run
-#   ./scripts/debloat-windows.ps1              # apply settings
-#   ./scripts/debloat-windows.ps1 -RemoveApps  # also uninstall bundled apps
+#   ./scripts/debloat-windows.ps1                        # pick groups, then apply
+#   ./scripts/debloat-windows.ps1 -DryRun                # show the plan, change nothing
+#   ./scripts/debloat-windows.ps1 -Groups tiling,privacy # no prompt
+#   ./scripts/debloat-windows.ps1 -All                   # every group, plus the apps
 #
 # Wraps Win11Debloat (github.com/Raphire/Raphire/Win11Debloat) rather than
 # reimplementing it: it is maintained, widely used, and already knows the
@@ -10,14 +11,26 @@
 #   * a pinned version, so a run today matches a run next month
 #   * a version-controlled, reviewable profile (configs/windows/debloat.json)
 #   * the handful of tiling tweaks Win11Debloat does not cover
+#   * a choice. The profile is grouped - tiling, taskbar, explorer, privacy, ai,
+#     system - and only tiling is load-bearing here: komorebi cannot place a
+#     window Windows keeps snapping. Everything else is taste, so it is offered
+#     rather than assumed, and a run with no arguments asks.
 #
-# Settings changes are reversible (Win11Debloat writes a restore point first,
-# and most flags have an inverse). App removal is not, so it is opt-in.
+# Defaults with no console to ask in: tiling and the app removal. Settings are
+# reversible (Win11Debloat writes a restore point first, and most flags have an
+# inverse). Removing an app is not, which is why it is its own checklist line.
 
 [CmdletBinding()]
 param(
     # Pin. Bump deliberately after reading the upstream changelog.
     [string]$Ref = "2026.08.24",
+
+    # Which groups of settings to apply, from configs/windows/debloat.json, plus
+    # the pseudo-group "apps" for removing the bundled ones. Left empty, a
+    # console gets a checklist and anything else gets the defaults below.
+    [string[]]$Groups,
+    [switch]$All,
+
     [switch]$RemoveApps,
     [switch]$DryRun,
     [switch]$NoRestorePoint,
@@ -45,6 +58,96 @@ trap {
     break
 }
 
+# powershell.exe -File binds "a,b,c" to a [string[]] as ONE element, unlike
+# -Command, and the elevated relaunch below goes through -File.
+if ($Groups) { $Groups = @($Groups -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
+
+$Repo = Split-Path -Parent $PSScriptRoot
+
+# Not $Profile: that is a PowerShell automatic variable holding the path to
+# your shell profile, and shadowing it breaks anything that reads it later.
+$ProfilePath = Join-Path $Repo "configs\windows\debloat.json"
+if (-not (Test-Path -LiteralPath $ProfilePath)) { throw "Missing profile: $ProfilePath" }
+
+# --- what to apply -----------------------------------------------------------
+# The settings used to be all-or-nothing: 39 registry tweaks fixed in the
+# profile, applied in full or not at all. Only the tiling group is actually
+# required by anything in this repo - komorebi cannot place windows Windows
+# keeps snapping - so the rest is now a choice, offered as groups rather than as
+# 39 separate lines because the checklist does not scroll.
+#
+# Chosen HERE, before the elevation relaunch, so the picking happens in the
+# terminal you already have rather than in a window that appears for it. The
+# child is then told what was picked and never asks again.
+$profileJson  = Get-Content -LiteralPath $ProfilePath -Raw | ConvertFrom-Json
+$knownGroups  = @($profileJson.Tweaks | ForEach-Object { $_.Group } | Select-Object -Unique | Where-Object { $_ })
+$groupBlurbs  = @{
+    tiling   = "stop Windows fighting komorebi for window placement"
+    taskbar  = "strip the Windows taskbar back - yasb is the real one"
+    explorer = "real file extensions, hidden files, opens on This PC"
+    privacy  = "telemetry, Bing in search, suggestion surfaces, ads"
+    ai       = "Copilot, Recall, Click to Do, AI in Edge/Paint/Notepad"
+    system   = "dark mode, mouse acceleration, fast start-up, updates"
+}
+
+if ($All) {
+    $Groups = @($knownGroups) + "apps"
+} elseif ($Groups) {
+    $unknown = @($Groups | Where-Object { $knownGroups -notcontains $_ -and $_ -ne "apps" })
+    if ($unknown.Count) {
+        throw "Unknown group(s): $($unknown -join ', '). Known: $(($knownGroups + 'apps') -join ', ')"
+    }
+} else {
+    # tiling and apps are the defaults: the first is what this desktop needs to
+    # work at all, the second is what most people came here for.
+    $Groups = @("tiling", "apps")
+
+    $interactive = ($Host.Name -eq "ConsoleHost")
+    try { $interactive = $interactive -and -not [Console]::IsInputRedirected } catch { }
+
+    if ($interactive) {
+        . (Join-Path $Repo "scripts\lib\tui.ps1")
+        Initialize-Tui
+
+        $items = foreach ($g in $knownGroups) {
+            $n = @($profileJson.Tweaks | Where-Object { $_.Group -eq $g }).Count
+            [pscustomobject]@{
+                Key         = $g
+                Title       = $g
+                Description = "{0} setting(s) - {1}" -f $n, $groupBlurbs[$g]
+                Selected    = ($g -eq "tiling")
+                Available   = $true
+                Note        = ""
+            }
+        }
+        $items = @($items) + [pscustomobject]@{
+            Key         = "apps"
+            Title       = "apps"
+            Description = "remove 24 bundled apps (Xbox, Solitaire, Teams, Bing News...) - NOT reversible"
+            Selected    = $true
+            Available   = $true
+            Note        = ""
+        }
+
+        $picked = Show-TuiChecklist -Items $items -Title "Debloat" -HeaderLines @(
+            "Everything here is optional except tiling, which komorebi needs.",
+            "Settings are reversible; removing apps is not."
+        )
+        Clear-Tui
+        if ($null -eq $picked) { Write-Host "Cancelled - nothing was changed."; exit 0 }
+        $Groups = @($picked)
+    }
+}
+
+if ($RemoveApps -and $Groups -notcontains "apps") { $Groups += "apps" }
+$RemoveApps = [bool]($Groups -contains "apps")
+$tweakGroups = @($Groups | Where-Object { $_ -ne "apps" })
+
+if (-not $tweakGroups.Count -and -not $RemoveApps) {
+    Write-Host "Nothing selected - nothing to do." -ForegroundColor Yellow
+    exit 0
+}
+
 # --- host and elevation ------------------------------------------------------
 # Win11Debloat is a Windows PowerShell 5.1 script and says so: it calls
 # Get-AppxPackage and Get-ComputerRestorePoint, and under pwsh 7 the Appx module
@@ -65,7 +168,10 @@ $isElevated = (New-Object Security.Principal.WindowsPrincipal(
     [Security.Principal.WindowsIdentity]::GetCurrent())
 ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
-if (($isCore -or -not $isElevated) -and $PSCommandPath) {
+# Not for -DryRun: it prints a plan and changes nothing, so asking for
+# administrator - and opening a second window to hold the answer - buys nothing
+# and makes the one safe way to inspect this script the most annoying one.
+if (($isCore -or -not $isElevated) -and $PSCommandPath -and -not $DryRun) {
     $winPs = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
     if (-not (Test-Path -LiteralPath $winPs)) {
         throw "Windows PowerShell 5.1 not found at $winPs, and Win11Debloat cannot run under pwsh."
@@ -73,7 +179,10 @@ if (($isCore -or -not $isElevated) -and $PSCommandPath) {
 
     $relaunch = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$PSCommandPath`"")
     foreach ($k in $PSBoundParameters.Keys) {
-        if ($k -eq "Pause") { continue }
+        # Groups is passed explicitly below - by now it holds what was picked,
+        # which is not what was bound. All and RemoveApps are already folded
+        # into it, and re-sending them would only widen the selection again.
+        if ($k -in @("Pause", "Groups", "All", "RemoveApps")) { continue }
         $v = $PSBoundParameters[$k]
         if ($v -is [switch]) {
             if ($v.IsPresent) { $relaunch += "-$k" }
@@ -81,6 +190,8 @@ if (($isCore -or -not $isElevated) -and $PSCommandPath) {
             $relaunch += @("-$k", "`"$v`"")
         }
     }
+    # The elevated copy must not ask again: it gets the answer.
+    $relaunch += @("-Groups", "`"$($Groups -join ',')`"")
 
     if ($isElevated) {
         Write-Host "Re-running under Windows PowerShell 5.1 (Win11Debloat needs the Appx module)." -ForegroundColor Yellow
@@ -100,15 +211,7 @@ if (($isCore -or -not $isElevated) -and $PSCommandPath) {
     exit $p.ExitCode
 }
 
-$Repo = Split-Path -Parent $PSScriptRoot
-
-# Not $Profile: that is a PowerShell automatic variable holding the path to
-# your shell profile, and shadowing it breaks anything that reads it later.
-$ProfilePath = Join-Path $Repo "configs\windows\debloat.json"
-
-if (-not (Test-Path -LiteralPath $ProfilePath)) { throw "Missing profile: $ProfilePath" }
-
-# Apps removed only when -RemoveApps is given. Keep this list conservative:
+# Apps removed only when the apps group is picked. Keep this list conservative:
 # everything here is a bundled consumer app with no role in a dev setup.
 $AppsToRemove = @(
     "Clipchamp.Clipchamp"
@@ -140,7 +243,8 @@ $AppsToRemove = @(
 Write-Host "Win11Debloat wrapper" -ForegroundColor Green
 Write-Host "  pinned ref : $Ref"
 Write-Host "  profile    : $ProfilePath"
-Write-Host "  app removal: $(if ($RemoveApps) { 'YES' } else { 'no (pass -RemoveApps)' })"
+Write-Host "  groups     : $(if ($tweakGroups.Count) { $tweakGroups -join ', ' } else { 'none' })"
+Write-Host "  app removal: $(if ($RemoveApps) { 'YES - not reversible' } else { 'no' })"
 
 # --- Fetch a pinned copy -----------------------------------------------------
 $work = Join-Path $env:TEMP "win11debloat-$Ref"
@@ -175,17 +279,33 @@ if ($RemoveApps) {
     $w11.Apps       = $AppsToRemove
 }
 
-# CreateRestorePoint comes from the profile, not from this command line, so the
-# old `Where-Object { $_ -ne "-CreateRestorePoint" }` filtered a string that was
-# never in the list: -NoRestorePoint did nothing at all. Take the setting out of
-# a copy of the profile instead, which is where it actually lives.
-if ($NoRestorePoint) {
+# The profile in the repo holds every group; Win11Debloat applies whatever is
+# in the file it is handed. So hand it a copy holding only what was picked.
+#
+# CreateRestorePoint lives in the profile too, not on this command line, which
+# is why the old `Where-Object { $_ -ne "-CreateRestorePoint" }` filtered a
+# string that was never in the argument list: -NoRestorePoint did nothing at all.
+$selected = @($profileJson.Tweaks | Where-Object { $tweakGroups -contains $_.Group })
+
+if ($NoRestorePoint -or $selected.Count -ne @($profileJson.Tweaks).Count) {
     $cfg = Get-Content -LiteralPath $ProfilePath -Raw | ConvertFrom-Json
-    $cfg.Deployment = @($cfg.Deployment | Where-Object { $_.Name -ne "CreateRestorePoint" })
-    $ProfilePath  = Join-Path $env:TEMP "debloat-norestore.json"
-    $cfg | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $ProfilePath -Encoding UTF8
-    $w11.Config   = $ProfilePath
-    Write-Host "  restore point: skipped (profile copied to $ProfilePath)" -ForegroundColor Yellow
+    $cfg.Tweaks = $selected
+    if ($NoRestorePoint) {
+        $cfg.Deployment = @($cfg.Deployment | Where-Object { $_.Name -ne "CreateRestorePoint" })
+    }
+
+    # An empty Tweaks list with nothing else left would be refused by the
+    # importer ("no importable data"), and with only apps picked there is
+    # nothing for it to read anyway.
+    if ($selected.Count -or @($cfg.Deployment).Count) {
+        $ProfilePath = Join-Path $env:TEMP "debloat-selected.json"
+        $cfg | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $ProfilePath -Encoding UTF8
+        $w11.Config = $ProfilePath
+    } else {
+        $w11.Remove("Config")
+    }
+
+    Write-Host "  applying   : $($selected.Count) of $(@($profileJson.Tweaks).Count) settings$(if ($NoRestorePoint) { ', no restore point' })" -ForegroundColor DarkGray
 }
 
 # Printed from the same hashtable the call uses, so the preview cannot drift
@@ -197,11 +317,15 @@ Write-Host "`nWould run:" -ForegroundColor Magenta
 Write-Host "  $entry $preview" -ForegroundColor DarkGray
 
 if ($DryRun) {
-    $cfgShown = Get-Content -LiteralPath $ProfilePath -Raw | ConvertFrom-Json
-    Write-Host "`nSettings in the profile:" -ForegroundColor Magenta
-    @($cfgShown.Deployment) + @($cfgShown.Tweaks) |
-        Where-Object { $_ } |
-        ForEach-Object { Write-Host ("  -{0}" -f $_.Name) -ForegroundColor DarkGray }
+    if ($w11.ContainsKey("Config")) {
+        $cfgShown = Get-Content -LiteralPath $w11.Config -Raw | ConvertFrom-Json
+        Write-Host "`nSettings that would be applied:" -ForegroundColor Magenta
+        @($cfgShown.Deployment) + @($cfgShown.Tweaks) |
+            Where-Object { $_ } |
+            ForEach-Object { Write-Host ("  -{0}" -f $_.Name) -ForegroundColor DarkGray }
+    } else {
+        Write-Host "`nNo settings selected - app removal only." -ForegroundColor Magenta
+    }
     if ($RemoveApps) {
         Write-Host "`nApps that would be removed:" -ForegroundColor Magenta
         $AppsToRemove -split ',' | ForEach-Object { Write-Host "  $_" -ForegroundColor DarkGray }

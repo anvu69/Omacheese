@@ -114,8 +114,9 @@ function Get-SetupModules {
         -Est "10 s" `
         -Action { param($ctx) & $ctx.LinkConfigs }))
 
-    $mods.Add((New-Mod -Key "debloat" -Description "Win11Debloat + the tweaks a tiling WM needs" `
+    $mods.Add((New-Mod -Key "debloat" -Description "Win11Debloat - asks which groups of settings to apply" `
         -Default $false `
+        -Note "picks its own groups; only 'tiling' is needed by komorebi" `
         -Est "2-4 min" `
         -Action { param($ctx) & $ctx.Debloat }))
 

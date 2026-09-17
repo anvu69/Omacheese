@@ -1,10 +1,28 @@
 # Debloat và tối ưu Windows cho tiling desktop
 
 ```powershell
-./scripts/debloat-windows.ps1 -DryRun      # xem sẽ chạy gì
-./scripts/debloat-windows.ps1              # áp dụng settings
-./scripts/debloat-windows.ps1 -RemoveApps  # gỡ luôn app bundled
+./scripts/debloat-windows.ps1                        # chọn nhóm rồi áp dụng
+./scripts/debloat-windows.ps1 -DryRun                # xem sẽ chạy gì, không đổi gì
+./scripts/debloat-windows.ps1 -Groups tiling,privacy # không hỏi
+./scripts/debloat-windows.ps1 -All                   # mọi nhóm, gỡ luôn app
 ```
+
+Chạy không tham số thì nó **hỏi**: checklist 6 nhóm + một dòng gỡ app bundled.
+Mặc định tích sẵn `tiling` và `apps` — `tiling` vì komorebi không đặt nổi cửa sổ
+mà Windows cứ snap lại, phần còn lại là khẩu vị nên không tự quyết thay bạn.
+
+| Nhóm | Số setting | Nội dung |
+|---|---|---|
+| `tiling` | 4 | tắt snap, snap assist, snap layouts, tab-trong-alt-tab |
+| `taskbar` | 7 | dọn taskbar Windows — yasb mới là thanh thật |
+| `explorer` | 6 | hiện đuôi file, file ẩn, mở vào This PC |
+| `privacy` | 8 | telemetry, Bing trong search, gợi ý, quảng cáo |
+| `ai` | 7 | Copilot, Recall, Click to Do, AI trong Edge/Paint/Notepad |
+| `system` | 7 | dark mode, mouse acceleration, fast start-up, update |
+| `apps` | 24 app | gỡ app bundled — **không hoàn tác được** |
+
+Chọn xong mới tới UAC: lựa chọn diễn ra trong terminal bạn đang gõ, cửa sổ admin
+chỉ nhận kết quả. `-DryRun` không cần quyền admin.
 
 Wrapper quanh [Win11Debloat](https://github.com/Raphire/Win11Debloat) thay vì
 viết lại — nó được maintain tốt, 57k sao, và đã biết sẵn các registry path.
@@ -18,7 +36,8 @@ Phần repo này thêm vào:
   Win11Debloat (117 tham số) — cùng loại lỗi với winget ID sai
 
 Settings đều reversible (Win11Debloat tạo restore point trước). **Gỡ app thì
-không**, nên nó nằm sau `-RemoveApps` riêng.
+không**, nên nó là một dòng riêng trong checklist, và `-Groups` không bao gồm
+nó trừ khi bạn tích hoặc ghi rõ `apps`.
 
 ---
 
@@ -56,8 +75,12 @@ tối đa:
 Cộng thêm (script tự làm, Win11Debloat không có):
 
 - **auto-hide taskbar** — sửa bit `0x08` của `StuckRects3\Settings[8]`
-- tắt News & interests
 - tắt search highlights
+
+> News & interests từng nằm ở đây. Windows 11 24H2 gỡ tính năng đó và để lại key
+> `...\CurrentVersion\Feeds` bị khoá: ghi vào là `Attempted to perform an
+> unauthorized operation` ngay cả khi elevated, và cả bước debloat fail **sau
+> khi** đã áp xong mọi setting. Widgets thay thế nó, `DisableWidgets` lo phần đó.
 
 > Auto-hide thay vì ẩn hẳn: taskbar vẫn là nơi hệ thống vẽ tray icon và
 > notification. Ẩn hoàn toàn sẽ mất cả hai.
@@ -94,7 +117,7 @@ Không liên quan gì tới Claude Code / Codex mà repo cài — xem
 
 ---
 
-## App bị gỡ (chỉ khi `-RemoveApps`)
+## App bị gỡ (chỉ khi chọn nhóm `apps`)
 
 Clipchamp, Bing News/Weather/Search, Xbox (app + overlay + TCUI + identity),
 Solitaire, Office Hub, People, Power Automate, To Do, Feedback Hub, Maps,

@@ -237,6 +237,17 @@ jobs:
           if ($unknown.Count) { throw "not FeatureIds in Win11Debloat $ref : $($unknown -join ', ')" }
           Write-Host "ok  every Tweaks name is a FeatureId"
 
+          # Every tweak has to carry a Group, or debloat-windows.ps1 can never
+          # offer it: the checklist is built from the groups present, and a
+          # setting in no group is silently applied by nobody.
+          $ungrouped = @($cfg.Tweaks | Where-Object { -not $_.Group } | ForEach-Object { $_.Name })
+          if ($ungrouped.Count) { throw "no Group on: $($ungrouped -join ', ')" }
+          $offered = @($cfg.Tweaks | ForEach-Object { $_.Group } | Sort-Object -Unique)
+          $known = @("tiling", "taskbar", "explorer", "privacy", "ai", "system")
+          $strange = @($offered | Where-Object { $known -notcontains $_ })
+          if ($strange.Count) { throw "unknown group(s): $($strange -join ', ') - known: $($known -join ', ')" }
+          Write-Host "ok  every tweak is in one of: $($offered -join ', ')"
+
       - name: Theme templates render back to the committed configs
         shell: pwsh
         run: |

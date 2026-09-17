@@ -24,7 +24,11 @@
     "           agents this repo installs, which are not Windows features.",
     "",
     "App removal is NOT here: it is opt-in behind -RemoveApps, and the list lives",
-    "in scripts/debloat-windows.ps1."
+    "in scripts/debloat-windows.ps1.",
+    "",
+    "Group is ours, not Win11Debloat's - the importer ignores unknown properties.",
+    "scripts/debloat-windows.ps1 offers the groups as a checklist and writes a",
+    "copy of this file holding only the ones picked. Groups: tiling, taskbar, explorer, privacy, ai, system."
   ],
   "Version": "1.0",
   "Deployment": [
@@ -36,159 +40,198 @@
   "Tweaks": [
     {
       "Name": "DisableWindowSnapping",
-      "Value": true
+      "Value": true,
+      "Group": "tiling"
     },
     {
       "Name": "DisableSnapAssist",
-      "Value": true
+      "Value": true,
+      "Group": "tiling"
     },
     {
       "Name": "DisableSnapLayouts",
-      "Value": true
+      "Value": true,
+      "Group": "tiling"
     },
     {
       "Name": "HideTabsInAltTab",
-      "Value": true
+      "Value": true,
+      "Group": "tiling"
     },
     {
       "Name": "TaskbarAlignLeft",
-      "Value": true
+      "Value": true,
+      "Group": "taskbar"
     },
     {
       "Name": "HideSearchTb",
-      "Value": true
+      "Value": true,
+      "Group": "taskbar"
     },
     {
       "Name": "HideTaskview",
-      "Value": true
+      "Value": true,
+      "Group": "taskbar"
     },
     {
       "Name": "HideChat",
-      "Value": true
+      "Value": true,
+      "Group": "taskbar"
     },
     {
       "Name": "DisableWidgets",
-      "Value": true
+      "Value": true,
+      "Group": "taskbar"
     },
     {
       "Name": "CombineTaskbarAlways",
-      "Value": true
+      "Value": true,
+      "Group": "taskbar"
     },
     {
       "Name": "EnableEndTask",
-      "Value": true
+      "Value": true,
+      "Group": "taskbar"
     },
     {
       "Name": "ShowKnownFileExt",
-      "Value": true
+      "Value": true,
+      "Group": "explorer"
     },
     {
       "Name": "ShowHiddenFolders",
-      "Value": true
+      "Value": true,
+      "Group": "explorer"
     },
     {
       "Name": "ExplorerToThisPC",
-      "Value": true
+      "Value": true,
+      "Group": "explorer"
     },
     {
       "Name": "HideGallery",
-      "Value": true
+      "Value": true,
+      "Group": "explorer"
     },
     {
       "Name": "ShowDriveLettersFirst",
-      "Value": true
+      "Value": true,
+      "Group": "explorer"
     },
     {
       "Name": "RevertContextMenu",
-      "Value": true
+      "Value": true,
+      "Group": "explorer"
     },
     {
       "Name": "DisableTelemetry",
-      "Value": true
+      "Value": true,
+      "Group": "privacy"
     },
     {
       "Name": "DisableBing",
-      "Value": true
+      "Value": true,
+      "Group": "privacy"
     },
     {
       "Name": "DisableStoreSearchSuggestions",
-      "Value": true
+      "Value": true,
+      "Group": "privacy"
     },
     {
       "Name": "DisableSuggestions",
-      "Value": true
+      "Value": true,
+      "Group": "privacy"
     },
     {
       "Name": "DisableLockscreenTips",
-      "Value": true
+      "Value": true,
+      "Group": "privacy"
     },
     {
       "Name": "DisableSettings365Ads",
-      "Value": true
+      "Value": true,
+      "Group": "privacy"
     },
     {
       "Name": "DisableEdgeAds",
-      "Value": true
+      "Value": true,
+      "Group": "privacy"
     },
     {
       "Name": "DisableFindMyDevice",
-      "Value": true
+      "Value": true,
+      "Group": "privacy"
     },
     {
       "Name": "DisableCopilot",
-      "Value": true
+      "Value": true,
+      "Group": "ai"
     },
     {
       "Name": "DisableRecall",
-      "Value": true
+      "Value": true,
+      "Group": "ai"
     },
     {
       "Name": "DisableClickToDo",
-      "Value": true
+      "Value": true,
+      "Group": "ai"
     },
     {
       "Name": "DisableAISvcAutoStart",
-      "Value": true
+      "Value": true,
+      "Group": "ai"
     },
     {
       "Name": "DisableEdgeAI",
-      "Value": true
+      "Value": true,
+      "Group": "ai"
     },
     {
       "Name": "DisablePaintAI",
-      "Value": true
+      "Value": true,
+      "Group": "ai"
     },
     {
       "Name": "DisableNotepadAI",
-      "Value": true
+      "Value": true,
+      "Group": "ai"
     },
     {
       "Name": "EnableDarkMode",
-      "Value": true
+      "Value": true,
+      "Group": "system"
     },
     {
       "Name": "DisableMouseAcceleration",
-      "Value": true
+      "Value": true,
+      "Group": "system"
     },
     {
       "Name": "DisableStickyKeys",
-      "Value": true
+      "Value": true,
+      "Group": "system"
     },
     {
       "Name": "DisableFastStartup",
-      "Value": true
+      "Value": true,
+      "Group": "system"
     },
     {
       "Name": "DisableDeliveryOptimization",
-      "Value": true
+      "Value": true,
+      "Group": "system"
     },
     {
       "Name": "PreventUpdateAutoReboot",
-      "Value": true
+      "Value": true,
+      "Group": "system"
     },
     {
       "Name": "DisableBitlockerAutoEncryption",
-      "Value": true
+      "Value": true,
+      "Group": "system"
     }
   ]
 }
