@@ -273,8 +273,18 @@ function Invoke-Step {
         # window and the user watches it there. -Wait is what actually waits:
         # a handle to an elevated child cannot always be reopened by PID from
         # an unelevated parent, so WaitForExit() alone is not dependable here.
+        #
+        # It transcribes itself instead. Without this an elevated step left NO
+        # log: its window closes the moment it ends, and a step that failed in
+        # it - debloat did - reported "see debloat.log" against a file that was
+        # never written. Start-Transcript is the only redirection available to
+        # a process this one cannot pipe.
+        $inner = "Start-Transcript -LiteralPath '{0}' -Force | Out-Null; try {{ & '{1}'{2}; exit `$LASTEXITCODE }} finally {{ try {{ Stop-Transcript | Out-Null }} catch {{ }} }}" -f `
+            $log.Replace("'", "''"), $File.Replace("'", "''"), $(if ($Arguments -and $Arguments.Count) { " " + ($Arguments -join " ") } else { "" })
+        $elevArgs = '-NoProfile -ExecutionPolicy Bypass -Command "{0}"' -f $inner.Replace('"', '\"')
+
         try {
-            $p = Start-Process -FilePath $psExe -ArgumentList $argLine -Verb RunAs -PassThru -Wait
+            $p = Start-Process -FilePath $psExe -ArgumentList $elevArgs -Verb RunAs -PassThru -Wait
         } catch {
             # Declined, or nobody answered: Windows dismisses the UAC dialog on
             # its own after about two minutes. Neither is a crash in the step,
