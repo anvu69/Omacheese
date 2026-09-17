@@ -181,7 +181,7 @@ if ($RemoveApps) {
 # a copy of the profile instead, which is where it actually lives.
 if ($NoRestorePoint) {
     $cfg = Get-Content -LiteralPath $ProfilePath -Raw | ConvertFrom-Json
-    $cfg.Settings = @($cfg.Settings | Where-Object { $_.Name -ne "CreateRestorePoint" })
+    $cfg.Deployment = @($cfg.Deployment | Where-Object { $_.Name -ne "CreateRestorePoint" })
     $ProfilePath  = Join-Path $env:TEMP "debloat-norestore.json"
     $cfg | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $ProfilePath -Encoding UTF8
     $w11.Config   = $ProfilePath
@@ -197,8 +197,10 @@ Write-Host "`nWould run:" -ForegroundColor Magenta
 Write-Host "  $entry $preview" -ForegroundColor DarkGray
 
 if ($DryRun) {
+    $cfgShown = Get-Content -LiteralPath $ProfilePath -Raw | ConvertFrom-Json
     Write-Host "`nSettings in the profile:" -ForegroundColor Magenta
-    (Get-Content -LiteralPath $ProfilePath -Raw | ConvertFrom-Json).Settings |
+    @($cfgShown.Deployment) + @($cfgShown.Tweaks) |
+        Where-Object { $_ } |
         ForEach-Object { Write-Host ("  -{0}" -f $_.Name) -ForegroundColor DarkGray }
     if ($RemoveApps) {
         Write-Host "`nApps that would be removed:" -ForegroundColor Magenta

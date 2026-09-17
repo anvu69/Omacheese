@@ -181,6 +181,62 @@ jobs:
         shell: powershell
         run: ./scripts/lib/tui.tests.ps1
 
+      # The debloat profile is only useful if the Win11Debloat version this repo
+      # pins can actually read it, and that has now broken twice: the arguments
+      # were splatted positionally, and the file used a {Settings:[...]} shape
+      # the importer ignores entirely ("The configuration file contains no
+      # importable data"). Both only showed up in a real elevated run. So fetch
+      # the pinned release and let its own importer answer.
+      - name: Win11Debloat accepts the pinned debloat profile
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $script = Get-Content ./scripts/debloat-windows.ps1 -Raw
+          if ($script -notmatch '\$Ref\s*=\s*"([^"]+)"') { throw "cannot find the pinned Ref in debloat-windows.ps1" }
+          $ref = $Matches[1]
+          Write-Host "pinned ref: $ref"
+
+          $work = Join-Path $env:RUNNER_TEMP "w11d"
+          New-Item -ItemType Directory -Force -Path $work | Out-Null
+          $zip = Join-Path $work "src.zip"
+          Invoke-WebRequest -UseBasicParsing -OutFile $zip `
+            -Uri "https://github.com/Raphire/Win11Debloat/archive/refs/tags/$ref.zip"
+          Expand-Archive -LiteralPath $zip -DestinationPath $work -Force
+          $W = (Get-ChildItem $work -Directory | Where-Object { Test-Path (Join-Path $_.FullName "Win11Debloat.ps1") } | Select-Object -First 1).FullName
+
+          # What Win11Debloat.ps1 has in scope when it calls the importer.
+          $script:Params = @{}
+          function Add-Parameter { param($n, $v = $true) $script:Params[$n] = $v }
+          function Import-JsonFile {
+            param($filePath, $expectedVersion)
+            $j = Get-Content -LiteralPath $filePath -Raw | ConvertFrom-Json
+            if ($expectedVersion -and $j.Version -ne $expectedVersion) { throw "config version $($j.Version), expected $expectedVersion" }
+            return $j
+          }
+          $script:Features = @{}
+          (Get-Content (Join-Path $W "Config\Features.json") -Raw | ConvertFrom-Json).Features |
+            ForEach-Object { $script:Features[$_.FeatureId] = $_ }
+          $script:ModernStandbySupported = $true
+
+          . (Join-Path $W "Scripts\Helpers\Test-ConfigConsistency.ps1")
+          . (Join-Path $W "Scripts\Helpers\Import-ConfigToParams.ps1")
+
+          $cfgPath = (Resolve-Path ./configs/windows/debloat.json).Path
+          $cfg = Import-JsonFile -filePath $cfgPath -expectedVersion '1.0'
+
+          $err = Test-ConfigConsistency -Config $cfg
+          if ($err) { throw "debloat.json rejected by Win11Debloat $ref : $err" }
+
+          Import-ConfigToParams -ConfigPath $cfgPath -CurrentBuild ([Environment]::OSVersion.Version.Build) -ExpectedVersion '1.0' | Out-Null
+          if ($script:Params.Count -lt 1) { throw "debloat.json imported nothing" }
+          Write-Host "ok  $($script:Params.Count) parameters imported from debloat.json"
+
+          # Every name has to be a FeatureId this release knows, or it is
+          # silently dropped - a typo would cost a setting and say nothing.
+          $unknown = @($cfg.Tweaks | Where-Object { -not $script:Features.ContainsKey($_.Name) } | ForEach-Object { $_.Name })
+          if ($unknown.Count) { throw "not FeatureIds in Win11Debloat $ref : $($unknown -join ', ')" }
+          Write-Host "ok  every Tweaks name is a FeatureId"
+
       - name: Theme templates render back to the committed configs
         shell: pwsh
         run: |

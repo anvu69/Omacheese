@@ -3,11 +3,14 @@
     "Win11Debloat configuration, tuned for a komorebi + yasb tiling desktop.",
     "Passed to Win11Debloat.ps1 via -Config by scripts/debloat-windows.ps1.",
     "",
-    "Schema: {Version, Settings:[{Name, Value}]}. Names are Win11Debloat's own",
-    "parameter names without the leading dash. Every entry below is a real",
-    "flag from https://github.com/Raphire/Win11Debloat/wiki/Command-line-Interface",
-    "Do not add comment objects inside Settings - the script reads .Name/.Value",
-    "off every element, so a decorative entry becomes a null setting.",
+    "Schema: {Version, Deployment:[{Name,Value}], Tweaks:[{Name,Value}]}, which is",
+    "what Scripts/Helpers/Import-ConfigToParams.ps1 reads. An earlier version of",
+    "this file used a single {Settings:[...]} list - the shape Win11Debloat's own",
+    "Config/DefaultSettings.json still has - and the importer ignored every entry",
+    "in it, then refused the file: 'The configuration file contains no importable",
+    "data.' Tweaks names must be FeatureIds from Config/Features.json; Deployment",
+    "understands only CreateRestorePoint, SkipRegistryBackup, RestartExplorer,",
+    "UserSelectionIndex, OtherUsername and AppRemovalScopeIndex.",
     "",
     "Grouped by intent:",
     "  tiling   DisableWindowSnapping/SnapAssist/SnapLayouts stop Windows from",
@@ -18,62 +21,174 @@
     "  explorer sane defaults: real extensions, hidden files, opens on This PC.",
     "  privacy  telemetry, Bing in search, suggestion surfaces, lockscreen ads.",
     "  ai       the built-in Copilot/Recall surfaces. Unrelated to the coding",
-    "           agents this repo installs - see docs/agents.md for those.",
-    "  system   dark mode to match Tokyo Night, mouse acceleration off,",
-    "           Fast Startup off (it skips a real shutdown, which confuses WSL2",
-    "           and GPU drivers after an update).",
+    "           agents this repo installs, which are not Windows features.",
     "",
-    "App removal is deliberately NOT here. It lives behind -RemoveApps in the",
-    "wrapper so uninstalling software stays a separate, explicit decision."
+    "App removal is NOT here: it is opt-in behind -RemoveApps, and the list lives",
+    "in scripts/debloat-windows.ps1."
   ],
-
   "Version": "1.0",
-  "Settings": [
-    { "Name": "CreateRestorePoint", "Value": true },
-
-    { "Name": "DisableWindowSnapping", "Value": true },
-    { "Name": "DisableSnapAssist", "Value": true },
-    { "Name": "DisableSnapLayouts", "Value": true },
-    { "Name": "HideTabsInAltTab", "Value": true },
-
-    { "Name": "TaskbarAlignLeft", "Value": true },
-    { "Name": "HideSearchTb", "Value": true },
-    { "Name": "HideTaskview", "Value": true },
-    { "Name": "HideChat", "Value": true },
-    { "Name": "DisableWidgets", "Value": true },
-    { "Name": "CombineTaskbarAlways", "Value": true },
-    { "Name": "EnableEndTask", "Value": true },
-
-    { "Name": "ShowKnownFileExt", "Value": true },
-    { "Name": "ShowHiddenFolders", "Value": true },
-    { "Name": "ExplorerToThisPC", "Value": true },
-    { "Name": "HideGallery", "Value": true },
-    { "Name": "ShowDriveLettersFirst", "Value": true },
-    { "Name": "RevertContextMenu", "Value": true },
-
-    { "Name": "DisableTelemetry", "Value": true },
-    { "Name": "DisableBing", "Value": true },
-    { "Name": "DisableStoreSearchSuggestions", "Value": true },
-    { "Name": "DisableSuggestions", "Value": true },
-    { "Name": "DisableLockscreenTips", "Value": true },
-    { "Name": "DisableSettings365Ads", "Value": true },
-    { "Name": "DisableEdgeAds", "Value": true },
-    { "Name": "DisableFindMyDevice", "Value": true },
-
-    { "Name": "DisableCopilot", "Value": true },
-    { "Name": "DisableRecall", "Value": true },
-    { "Name": "DisableClickToDo", "Value": true },
-    { "Name": "DisableAISvcAutoStart", "Value": true },
-    { "Name": "DisableEdgeAI", "Value": true },
-    { "Name": "DisablePaintAI", "Value": true },
-    { "Name": "DisableNotepadAI", "Value": true },
-
-    { "Name": "EnableDarkMode", "Value": true },
-    { "Name": "DisableMouseAcceleration", "Value": true },
-    { "Name": "DisableStickyKeys", "Value": true },
-    { "Name": "DisableFastStartup", "Value": true },
-    { "Name": "DisableDeliveryOptimization", "Value": true },
-    { "Name": "PreventUpdateAutoReboot", "Value": true },
-    { "Name": "DisableBitlockerAutoEncryption", "Value": true }
+  "Deployment": [
+    {
+      "Name": "CreateRestorePoint",
+      "Value": true
+    }
+  ],
+  "Tweaks": [
+    {
+      "Name": "DisableWindowSnapping",
+      "Value": true
+    },
+    {
+      "Name": "DisableSnapAssist",
+      "Value": true
+    },
+    {
+      "Name": "DisableSnapLayouts",
+      "Value": true
+    },
+    {
+      "Name": "HideTabsInAltTab",
+      "Value": true
+    },
+    {
+      "Name": "TaskbarAlignLeft",
+      "Value": true
+    },
+    {
+      "Name": "HideSearchTb",
+      "Value": true
+    },
+    {
+      "Name": "HideTaskview",
+      "Value": true
+    },
+    {
+      "Name": "HideChat",
+      "Value": true
+    },
+    {
+      "Name": "DisableWidgets",
+      "Value": true
+    },
+    {
+      "Name": "CombineTaskbarAlways",
+      "Value": true
+    },
+    {
+      "Name": "EnableEndTask",
+      "Value": true
+    },
+    {
+      "Name": "ShowKnownFileExt",
+      "Value": true
+    },
+    {
+      "Name": "ShowHiddenFolders",
+      "Value": true
+    },
+    {
+      "Name": "ExplorerToThisPC",
+      "Value": true
+    },
+    {
+      "Name": "HideGallery",
+      "Value": true
+    },
+    {
+      "Name": "ShowDriveLettersFirst",
+      "Value": true
+    },
+    {
+      "Name": "RevertContextMenu",
+      "Value": true
+    },
+    {
+      "Name": "DisableTelemetry",
+      "Value": true
+    },
+    {
+      "Name": "DisableBing",
+      "Value": true
+    },
+    {
+      "Name": "DisableStoreSearchSuggestions",
+      "Value": true
+    },
+    {
+      "Name": "DisableSuggestions",
+      "Value": true
+    },
+    {
+      "Name": "DisableLockscreenTips",
+      "Value": true
+    },
+    {
+      "Name": "DisableSettings365Ads",
+      "Value": true
+    },
+    {
+      "Name": "DisableEdgeAds",
+      "Value": true
+    },
+    {
+      "Name": "DisableFindMyDevice",
+      "Value": true
+    },
+    {
+      "Name": "DisableCopilot",
+      "Value": true
+    },
+    {
+      "Name": "DisableRecall",
+      "Value": true
+    },
+    {
+      "Name": "DisableClickToDo",
+      "Value": true
+    },
+    {
+      "Name": "DisableAISvcAutoStart",
+      "Value": true
+    },
+    {
+      "Name": "DisableEdgeAI",
+      "Value": true
+    },
+    {
+      "Name": "DisablePaintAI",
+      "Value": true
+    },
+    {
+      "Name": "DisableNotepadAI",
+      "Value": true
+    },
+    {
+      "Name": "EnableDarkMode",
+      "Value": true
+    },
+    {
+      "Name": "DisableMouseAcceleration",
+      "Value": true
+    },
+    {
+      "Name": "DisableStickyKeys",
+      "Value": true
+    },
+    {
+      "Name": "DisableFastStartup",
+      "Value": true
+    },
+    {
+      "Name": "DisableDeliveryOptimization",
+      "Value": true
+    },
+    {
+      "Name": "PreventUpdateAutoReboot",
+      "Value": true
+    },
+    {
+      "Name": "DisableBitlockerAutoEncryption",
+      "Value": true
+    }
   ]
 }
