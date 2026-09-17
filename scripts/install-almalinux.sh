@@ -58,7 +58,12 @@ fi
 # shellcheck disable=SC1091
 source "$HOME/.cargo/env" 2>/dev/null || true
 
-command -v eza    >/dev/null 2>&1 || cargo install eza || true
+# --locked on both. Without it cargo resolves every dependency afresh to the
+# newest semver-compatible release, and for eza 0.23.5 that picked a palette
+# crate its code does not build against - "error[E0433]: cannot find `lms` in
+# `crate`" - while the `|| true` below turned the failure into silence: zoxide
+# (already --locked) installed, eza did not, and nothing said so.
+command -v eza    >/dev/null 2>&1 || cargo install eza --locked || true
 command -v zoxide >/dev/null 2>&1 || cargo install zoxide --locked || true
 
 say "Installing Oh My Zsh"
@@ -85,8 +90,15 @@ if ! command -v oh-my-posh >/dev/null 2>&1; then
 fi
 
 say "Setting zsh as the default shell"
-if command -v zsh >/dev/null 2>&1 && [ "${SHELL:-}" != "$(command -v zsh)" ]; then
-  chsh -s "$(command -v zsh)" || true
+# usermod through sudo, not chsh. chsh run as the user authenticates through
+# PAM and asks for the account password; with no console - a setup step - it
+# fails, and the `|| true` that used to follow hid it, so zsh was installed and
+# configured and never became the shell anyone got.
+if command -v zsh >/dev/null 2>&1; then
+  zsh_path="$(command -v zsh)"
+  if [ "$(getent passwd "$USER" | cut -d: -f7)" != "$zsh_path" ]; then
+    sudo usermod -s "$zsh_path" "$USER"
+  fi
 fi
 
 # Run from a clone, the configs are right here, so install them rather than
@@ -101,15 +113,7 @@ if [ -d "$REPO_DIR/configs" ]; then
   bash "$REPO_DIR/scripts/install-configs-wsl.sh" "$REPO_DIR"
 fi
 
-cat <<'EOF'
-
-AlmaLinux packages installed.
-
-Next:
-  1. Install wsl.conf:   sudo cp ~/.config/wsl/wsl.conf /etc/wsl.conf
-  2. From Windows:       wsl --shutdown
-  3. Reopen Alacritty.
-
-For SSH keys from Bitwarden inside WSL you also need, on Windows:
-  winget install --id albertony.npiperelay -e
-EOF
+# No "Next:" list. /etc/wsl.conf, the default user, the distro restart and
+# npiperelay on the Windows side are all done by scripts/install-distro.ps1,
+# which is what runs this script.
+printf '\nAlmaLinux dev environment installed.\n'

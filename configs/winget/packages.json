@@ -44,6 +44,15 @@
         }
       ]
     },
+    "wsl": {
+      "description": "Windows-side pieces the WSL distro needs. Installed by scripts/install-distro.ps1 (setup's distro step).",
+      "packages": [
+        {
+          "id": "albertony.npiperelay",
+          "note": "relays the Windows SSH agent pipe (Bitwarden) into WSL - configs/wsl/ssh-agent-bridge.sh"
+        }
+      ]
+    },
     "langs": {
       "description": "One version manager, and the languages it installs cleanly on Windows: node, python, go, rust, java, ruby.",
       "packages": [

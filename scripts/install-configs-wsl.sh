@@ -44,16 +44,27 @@ cp "$SRC/configs/ai/docker-compose.finetune.yml" "$HOME/.config/ai/"
 cp "$SRC/configs/ai/.env.example"                "$HOME/.config/ai/"
 [ -f "$HOME/.config/ai/.env" ] || cp "$SRC/configs/ai/.env.example" "$HOME/.config/ai/.env"
 
-cat <<'EOF'
+printf '\nLinux configs installed.\n'
 
-Linux configs installed.
+# Only what is actually still undone. From setup.ps1 the distro step writes
+# /etc/wsl.conf and restarts the distro itself, so printing "sudo cp ... &&
+# wsl --shutdown" there sent people to redo finished work. The curl bootstrap
+# has no Windows side to do it, so it still gets told.
+if ! grep -qs '^appendWindowsPath=false' /etc/wsl.conf || ! grep -qs '^default=' /etc/wsl.conf; then
+  cat <<'EOF'
 
 Still to do (needs root, and a restart of the distro):
   sudo cp ~/.config/wsl/wsl.conf /etc/wsl.conf
   # then, from Windows:
   wsl --shutdown
+EOF
+fi
+
+if [ -z "$(git config --global user.name 2>/dev/null)" ]; then
+  cat <<'EOF'
 
 Set your git identity (deliberately not shipped in the repo):
   git config --global user.name  "Your Name"
   git config --global user.email "you@example.com"
 EOF
+fi
