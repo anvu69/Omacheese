@@ -173,6 +173,28 @@ jobs:
       # and the first version of it threw on every frame while still looking
       # perfectly healthy in a benchmark. Run on both hosts: the installer
       # meets 5.1 on a fresh machine and pwsh 7 everywhere after that.
+      # `-f` inside a .NET method call's parentheses. The comma meant for the
+      # format operator separates METHOD ARGUMENTS instead:
+      #   [Console]::Out.Write("{0}{1}" -f $a, $b)   -> Write(format, arg0)
+      #   $list.Add([pscustomobject]@{ D = "{0} {1}" -f $a, $b })  -> parse error
+      # The first threw on every TUI frame; the second broke the debloat group
+      # list. Both read correctly to a person. The AST does not lie about it.
+      - name: No format operator split across method arguments
+        shell: pwsh
+        run: |
+          $hits = 0
+          Get-ChildItem -Recurse -Filter *.ps1 | ForEach-Object {
+            $t = $null; $e = $null
+            $ast = [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$t, [ref]$e)
+            if ($e) { Write-Host "PARSE $($_.FullName): $($e[0].Message) (line $($e[0].Extent.StartLineNumber))"; $hits++; return }
+            $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.InvokeMemberExpressionAst] }, $true) |
+              Where-Object { @($_.Arguments).Count -ge 2 -and
+                             (@($_.Arguments) | Where-Object { $_ -is [System.Management.Automation.Language.BinaryExpressionAst] -and $_.Operator -eq 'Format' }) } |
+              ForEach-Object { Write-Host "FAIL $($_.Extent.File):$($_.Extent.StartLineNumber)  $($_.Extent.Text.Split("`n")[0])"; $hits++ }
+          }
+          if ($hits) { exit 1 }
+          Write-Host "ok  no -f split across method arguments"
+
       - name: TUI frames
         shell: pwsh
         run: ./scripts/lib/tui.tests.ps1

@@ -79,16 +79,9 @@ if (-not (Test-Path -LiteralPath $ProfilePath)) { throw "Missing profile: $Profi
 # Chosen HERE, before the elevation relaunch, so the picking happens in the
 # terminal you already have rather than in a window that appears for it. The
 # child is then told what was picked and never asks again.
-$profileJson  = Get-Content -LiteralPath $ProfilePath -Raw | ConvertFrom-Json
-$knownGroups  = @($profileJson.Tweaks | ForEach-Object { $_.Group } | Select-Object -Unique | Where-Object { $_ })
-$groupBlurbs  = @{
-    tiling   = "stop Windows fighting komorebi for window placement"
-    taskbar  = "strip the Windows taskbar back - yasb is the real one"
-    explorer = "real file extensions, hidden files, opens on This PC"
-    privacy  = "telemetry, Bing in search, suggestion surfaces, ads"
-    ai       = "Copilot, Recall, Click to Do, AI in Edge/Paint/Notepad"
-    system   = "dark mode, mouse acceleration, fast start-up, updates"
-}
+. (Join-Path $Repo "scripts\lib\debloat.ps1")
+$profileJson = Get-Content -LiteralPath $ProfilePath -Raw | ConvertFrom-Json
+$knownGroups = @(Get-DebloatGroups -DebloatConfig $profileJson)
 
 if ($All) {
     $Groups = @($knownGroups) + "apps"
@@ -109,26 +102,7 @@ if ($All) {
         . (Join-Path $Repo "scripts\lib\tui.ps1")
         Initialize-Tui
 
-        $items = foreach ($g in $knownGroups) {
-            $n = @($profileJson.Tweaks | Where-Object { $_.Group -eq $g }).Count
-            [pscustomobject]@{
-                Key         = $g
-                Title       = $g
-                Description = "{0} setting(s) - {1}" -f $n, $groupBlurbs[$g]
-                Selected    = ($g -eq "tiling")
-                Available   = $true
-                Note        = ""
-            }
-        }
-        $items = @($items) + [pscustomobject]@{
-            Key         = "apps"
-            Title       = "apps"
-            Description = "remove 24 bundled apps (Xbox, Solitaire, Teams, Bing News...) - NOT reversible"
-            Selected    = $true
-            Available   = $true
-            Note        = ""
-        }
-
+        $items  = Get-DebloatGroupItems -DebloatConfig $profileJson
         $picked = Show-TuiChecklist -Items $items -Title "Debloat" -HeaderLines @(
             "Everything here is optional except tiling, which komorebi needs.",
             "Settings are reversible; removing apps is not."
@@ -211,34 +185,9 @@ if (($isCore -or -not $isElevated) -and $PSCommandPath -and -not $DryRun) {
     exit $p.ExitCode
 }
 
-# Apps removed only when the apps group is picked. Keep this list conservative:
-# everything here is a bundled consumer app with no role in a dev setup.
-$AppsToRemove = @(
-    "Clipchamp.Clipchamp"
-    "Microsoft.BingNews"
-    "Microsoft.BingWeather"
-    "Microsoft.BingSearch"
-    "Microsoft.GamingApp"
-    "Microsoft.GetHelp"
-    "Microsoft.Getstarted"
-    "Microsoft.MicrosoftOfficeHub"
-    "Microsoft.MicrosoftSolitaireCollection"
-    "Microsoft.People"
-    "Microsoft.PowerAutomateDesktop"
-    "Microsoft.Todos"
-    "Microsoft.WindowsFeedbackHub"
-    "Microsoft.WindowsMaps"
-    "Microsoft.Xbox.TCUI"
-    "Microsoft.XboxGameOverlay"
-    "Microsoft.XboxGamingOverlay"
-    "Microsoft.XboxIdentityProvider"
-    "Microsoft.XboxSpeechToTextOverlay"
-    "Microsoft.ZuneMusic"
-    "Microsoft.ZuneVideo"
-    "MicrosoftCorporationII.MicrosoftFamily"
-    "MicrosoftTeams"
-    "MSTeams"
-) -join ','
+# Apps removed only when the apps group is picked. The list lives in
+# scripts\lib\debloat.ps1, next to the checklist line that describes it.
+$AppsToRemove = (Get-DebloatAppsToRemove) -join ','
 
 Write-Host "Win11Debloat wrapper" -ForegroundColor Green
 Write-Host "  pinned ref : $Ref"

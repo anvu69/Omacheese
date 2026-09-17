@@ -22,7 +22,8 @@ mà Windows cứ snap lại, phần còn lại là khẩu vị nên không tự 
 | `apps` | 24 app | gỡ app bundled — **không hoàn tác được** |
 
 Chọn xong mới tới UAC: lựa chọn diễn ra trong terminal bạn đang gõ, cửa sổ admin
-chỉ nhận kết quả. `-DryRun` không cần quyền admin.
+chỉ nhận kết quả. `-DryRun` không cần quyền admin. Chạy qua `setup.ps1` thì setup
+hỏi nhóm ngay trước bảng plan, rồi truyền `-Groups` cho bước debloat.
 
 Wrapper quanh [Win11Debloat](https://github.com/Raphire/Win11Debloat) thay vì
 viết lại — nó được maintain tốt, 57k sao, và đã biết sẵn các registry path.
@@ -123,7 +124,7 @@ Clipchamp, Bing News/Weather/Search, Xbox (app + overlay + TCUI + identity),
 Solitaire, Office Hub, People, Power Automate, To Do, Feedback Hub, Maps,
 Media Player/Movies (Zune*), Family, Teams.
 
-Danh sách nằm trong `$AppsToRemove` ở `scripts/debloat-windows.ps1`. Không gỡ
+Danh sách nằm trong `Get-DebloatAppsToRemove` ở `scripts/lib/debloat.ps1`. Không gỡ
 Edge (`-ForceRemoveEdge` tồn tại nhưng hay làm hỏng update; bật thủ công nếu
 bạn thật sự muốn).
 

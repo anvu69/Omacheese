@@ -124,6 +124,40 @@ if ($Modules) {
 $steps = @($allModules | Where-Object { $selectedKeys -contains $_.Key })
 if (-not $steps.Count) { Clear-Tui; Write-Host "Nothing selected."; return }
 
+# --- debloat: which groups ---------------------------------------------------
+# debloat-windows.ps1 asks this itself when it has a console. As a step it does
+# not: every step runs with stdin redirected to an empty file, so the script
+# saw no console, took its defaults - tiling AND removing 24 apps - and nobody
+# was asked. Measured by running it exactly as the step does. So the question
+# is put here, where the person is, and the step is handed the answer.
+#
+# Before the plan, so the plan shows what was picked. Not under -Yes, which
+# means "defaults, no questions", and not under -DryRun, which is documented for
+# consoles that cannot answer (see the checklist note above).
+$script:DebloatArgs = @()
+if (($steps | Where-Object { $_.Key -eq "debloat" }) -and -not $Yes -and -not $DryRun) {
+    . (Join-Path $RepoRoot "scripts\lib\debloat.ps1")
+    $dbCfg = Get-Content -LiteralPath (Join-Path $RepoRoot "configs\windows\debloat.json") -Raw | ConvertFrom-Json
+
+    $dbPicked = Show-TuiChecklist -Items (Get-DebloatGroupItems -DebloatConfig $dbCfg) -Title "Debloat" -HeaderLines @(
+        "Which parts of the debloat to apply. Only tiling is needed by komorebi.",
+        ("{0}Settings are reversible; removing apps is not.{1}" -f $T.Dim, $T.Reset)
+    )
+    if ($null -eq $dbPicked) { Clear-Tui; Write-Host "Cancelled."; return }
+
+    if (@($dbPicked).Count -eq 0) {
+        # An empty answer is an answer: drop the step rather than run it to do
+        # nothing, and say so on the plan's absence rather than silently.
+        $steps = @($steps | Where-Object { $_.Key -ne "debloat" })
+        if (-not $steps.Count) { Clear-Tui; Write-Host "Nothing selected."; return }
+    } else {
+        $script:DebloatArgs = @("-Groups", (@($dbPicked) -join ","))
+        foreach ($s in $steps) {
+            if ($s.Key -eq "debloat") { $s.Description = "Win11Debloat: " + (@($dbPicked) -join ", ") }
+        }
+    }
+}
+
 # --- plan --------------------------------------------------------------------
 Clear-Tui
 $w = Get-TuiWidth
@@ -367,7 +401,7 @@ $ctx = @{
         # (absent from pwsh 7) and admin, and asks for the latter with an
         # interactive prompt that this runner cannot answer.
         Invoke-Step -Key "debloat" -File (Join-Path $RepoRoot "scripts\debloat-windows.ps1") `
-            -Arguments @() -WindowsPowerShell -Elevate
+            -Arguments $script:DebloatArgs -WindowsPowerShell -Elevate
     }
     InstallWsl = {
         Invoke-Step -Key "wsl" -File (Join-Path $RepoRoot "scripts\install-wsl.ps1") -Arguments @() -Elevate
