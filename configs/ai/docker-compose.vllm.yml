@@ -25,12 +25,24 @@ services:
     restart: unless-stopped
 
     # Set MODEL in .env to override without editing this file.
+    #
+    # GPU_UTIL is 0.80, not the 0.90 a headless server would use: this GPU also
+    # draws the desktop. Measured here with vLLM stopped, the desktop alone
+    # (DWM, two browsers, Alacritty's OpenGL renderer, Signal, PowerToys) holds
+    # 968 MiB of the 16376 MiB card. At 0.90 the card sat at 15882 MiB used and
+    # 164 MiB free, and anything that then wanted VRAM - a new tab, a video, a
+    # terminal repaint - got it by eviction: windows freeze on screen while the
+    # process behind them keeps running. 0.80 leaves ~2 GB of headroom.
+    #
+    # Everything under `command: >` is one folded string, so a comment cannot
+    # live inside it - it would be passed to vLLM as an argument, and compose
+    # rejects the file with "invalid command line string".
     command: >
       --model ${MODEL:-Qwen/Qwen3-8B}
       --served-model-name ${SERVED_NAME:-local}
       --quantization ${QUANT:-fp8}
       --max-model-len ${MAX_LEN:-16384}
-      --gpu-memory-utilization ${GPU_UTIL:-0.90}
+      --gpu-memory-utilization ${GPU_UTIL:-0.80}
       --host 0.0.0.0
       --port 8000
 

@@ -199,7 +199,7 @@ if ($hint) {
         "SERVED_NAME=local"
         "QUANT=$($hint.Quant)"
         "MAX_LEN=$($hint.MaxLen)"
-        "GPU_UTIL=0.90"
+        "GPU_UTIL=0.80"
         "WORKSPACE=./workspace"
         "WANDB_API_KEY="
     ) -join "`n"
