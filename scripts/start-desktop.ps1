@@ -100,9 +100,33 @@ foreach ($i in 1..20) {
     Start-Sleep -Milliseconds 250
 }
 if (-not (Get-Process whkd -ErrorAction SilentlyContinue)) {
-    Write-Host "whkd is NOT running - every hotkey is dead." -ForegroundColor Red
-    Write-Host "Usually a bad key name in whkdrc. Check with:" -ForegroundColor Yellow
-    Write-Host "  ./scripts/doctor.ps1" -ForegroundColor Cyan
+    # This used to say "check with ./scripts/doctor.ps1" - a script that lives
+    # in the repo, which this copy under ~/.config does not know the location
+    # of. whkd will say what is wrong itself: started on a whkdrc it cannot
+    # parse, it exits within a moment with the reason on stderr. Measured with
+    # an "alt + enter" chord:
+    #   Error: 0: Invalid key name `ENTER`
+    # And if it does NOT exit, the config was fine and whatever stopped it the
+    # first time did not repeat - so it is left running, which is the fix.
+    Write-Host "whkd did not start - retrying it to see why..." -ForegroundColor Yellow
+    $whkdExe = (Get-Command whkd -ErrorAction SilentlyContinue).Source
+    if ($whkdExe) {
+        $whkdErr = Join-Path $env:TEMP "omacheese-whkd.err"
+        $w = Start-Process -FilePath $whkdExe -WindowStyle Hidden -PassThru `
+             -RedirectStandardError $whkdErr -ErrorAction SilentlyContinue
+        if ($w) { $null = $w.Handle }
+        if ($w -and $w.WaitForExit(3000)) {
+            Write-Host "whkd is NOT running - every hotkey is dead. It says:" -ForegroundColor Red
+            Get-Content -LiteralPath $whkdErr -ErrorAction SilentlyContinue |
+                Where-Object { $_ -and $_ -notmatch 'RUST_BACKTRACE|Backtrace omitted|Location:|main.rs' } |
+                ForEach-Object { Write-Host "  $_" -ForegroundColor Yellow }
+            Write-Host "  in $WhkdRc" -ForegroundColor DarkGray
+        } else {
+            Write-Host "whkd is up (second attempt)." -ForegroundColor Green
+        }
+    } else {
+        Write-Host "whkd is NOT installed - every hotkey is dead. winget install --id LGUG2Z.whkd -e" -ForegroundColor Red
+    }
 } else {
     Write-Host "whkd is up." -ForegroundColor Green
 }
