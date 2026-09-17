@@ -162,8 +162,16 @@ if (-not $repoLinux) {
     exit 1
 }
 
-Info "running install-docker-wsl.sh inside $Distro..."
-& wsl.exe -d $Distro -- bash "$repoLinux/scripts/install-docker-wsl.sh"
+# As root, naming the real user. The distro step gives the default account a
+# sudo password, and this runs with no console to type it into, so every `sudo`
+# in the Docker install would fail as that user. Root needs none; the account
+# the docker group is for is passed in OMACHEESE_USER. --cd plus a relative
+# path, not a /mnt path argument: wsl.exe re-joins arguments and a space in the
+# repo path would split it.
+$distroUser = ("" + (Invoke-BoundedCommand -FilePath "wsl.exe" -ArgumentList @("-d", $Distro, "--", "id", "-un") -TimeoutMs 60000).Output).Trim()
+if (-not $distroUser) { $distroUser = "root" }
+Info "running install-docker-wsl.sh inside $Distro (docker for $distroUser)..."
+& wsl.exe -d $Distro -u root --cd $RepoRoot -- env "OMACHEESE_USER=$distroUser" bash scripts/install-docker-wsl.sh
 $code = $LASTEXITCODE
 if ($code -ne 0) {
     Warn "install-docker-wsl.sh exited $code - check the output above."

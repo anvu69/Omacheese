@@ -213,8 +213,10 @@ if (Test-Path -LiteralPath $ps51) {
         "scripts\setup.ps1", "scripts\install-windows.ps1", "scripts\link-configs.ps1",
         "scripts\install-wsl.ps1", "scripts\install-localllm.ps1", "scripts\debloat-windows.ps1",
         "scripts\bootstrap-windows.ps1", "scripts\doctor.ps1",
+        "scripts\install-distro.ps1", "scripts\disable-openssh-agent.ps1",
         "scripts\lib\tui.ps1", "scripts\lib\detect.ps1", "scripts\lib\modules.ps1",
-        "scripts\lib\common.ps1"
+        "scripts\lib\common.ps1", "scripts\lib\debloat.ps1", "scripts\lib\distro.ps1",
+        "scripts\lib\resume.ps1"
     )
     $bad51 = @()
     foreach ($rel in $mustParse) {
@@ -644,7 +646,7 @@ if (-not (Test-WslPresent)) {
     #
     # WSL also prints noise on stderr ("your 131072x1 screen size is bogus"),
     # so the payload is tagged and pulled back out by marker.
-    $probeBody = "printf 'W11PROBE|%s|%s|%s|%s|%s\n' `"`$(ps -p 1 -o comm=)`" `"`$(command -v docker || echo -)`" `"`$(command -v nvidia-ctk || echo -)`" `"`$([ -e /dev/dxg ] && echo dxg || echo -)`" `"`$(docker ps -a --filter name=vllm --format '{{.State}}' 2>/dev/null | head -1 || echo -)`"`n"
+    $probeBody = "printf 'W11PROBE|%s|%s|%s|%s|%s|%s|%s\n' `"`$(ps -p 1 -o comm=)`" `"`$(command -v docker || echo -)`" `"`$(command -v nvidia-ctk || echo -)`" `"`$([ -e /dev/dxg ] && echo dxg || echo -)`" `"`$(docker ps -a --filter name=vllm --format '{{.State}}' 2>/dev/null | head -1 || echo -)`" `"`$(id -un)`" `"`$(getent passwd `$(id -un) | cut -d: -f7)`"`n"
     $probeFile = Join-Path $env:TEMP "w11-doctor-probe.sh"
     [System.IO.File]::WriteAllText($probeFile, ($probeBody -replace "`r`n", "`n"),
         (New-Object System.Text.UTF8Encoding($false)))
@@ -672,6 +674,24 @@ if (-not (Test-WslPresent)) {
         else                              { Warn "no docker in $distro (bash ./scripts/install-docker-wsl.sh)" }
         if ($parts[2] -ne "-") { Ok "nvidia-container-toolkit installed" } else { Warn "nvidia-container-toolkit missing - GPU containers will not work" }
         if ($parts[3] -eq "dxg") { Ok "/dev/dxg present (GPU passthrough)" } else { Warn "/dev/dxg missing - no GPU in WSL" }
+
+        # The account `wsl` opens as. install-wsl.ps1 installs with --no-launch,
+        # which creates no user, so without the distro step every shell is root.
+        if ($parts.Count -ge 7) {
+            $wslUser = $parts[5]; $wslShell = $parts[6]
+            if ($wslUser -eq "root") {
+                Warn "$distro opens as root - no user of your own (./scripts/install-distro.ps1)"
+            } else {
+                Ok "$distro opens as $wslUser"
+                if ($wslShell -like "*zsh") { Ok "$wslUser's shell is zsh" }
+                else { Warn "$wslUser's shell is $wslShell, not zsh (./scripts/install-distro.ps1)" }
+
+                # passwd -S needs root; `wsl -u root` needs no password.
+                $pw = ("" + (Invoke-Wsl @("-d", $distro, "-u", "root", "--", "passwd", "-S", $wslUser) -TimeoutMs 30000)).Trim()
+                if ($pw -match "^\S+\s+PS\s") { Ok "$wslUser has a password (sudo works)" }
+                elseif ($pw) { Warn "$wslUser has no password - sudo cannot work (./scripts/setup.ps1 -Modules distro asks for one)" }
+            }
+        }
 
         # Only ask about the model server where there is one to ask about: the
         # container has to exist. A stopped one is a choice - that GPU also

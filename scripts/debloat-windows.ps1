@@ -58,6 +58,16 @@ trap {
     break
 }
 
+# Windows PowerShell started from a pwsh 7 session inherits pwsh 7's module
+# directories at the front of PSModulePath, and then autoloads the Core build of
+# Microsoft.PowerShell.Security and friends - which it cannot load. Win11Debloat
+# runs in this process and autoloads plenty. Filtered here, it also reaches the
+# Windows PowerShell relaunch below, which inherits this environment.
+$env:PSModulePath = (@($env:PSModulePath -split ';' | Where-Object {
+    $_ -and $_ -notlike '*\Documents\PowerShell\Modules*' -and
+            $_ -notlike '*\Program Files\PowerShell\*' -and
+            $_ -notlike '*\WindowsApps\Microsoft.PowerShell_*' }) -join ';')
+
 # powershell.exe -File binds "a,b,c" to a [string[]] as ONE element, unlike
 # -Command, and the elevated relaunch below goes through -File.
 if ($Groups) { $Groups = @($Groups -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
@@ -343,8 +353,16 @@ if (-not $SkipTweaks) {
         Write-Host "  ! could not turn off search highlights: $($_.Exception.Message)" -ForegroundColor Yellow
     }
 
-    Write-Host "`n  Restart Explorer for these to take effect:" -ForegroundColor Yellow
-    Write-Host "    Stop-Process -Name explorer -Force" -ForegroundColor Cyan
+    # Explorer reads the taskbar settings when it starts. Win11Debloat restarts
+    # it once, before these run, so they would otherwise wait for the next
+    # sign-in - and this used to print the Stop-Process line for you to type.
+    # Windows starts a new explorer.exe by itself when the shell process ends.
+    try {
+        Stop-Process -Name explorer -Force -ErrorAction Stop
+        Write-Host "  + Explorer restarted to apply them" -ForegroundColor Green
+    } catch {
+        Write-Host "  ! could not restart Explorer - they apply at the next sign-in" -ForegroundColor Yellow
+    }
 }
 
 Write-Host ""

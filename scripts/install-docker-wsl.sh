@@ -80,12 +80,20 @@ say "Enabling the service"
 sudo systemctl enable --now docker
 sudo systemctl is-active --quiet docker && ok "docker service active" || die "docker service failed to start"
 
-say "Adding $USER to the docker group"
-if id -nG "$USER" | grep -qw docker; then
+# Whose docker this is. install-localllm.ps1 runs this script as root - the
+# account the distro step creates has a sudo password and there is no console
+# to type it into - and names the real user in OMACHEESE_USER. Run by hand as
+# yourself, it is you.
+TARGET_USER="${OMACHEESE_USER:-$USER}"
+
+say "Adding $TARGET_USER to the docker group"
+if id -nG "$TARGET_USER" | grep -qw docker; then
   ok "already a member"
 else
-  sudo usermod -aG docker "$USER"
-  warn "group change needs a new login: run 'wsl --shutdown' from Windows"
+  sudo usermod -aG docker "$TARGET_USER"
+  # Measured on WSL 2.7: every NEW `wsl` process sees the group at once. Only
+  # a shell that was already open misses it, so no `wsl --shutdown` is needed.
+  ok "added - new shells have it; one already open needs reopening"
 fi
 
 # --- NVIDIA Container Toolkit ------------------------------------------------
@@ -108,32 +116,28 @@ ok "daemon restarted with the nvidia runtime"
 # --- Verify ------------------------------------------------------------------
 say "Verifying GPU access from a container"
 
-# Needs the docker group, which the current shell may not have yet.
-DOCKER="docker"
-id -nG "$USER" | grep -qw docker || DOCKER="sudo docker"
+# Root, or a member of the docker group in THIS process. A group added a moment
+# ago is in /etc/group but not in this shell's credentials, and sudo may have no
+# console to ask on, so fall back to sg, which reads /etc/group afresh.
+docker_cmd() {
+  if [ "$(id -u)" -eq 0 ] || id -nG | grep -qw docker; then
+    docker "$@"
+  else
+    sg docker -c "docker $(printf '%q ' "$@")"
+  fi
+}
 
-if $DOCKER run --rm --gpus all nvidia/cuda:12.6.2-base-ubi9 nvidia-smi \
+if docker_cmd run --rm --gpus all nvidia/cuda:12.6.2-base-ubi9 nvidia-smi \
      --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null; then
   ok "containers can see the GPU"
 else
   warn "GPU test failed. Usual causes:"
-  warn "  - the shell has not picked up the docker group yet (wsl --shutdown)"
   warn "  - Windows NVIDIA driver too old for the CUDA image"
-  warn "  Retry with: sudo docker run --rm --gpus all nvidia/cuda:12.6.2-base-ubi9 nvidia-smi"
+  warn "  - /dev/dxg missing (see the preflight above)"
+  warn "  Retry with: docker run --rm --gpus all nvidia/cuda:12.6.2-base-ubi9 nvidia-smi"
 fi
 
-cat <<'EOF'
-
-Docker is ready.
-
-If the group change was just applied, run this from Windows first:
-  wsl --shutdown
-
-Then serve a model:
-  cd ~/.config/ai
-  docker compose -f docker-compose.vllm.yml up -d
-  curl http://localhost:8000/v1/models
-
-See docs/ai-stack.md for model choices that fit 16 GB, and for the
-fine-tuning stack (vLLM serves models; it does not train them).
-EOF
+# No "run wsl --shutdown, then docker compose up" list any more: a new wsl
+# process already has the group, and install-localllm.ps1 - which runs this
+# script - starts the model server itself.
+printf '\nDocker is ready.\n'
