@@ -62,10 +62,10 @@ function Get-SetupModules {
 
     # One binary that manages node, python, go, rust and dart versions, so a
     # project can pin its own without five separate managers fighting over
-    # PATH. Installing mise installs no language: you ask for them later with
-    # `mise use python@3.13`.
-    $mods.Add((New-Mod -Key "langs" -Description "mise - version manager for node, python, go, rust, dart" `
-        -Available $wingetOk -Note "needs winget" -Est "30 s" `
+    # PATH. node comes with it, because the agents and every npm-shaped repo
+    # need one; the rest are a command each (`mise use python@3.13`).
+    $mods.Add((New-Mod -Key "langs" -Description "mise + node (python, go, rust, dart on request)" `
+        -Available $wingetOk -Note "needs winget" -Est "1-2 min" `
         -Action { param($ctx) & $ctx.InstallWindows -Groups @("langs") }))
 
     # Separate from the runtime in core because the SDK is four times the size
