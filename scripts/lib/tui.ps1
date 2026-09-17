@@ -323,7 +323,13 @@ function Show-TuiChecklist {
                     continue
                 }
                 "Enter" {
-                    return @($Items | Where-Object { $_.Selected -and $_.Available } | ForEach-Object { $_.Key })
+                    # The comma is load-bearing: `return @()` unrolls to nothing
+                    # and the caller reads $null, which is what this function
+                    # returns for CANCELLED. So Enter on an empty checklist
+                    # looked exactly like Escape, and the setup announced
+                    # "Cancelled." at someone who had just confirmed a choice -
+                    # an empty one, but a choice.
+                    return ,@($Items | Where-Object { $_.Selected -and $_.Available } | ForEach-Object { $_.Key })
                 }
                 "Escape" { return $null }
             }

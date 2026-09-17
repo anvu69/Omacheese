@@ -87,6 +87,26 @@ $checks += @(
                 $script:TuiModifierVKeys -contains $_ }) -notcontains $false }
 )
 
+# Enter on a checklist with nothing ticked is an answer - an empty one - and has
+# to be distinguishable from Escape, which returns $null for "cancelled".
+# `return @()` unrolls to nothing on the way out, so both arrived as $null and
+# the setup said "Cancelled." to someone who had pressed Enter.
+function Read-TuiKey { [pscustomobject]@{ Name = "Enter"; Char = "" } }
+$emptyItems = @(
+    [pscustomobject]@{ Key = "a"; Title = "a"; Description = ""; Selected = $false; Available = $true; Note = "" }
+    [pscustomobject]@{ Key = "b"; Title = "b"; Description = ""; Selected = $false; Available = $true; Note = "" }
+)
+$pickedNone = Show-TuiChecklist -Items $emptyItems -Title "t"
+$emptyItems[0].Selected = $true
+$pickedOne = Show-TuiChecklist -Items $emptyItems -Title "t"
+
+$checks += @(
+    @{ Name = "enter with nothing ticked is not a cancel"
+       Ok = ($null -ne $pickedNone) -and (@($pickedNone).Count -eq 0) }
+    @{ Name = "enter returns what was ticked"
+       Ok = ((@($pickedOne) -join ",") -eq "a") }
+)
+
 $failed = 0
 foreach ($c in $checks) {
     if ($c.Ok) { $old.WriteLine("  ok    {0}", $c.Name) }
