@@ -204,9 +204,28 @@ function Write-TuiBottom {
     Write-TuiOut ("{0}+{1}+{2}" -f $script:Tui.Dim, ("-" * ($Width - 2)), $script:Tui.Reset)
 }
 
+# Shift, Ctrl, Alt, the Windows keys and the lock keys each report a key-down
+# of their own, with no character on it. Handing one to a caller is how
+# "press Shift" became an answer at the confirmation prompt - Confirm-Tui read
+# it, saw no 'y' and no 'n', and took its default, which is yes.
+$script:TuiModifierVKeys = @(
+    16,   # Shift
+    17,   # Ctrl
+    18,   # Alt
+    20,   # CapsLock
+    91,   # Left Windows
+    92,   # Right Windows
+    93,   # Menu/Application
+    144,  # NumLock
+    145   # ScrollLock
+)
+
 function Read-TuiKey {
-    # Read a key without echoing it.
-    $k = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    # Read a key without echoing it. A modifier on its own is not a keypress
+    # anyone meant, so keep waiting for one that is.
+    do {
+        $k = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    } while ($script:TuiModifierVKeys -contains [int]$k.VirtualKeyCode)
 
     # Arrow and function keys report Character as [char]0. Casting that to bool
     # is not reliable across hosts, so normalise to a plain string here and let
@@ -379,6 +398,22 @@ function Show-TuiMenu {
     }
 }
 
+# Pure, so the wiring above it can stay dumb and this can be tested: returns
+# $true, $false, or $null for "that was not an answer, keep waiting".
+#
+# Only y, n, Enter and Escape answer. Everything else used to fall through to
+# the default, so any stray key - including one from a modifier - started an
+# install nobody had confirmed.
+function Get-TuiConfirmAnswer {
+    param([string]$Char, [string]$Name, [switch]$DefaultNo)
+
+    if ($Char -eq "y") { return $true }
+    if ($Char -eq "n") { return $false }
+    if ($Name -eq "Enter")  { return (-not $DefaultNo.IsPresent) }
+    if ($Name -eq "Escape") { return $false }
+    return $null
+}
+
 function Confirm-Tui {
     param([string]$Question, [switch]$DefaultNo)
 
@@ -387,12 +422,15 @@ function Confirm-Tui {
     if ($DefaultNo) { $hint = "[y/N]" }
     Write-Host ""
     Write-Host ("  {0}{1}{2} {3}{4}{2} " -f $T.Bright, $Question, $T.Reset, $T.Dim, $hint) -NoNewline
-    $key = Read-TuiKey
-    Write-Host ""
-    $c = $key.Char.ToLower()
-    if ($c -eq "y") { return $true }
-    if ($c -eq "n") { return $false }
-    return (-not $DefaultNo)
+
+    while ($true) {
+        $key = Read-TuiKey
+        $answer = Get-TuiConfirmAnswer -Char $key.Char.ToLower() -Name $key.Name -DefaultNo:$DefaultNo
+        if ($null -ne $answer) {
+            Write-Host ""
+            return $answer
+        }
+    }
 }
 
 # -----------------------------------------------------------------------------

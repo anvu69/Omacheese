@@ -1,4 +1,4 @@
-# What a TUI frame is allowed to put on the wire.
+# What the TUI is allowed to put on the wire, and what counts as an answer.
 #
 #   pwsh -NoProfile -File ./scripts/lib/tui.tests.ps1
 #
@@ -67,6 +67,26 @@ $checks = @(
 # swapped [Console]::Out and put it back, pwsh's Write-Host stops reaching
 # stdout for the rest of the process - which is why the first version of this
 # file exited 1 with not one line of output to say why.
+# The confirmation prompt. "Run these N steps?" used to start on any key at
+# all, because anything that was not y or n fell through to the default - and
+# Shift alone reports a key-down, so resting a hand on it ran the install.
+$checks += @(
+    @{ Name = "y answers yes";        Ok = ((Get-TuiConfirmAnswer -Char "y" -Name "")      -eq $true) }
+    @{ Name = "n answers no";         Ok = ((Get-TuiConfirmAnswer -Char "n" -Name "")      -eq $false) }
+    @{ Name = "enter takes the default"
+       Ok = ((Get-TuiConfirmAnswer -Char "" -Name "Enter") -eq $true) -and
+            ((Get-TuiConfirmAnswer -Char "" -Name "Enter" -DefaultNo) -eq $false) }
+    @{ Name = "escape answers no"
+       Ok = (((Get-TuiConfirmAnswer -Char "" -Name "Escape") -eq $false) -and
+             ((Get-TuiConfirmAnswer -Char "" -Name "Escape" -DefaultNo) -eq $false)) }
+    @{ Name = "any other key is not an answer"
+       Ok = (@("", "k", "1", " ") | ForEach-Object {
+                $null -eq (Get-TuiConfirmAnswer -Char $_ -Name "") }) -notcontains $false }
+    @{ Name = "modifier keys are not keypresses"
+       Ok = (@(16, 17, 18, 91, 144) | ForEach-Object {
+                $script:TuiModifierVKeys -contains $_ }) -notcontains $false }
+)
+
 $failed = 0
 foreach ($c in $checks) {
     if ($c.Ok) { $old.WriteLine("  ok    {0}", $c.Name) }
@@ -78,5 +98,5 @@ if ($failed) {
     $old.Flush()
     exit 1
 }
-$old.WriteLine("tui frames ok")
+$old.WriteLine("tui ok")
 $old.Flush()
