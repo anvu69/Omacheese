@@ -61,6 +61,20 @@ if ($ModulesOnly) {
 
 $result = Install-WingetManifest -Manifest $manifest -Groups $Groups -Force:$Force
 
+# For setup.ps1's summary, which lists what was actually installed. The "+ id"
+# lines in this script's log are printed before winget runs, so they cannot
+# tell an install from an attempt; this file can. Only under setup.
+if ($env:OMACHEESE_SETUP_RUN -and (Test-Path -LiteralPath $env:OMACHEESE_SETUP_RUN)) {
+    $tag = if ($Groups) { $Groups -join "-" } else { "all" }
+    [pscustomobject]@{
+        Groups    = @($Groups)
+        Installed = @($result.Installed)
+        Present   = @($result.Skipped)
+        Failed    = @($result.Failed)
+    } | ConvertTo-Json -Depth 3 |
+        Set-Content -LiteralPath (Join-Path $env:OMACHEESE_SETUP_RUN "packages-$tag.json") -Encoding UTF8
+}
+
 # The langs group installs mise, and mise on its own installs no language: a
 # fresh machine finished the whole setup with no node on it, while
 # packages.json told the truth about the agents group needing one ("Node comes

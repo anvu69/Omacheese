@@ -379,15 +379,19 @@ Shortcut trong Startup lo mọi lần đăng nhập sau; `setup.ps1` giờ lo ph
 một lần khi module `raycast` được chọn (Store app cần đăng nhập thì mới dùng
 được, cài xong mà không mở thì nó nằm đó không ai cấu hình).
 
-Cuối phiên setup cũng mở sẵn những app cần bạn đăng nhập/bật setting, và phần
-tổng kết ghi việc cần làm trong từng app: **Bitwarden** (đăng nhập, bật SSH agent —
-dịch vụ OpenSSH Authentication Agent của Windows đã được tắt trong bước `desktop`),
-**Brave** (profile, trình duyệt mặc định), **Raycast** (tài khoản, thư mục script).
-Nếu có restart đang chờ thì chưa mở — chúng được mang sang lần chạy resume.
+Raycast là app **duy nhất** được mở: nó vô dụng cho tới khi wizard lần đầu (tài
+khoản, hotkey, thư mục script) chạy xong, và wizard chỉ chạy khi app được mở. Nếu
+có restart đang chờ thì chưa mở — nó được mang sang lần chạy resume. Mọi thứ khác
+không bật lên màn hình; phần tổng kết in mục **Installed**: gói **mới cài** theo từng
+nhóm (tên đọc được, gói Store hiện tên thay vì mã số), số gói đã có sẵn, và gói lỗi
+nếu có. Chạy lại mà không cài thêm gì thì nó nói đúng như vậy. Số liệu lấy từ file
+`packages-*.json` mà `install-windows.ps1` ghi vào thư mục log khi chạy dưới setup —
+dòng `+ id` trong log in ra trước khi winget chạy nên không phân biệt được cài xong
+hay chỉ mới thử.
 
 PATH thì không sửa được từ bên ngoài: một tiến trình đọc PATH đúng một lần lúc
-khởi động. Terminal đang chạy setup vẫn giữ PATH cũ — nên setup **mở một cửa sổ
-Alacritty mới**, kế thừa PATH đã cập nhật, thay vì bảo bạn tự mở.
+khởi động. Terminal đang chạy setup vẫn giữ PATH cũ, nên tổng kết ghi rõ là hãy
+mở terminal mới để dùng những gì vừa cài — không phải reboot.
 
 ### WSL: không còn danh sách lệnh để gõ
 

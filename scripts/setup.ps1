@@ -694,20 +694,17 @@ if ($didWm -and $didConfigs) {
 $didDesktop = @($steps | Where-Object { $_.Key -eq "desktop" -and $_.Status -eq "Done" }).Count -gt 0
 $didDistro  = @($steps | Where-Object { $_.Key -eq "distro"  -and $_.Status -eq "Done" }).Count -gt 0
 
-# Apps that do nothing useful until someone signs in or flips a setting. They
-# are opened here, at the end, so the settings get done while the person is
-# still at the machine - and what to do in each is on the summary below.
-# Raycast wants an account; Bitwarden wants a sign-in and its SSH agent
-# switched on (the Windows agent service was already handed over during the
-# desktop step); Brave wants a profile and asks to be the default browser.
+# Raycast is the one app opened for you: it will not do anything until its own
+# first-run wizard - account, hotkey, the script directory - has been through,
+# and that wizard only starts when the app does. Everything else that was
+# installed is listed in the summary instead of popping up on screen.
 $appsToOpen = @()
 if ($didRaycast) { $appsToOpen += "Raycast" }
-if ($didDesktop) { $appsToOpen += @("Bitwarden", "Brave") }
 if ($saved) { $appsToOpen += @($saved.OpenApps) }
 $appsToOpen = @($appsToOpen | Select-Object -Unique)
 
-# Not while a restart is pending: it would close them again. They are carried
-# into the resume state instead and opened after the restart.
+# Not while a restart is pending: it would close it again. It is carried into
+# the resume state instead and opened after the restart.
 $openedApps = @()
 if (-not $script:RebootRequired) {
     foreach ($app in $appsToOpen) {
@@ -785,18 +782,66 @@ if ($script:RebootRequired) {
     }
 }
 
-# A terminal started from this setup inherits the PATH this process refreshed
-# after every step. The one the setup was launched from does not - PATH is read
-# once per process - which is why everything winget installed looked missing
-# there. So open a new one rather than telling people to.
-$newTerminal = $false
-$pathChanged = @($steps | Where-Object { $_.Key -in @("core", "cli", "langs", "dotnet", "agents") -and $_.Status -eq "Done" }).Count -gt 0
-if ($pathChanged -and -not $script:RebootRequired) {
-    $term = Get-Command alacritty -ErrorAction SilentlyContinue
+# What was installed, per package group, from the result files install-windows.ps1
+# leaves in the run directory. Newly installed and already present are told
+# apart: a re-run that installs nothing says so instead of listing everything.
+$pkgResults = @(Get-ChildItem -LiteralPath $RunDir -Filter "packages-*.json" -ErrorAction SilentlyContinue |
+    ForEach-Object { try { Get-Content -LiteralPath $_.FullName -Raw | ConvertFrom-Json } catch { } })
+if ($pkgResults.Count) {
+    $manifestFile = Join-Path $RepoRoot "configs\winget\packages.json"
+    $pkgInfo = @{}
     try {
-        if ($term) { Start-Process -FilePath $term.Source -WorkingDirectory $env:USERPROFILE; $newTerminal = $true }
+        $mf = Get-Content -LiteralPath $manifestFile -Raw | ConvertFrom-Json
+        foreach ($g in $mf.groups.PSObject.Properties) {
+            foreach ($p in $g.Value.packages) { $pkgInfo[$p.id] = $p }
+        }
     } catch { }
-    Write-SetupLog "new terminal: $newTerminal"
+
+    # Publisher.Name ids read fine without the publisher; a Store id is an
+    # opaque number, so its note names it.
+    function Get-PackageLabel {
+        param([string]$Id)
+        $p = $pkgInfo[$Id]
+        if ($p -and $p.PSObject.Properties.Name -contains "source" -and $p.source -eq "msstore" -and $p.note) {
+            return ($p.note -split ' - ')[0]
+        }
+        $parts = $Id.Split('.')
+        if ($parts.Count -gt 1) { return ($parts[1..($parts.Count - 1)] -join '.') }
+        return $Id
+    }
+
+    $newCount = 0; $presentCount = 0; $failCount = 0
+    $footer += ""
+    $footer += "{0}Installed:{1}" -f $T.Bright, $T.Reset
+    $room = (Get-TuiWidth) - 18
+    foreach ($r in $pkgResults) {
+        $group = (@($r.Groups) -join ",")
+        $new = @($r.Installed | Where-Object { $_ })
+        $newCount += $new.Count
+        $presentCount += @($r.Present | Where-Object { $_ }).Count
+        $failCount += @($r.Failed | Where-Object { $_ }).Count
+        if (-not $new.Count) { continue }
+
+        # Wrapped by hand: Write-TuiLine pads but cannot truncate.
+        $line = ""; $first = $true
+        foreach ($label in ($new | ForEach-Object { Get-PackageLabel $_ })) {
+            $candidate = if ($line) { "$line, $label" } else { $label }
+            if ($candidate.Length -gt $room -and $line) {
+                $footer += "  {0}{1,-12}{2} {3}," -f $T.Cyan, $(if ($first) { $group } else { "" }), $T.Reset, $line
+                $first = $false; $line = $label
+            } else { $line = $candidate }
+        }
+        if ($line) { $footer += "  {0}{1,-12}{2} {3}" -f $T.Cyan, $(if ($first) { $group } else { "" }), $T.Reset, $line }
+    }
+    if (-not $newCount) {
+        $footer += "  {0}nothing new - {1} package(s) were already installed{2}" -f $T.Dim, $presentCount, $T.Reset
+    } elseif ($presentCount) {
+        $footer += "  {0}+ {1} package(s) already installed{2}" -f $T.Dim, $presentCount, $T.Reset
+    }
+    if ($failCount) {
+        $failedPkgs = @($pkgResults | ForEach-Object { $_.Failed } | Where-Object { $_ } | ForEach-Object { Get-PackageLabel $_ })
+        $footer += "  {0}failed: {1}{2} - see the pkg-*.log files" -f $T.Red, ($failedPkgs -join ", "), $T.Reset
+    }
 }
 
 $footer += ""
@@ -806,25 +851,19 @@ if ($desktopUp) {
 } elseif ($didWm) {
     $footer += "  {0}the desktop did not start{1} - what went wrong is in desktop-start.log" -f $T.Red, $T.Reset
 }
-foreach ($app in $openedApps) {
-    switch ($app) {
-        "Raycast"   { $footer += "  {0}Raycast is open{1}    sign in, then add {2}~/.config/omacheese/raycast{1} as a script directory" -f $T.Green, $T.Reset, $T.Cyan }
-        "Bitwarden" { $footer += "  {0}Bitwarden is open{1}  sign in, then Settings > turn on the SSH agent" -f $T.Green, $T.Reset }
-        "Brave"     { $footer += "  {0}Brave is open{1}      set up your profile; it will offer to be the default browser" -f $T.Green, $T.Reset }
-    }
-}
-foreach ($app in @($appsToOpen | Where-Object { $openedApps -notcontains $_ })) {
-    if (-not $script:RebootRequired) {
-        $footer += "  {0}{1} did not open{2} - find it in the Start menu" -f $T.Yellow, $app, $T.Reset
-    }
+if ($raycastUp) {
+    $footer += "  {0}Raycast is open{1} - go through its setup, then add {2}~/.config/omacheese/raycast{1} as a script directory" -f $T.Green, $T.Reset, $T.Cyan
+} elseif ($appsToOpen -contains "Raycast" -and -not $script:RebootRequired) {
+    $footer += "  {0}Raycast did not open{1} - start it from the Start menu to run its setup" -f $T.Yellow, $T.Reset
 }
 if ($didDistro) {
-    $footer += "  {0}WSL is ready{1}       {2}wsl{1} opens AlmaLinux as {3} in zsh" -f $T.Green, $T.Reset, $T.Cyan, (ConvertTo-LinuxUserName -Name $env:USERNAME)
+    $footer += "  {0}WSL is ready{1} - {2}wsl{1} opens AlmaLinux as {3} in zsh" -f $T.Green, $T.Reset, $T.Cyan, (ConvertTo-LinuxUserName -Name $env:USERNAME)
 }
-if ($newTerminal) {
-    $footer += "  {0}a new terminal is open{1} with the updated PATH - this one still has the old one" -f $T.Green, $T.Reset
-} elseif ($pathChanged -and -not $script:RebootRequired) {
-    $footer += "  {0}open a NEW terminal{1} - this one still has the old PATH" -f $T.Cyan, $T.Reset
+# PATH is read once per process, so the terminal this setup was started from
+# still has the old one; anything winget just installed is missing there.
+$pathChanged = @($steps | Where-Object { $_.Key -in @("core", "cli", "langs", "dotnet", "agents") -and $_.Status -eq "Done" }).Count -gt 0
+if ($pathChanged -and -not $script:RebootRequired) {
+    $footer += "  {0}open a new terminal{1} to use what was installed - this one still has the old PATH" -f $T.Cyan, $T.Reset
 }
 
 # What the verify step found, printed here instead of "run ./scripts/doctor.ps1"

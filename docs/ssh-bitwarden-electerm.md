@@ -19,8 +19,7 @@ Private key không bao giờ rời vault. Client chỉ gửi challenge cho agent
 2. Tạo/import key dưới dạng item loại **SSH key**.
 3. **Bắt buộc**: `services.msc` → **OpenSSH Authentication Agent** →
    Startup type = **Disabled** → Stop. Module `desktop` của setup tự làm bước
-   này (`scripts/disable-openssh-agent.ps1`, một lần UAC, bỏ qua nếu đã Disabled),
-   và mở sẵn Bitwarden ở cuối để bạn làm bước 1-2.
+   này (`scripts/disable-openssh-agent.ps1`, một lần UAC, bỏ qua nếu đã Disabled).
 
 Bước 3 không phải tùy chọn. Bitwarden phục vụ đúng cái named pipe
 `\\.\pipe\openssh-ssh-agent` mà service của Windows cũng đòi; để cả hai chạy
