@@ -273,7 +273,23 @@ function Invoke-Step {
         # window and the user watches it there. -Wait is what actually waits:
         # a handle to an elevated child cannot always be reopened by PID from
         # an unelevated parent, so WaitForExit() alone is not dependable here.
-        $p = Start-Process -FilePath $psExe -ArgumentList $argLine -Verb RunAs -PassThru -Wait
+        try {
+            $p = Start-Process -FilePath $psExe -ArgumentList $argLine -Verb RunAs -PassThru -Wait
+        } catch {
+            # Declined, or nobody answered: Windows dismisses the UAC dialog on
+            # its own after about two minutes. Neither is a crash in the step,
+            # but the exception text names pwsh.exe and a working directory and
+            # never says "administrator", and an elevated step writes no log of
+            # its own - so the board pointed at a log file that did not exist.
+            Set-Content -LiteralPath $log -Value @(
+                "This step needs administrator rights, and the UAC prompt was not accepted.",
+                "(Windows also dismisses that prompt by itself after about two minutes.)",
+                "",
+                "Re-run this from a terminal that is already elevated, or run the step alone:",
+                "  $File"
+            )
+            return 1223  # ERROR_CANCELLED
+        }
         try { $p.WaitForExit() } catch { }
         return $p.ExitCode
     }
@@ -552,7 +568,12 @@ if ($didRaycast) {
     else            { $footer += "  {0}open Raycast once{1} to sign in and add {0}~/.config/omacheese/raycast{1}" -f $T.Cyan, $T.Reset }
 }
 if ($didWsl -and -not $script:RebootRequired) {
-    $footer += "  {0}wsl -d AlmaLinux-9{1}           then {0}bash scripts/install-almalinux.sh{1}" -f $T.Cyan, $T.Reset
+    # --cd takes a Windows path. Saying "wsl -d AlmaLinux-9, then bash
+    # scripts/install-almalinux.sh" put you in your Linux home, where the repo
+    # is not - it is on the Windows side, under /mnt.
+    $footer += "  {0}set up the distro:{1}" -f $T.Cyan, $T.Reset
+    $footer += "    {0}wsl -d AlmaLinux-9 --cd `"{1}`"{2}" -f $T.Cyan, $RepoRoot, $T.Reset
+    $footer += "      {0}-- bash scripts/install-almalinux.sh{1}" -f $T.Cyan, $T.Reset
 }
 # PATH is read once per process. Everything winget just installed is missing
 # from the shell this was launched from, which is why a fresh machine looked
