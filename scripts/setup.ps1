@@ -18,7 +18,11 @@ param(
     [string]$Preset,
     [string[]]$Modules,
     [switch]$DryRun,
-    [switch]$Yes
+    [switch]$Yes,
+
+    # Set by the RunOnce entry written when a step needs Windows restarted.
+    # Nothing else should pass it.
+    [switch]$Resume
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,6 +32,26 @@ $ErrorActionPreference = "Stop"
 if ($Modules) { $Modules = @($Modules -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
+
+# --- resume after a restart --------------------------------------------------
+# See scripts\lib\resume.ps1. Every question was answered before the restart,
+# so a resumed run asks none.
+. (Join-Path $RepoRoot "scripts\lib\resume.ps1")
+$script:LinuxPassword = $null
+$script:DistroAgents  = ""
+$saved = $null
+if ($Resume) {
+    $saved = Read-SetupResume
+    if (-not $saved) {
+        Write-Host "Nothing to resume." -ForegroundColor DarkGray
+        return
+    }
+    $Modules = @($saved.Modules)
+    $script:DistroAgents  = $saved.DistroAgents
+    $script:LinuxPassword = $saved.LinuxPassword
+    $Yes = $true
+}
+
 . (Join-Path $RepoRoot "scripts\lib\tui.ps1")
 . (Join-Path $RepoRoot "scripts\lib\detect.ps1")
 . (Join-Path $RepoRoot "scripts\lib\modules.ps1")
@@ -51,7 +75,25 @@ $env:OMACHEESE_SETUP_RUN = $RunDir
 function Write-SetupLog {
     param([string]$Message)
     $line = "[{0}] {1}" -f (Get-Date -Format "HH:mm:ss"), $Message
-    Add-Content -LiteralPath $MainLog -Value $line
+    # A log line must never be what ends an install. Under
+    # ErrorActionPreference=Stop, Add-Content failing on a sharing violation -
+    # anything holding setup.log open to read it: a `tail -f`, a
+    # `Get-Content -Wait`, a virus scanner - threw straight out of the run loop.
+    # Measured: the distro step finished its whole job and the setup died on
+    # the next line of its own log. Retry briefly, then drop the line.
+    for ($try = 0; $try -lt 5; $try++) {
+        try {
+            $fs = New-Object System.IO.FileStream($MainLog, [System.IO.FileMode]::Append,
+                [System.IO.FileAccess]::Write, [System.IO.FileShare]::ReadWrite)
+            try {
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes($line + "`r`n")
+                $fs.Write($bytes, 0, $bytes.Length)
+            } finally { $fs.Dispose() }
+            return
+        } catch {
+            Start-Sleep -Milliseconds 100
+        }
+    }
 }
 
 Write-SetupLog "repo: $RepoRoot"
@@ -163,6 +205,36 @@ if (($steps | Where-Object { $_.Key -eq "debloat" }) -and -not $Yes -and -not $D
         $script:DebloatArgs = @("-Groups", (@($dbPicked) -join ","))
         foreach ($s in $steps) {
             if ($s.Key -eq "debloat") { $s.Description = "Win11Debloat: " + (@($dbPicked) -join ", ") }
+        }
+    }
+}
+
+# --- distro: the Linux password ----------------------------------------------
+# install-distro.ps1 creates a Linux user named after this Windows account. It
+# needs a password for sudo, and once steps start there is no console to type
+# one into - so it is asked here, with the other questions, and only when the
+# account does not already have one. Under -Yes nothing is asked: the account
+# is created without a password and the next interactive run asks.
+if (($steps | Where-Object { $_.Key -eq "distro" }) -and -not $DryRun) {
+    . (Join-Path $RepoRoot "scripts\lib\distro.ps1")
+
+    # The agents installed on the Windows side, installed inside WSL as well,
+    # when the agents module is part of this run.
+    if ($steps | Where-Object { $_.Key -eq "agents" }) { $script:DistroAgents = "claude,codex" }
+
+    if (-not $Yes -and -not $script:LinuxPassword) {
+        $linuxUser = ConvertTo-LinuxUserName -Name $env:USERNAME
+        if ((Get-DistroUserState -Distro "AlmaLinux-9" -User $linuxUser) -ne "ready") {
+            Clear-Tui
+            Write-Host ""
+            Write-Host ("  {0}WSL: Linux user '{1}'{2}" -f ($T.Bright + $T.Bold), $linuxUser, $T.Reset)
+            Write-Host ("  {0}The distro step creates this account. Its password is what sudo asks for{1}" -f $T.Dim, $T.Reset)
+            Write-Host ("  {0}inside WSL - it is not your Windows password unless you make it so.{1}" -f $T.Dim, $T.Reset)
+            Write-Host ""
+            $script:LinuxPassword = Read-LinuxPassword -User $linuxUser
+            if (-not $script:LinuxPassword) {
+                Write-Host ("  {0}no password - the account is created without one, and the next run asks again{1}" -f $T.Yellow, $T.Reset)
+            }
         }
     }
 }
@@ -316,6 +388,22 @@ function Invoke-Step {
         $psExe = (Get-Process -Id $PID).Path
     }
 
+    # A Windows PowerShell child must not inherit pwsh 7's module directories.
+    # Started from a pwsh 7 session it does - they come first in PSModulePath -
+    # and it then loads the Core build of Microsoft.PowerShell.Security and
+    # friends and fails on them: "command was found in the module ... but the
+    # module could not be loaded". Measured with ConvertTo-SecureString: fails
+    # on the inherited path, works on the filtered one. The debloat step runs in
+    # Windows PowerShell on purpose, so a setup started from pwsh 7 handed it a
+    # broken module path.
+    $savedModulePath = $env:PSModulePath
+    if ($psExe -like "*\WindowsPowerShell\v1.0\powershell.exe") {
+        $env:PSModulePath = (@($env:PSModulePath -split ';' | Where-Object {
+            $_ -and $_ -notlike '*\Documents\PowerShell\Modules*' -and
+                    $_ -notlike '*\Program Files\PowerShell\*' -and
+                    $_ -notlike '*\WindowsApps\Microsoft.PowerShell_*' }) -join ';')
+    }
+
     # One string, not an array: Start-Process joins an array with spaces and
     # does not quote, so a username with a space in it broke every step.
     $argLine = '-NoProfile -ExecutionPolicy Bypass -File "{0}"' -f $File
@@ -332,13 +420,16 @@ function Invoke-Step {
         # it - debloat did - reported "see debloat.log" against a file that was
         # never written. Start-Transcript is the only redirection available to
         # a process this one cannot pipe.
-        $inner = "`$env:OMACHEESE_SETUP_RUN = '{3}'; Start-Transcript -LiteralPath '{0}' -Force | Out-Null; try {{ & '{1}'{2}; exit `$LASTEXITCODE }} finally {{ try {{ Stop-Transcript | Out-Null }} catch {{ }} }}" -f `
-            $log.Replace("'", "''"), $File.Replace("'", "''"), $(if ($Arguments -and $Arguments.Count) { " " + ($Arguments -join " ") } else { "" }), $RunDir.Replace("'", "''")
+        # PSModulePath is written into the command too: whether a UAC-started
+        # process inherits this environment is not something to rely on.
+        $inner = "`$env:PSModulePath = '{4}'; `$env:OMACHEESE_SETUP_RUN = '{3}'; Start-Transcript -LiteralPath '{0}' -Force | Out-Null; try {{ & '{1}'{2}; exit `$LASTEXITCODE }} finally {{ try {{ Stop-Transcript | Out-Null }} catch {{ }} }}" -f `
+            $log.Replace("'", "''"), $File.Replace("'", "''"), $(if ($Arguments -and $Arguments.Count) { " " + ($Arguments -join " ") } else { "" }), $RunDir.Replace("'", "''"), $env:PSModulePath.Replace("'", "''")
         $elevArgs = '-NoProfile -ExecutionPolicy Bypass -Command "{0}"' -f $inner.Replace('"', '\"')
 
         try {
             $p = Start-Process -FilePath $psExe -ArgumentList $elevArgs -Verb RunAs -PassThru -Wait
         } catch {
+            $env:PSModulePath = $savedModulePath
             # Declined, or nobody answered: Windows dismisses the UAC dialog on
             # its own after about two minutes. Neither is a crash in the step,
             # but the exception text names pwsh.exe and a working directory and
@@ -353,14 +444,20 @@ function Invoke-Step {
             )
             return 1223  # ERROR_CANCELLED
         }
+        $env:PSModulePath = $savedModulePath
         try { $p.WaitForExit() } catch { }
         return $p.ExitCode
     }
 
-    $p = Start-Process -FilePath $psExe -ArgumentList $argLine `
-        -NoNewWindow -PassThru `
-        -RedirectStandardInput $NullIn `
-        -RedirectStandardOutput $log -RedirectStandardError "$log.err"
+    try {
+        $p = Start-Process -FilePath $psExe -ArgumentList $argLine `
+            -NoNewWindow -PassThru `
+            -RedirectStandardInput $NullIn `
+            -RedirectStandardOutput $log -RedirectStandardError "$log.err"
+    } finally {
+        # The child has its copy; this process keeps the one it started with.
+        $env:PSModulePath = $savedModulePath
+    }
 
     # Touching .Handle is not decoration. On Windows PowerShell 5.1 - the host
     # this runs in on a fresh machine - Start-Process -PassThru WITHOUT -Wait
@@ -422,8 +519,35 @@ $ctx = @{
         Invoke-Step -Key "debloat" -File (Join-Path $RepoRoot "scripts\debloat-windows.ps1") `
             -Arguments $script:DebloatArgs -WindowsPowerShell -Elevate
     }
+    InstallDesktop = {
+        $code = Invoke-Step -Key "pkg-desktop" -File (Join-Path $RepoRoot "scripts\install-windows.ps1") `
+            -Arguments @("-Groups", "desktop", "-SkipModules")
+        # Bitwarden's SSH agent needs the pipe Windows' own agent service holds.
+        # Checked first: reading the start type needs no admin, so a machine
+        # where it is already done gets no UAC prompt for it.
+        $svc = Get-Service ssh-agent -ErrorAction SilentlyContinue
+        if ($code -eq 0 -and $svc -and $svc.StartType -ne "Disabled") {
+            $code = Invoke-Step -Key "ssh-agent" -File (Join-Path $RepoRoot "scripts\disable-openssh-agent.ps1") `
+                -Arguments @() -Elevate
+        }
+        $code
+    }
     InstallWsl = {
         Invoke-Step -Key "wsl" -File (Join-Path $RepoRoot "scripts\install-wsl.ps1") -Arguments @() -Elevate
+    }
+    InstallDistro = {
+        $distroArgs = @()
+        if ($script:DistroAgents) { $distroArgs = @("-Agents", $script:DistroAgents) }
+        # The password travels in this process's environment for the length of
+        # one Start-Process: inherited by the step, never on a command line, never
+        # on disk. install-distro.ps1 removes it from its own copy on read.
+        if ($script:LinuxPassword) { $env:OMACHEESE_LINUX_PASSWORD = $script:LinuxPassword }
+        try {
+            Invoke-Step -Key "distro" -File (Join-Path $RepoRoot "scripts\install-distro.ps1") -Arguments $distroArgs
+        } finally {
+            Remove-Item Env:OMACHEESE_LINUX_PASSWORD -ErrorAction SilentlyContinue
+            $script:LinuxPassword = $null
+        }
     }
     InstallLocalLlm = {
         Invoke-Step -Key "localllm" -File (Join-Path $RepoRoot "scripts\install-localllm.ps1") `
@@ -459,15 +583,17 @@ $failed = @()
 # module needs a distro that cannot boot until the reboot has happened, and
 # failing there told the user nothing except that something was broken.
 $script:RebootRequired = $false
-$NeedsRunningWsl = @("localllm")
+$NeedsRunningWsl = @("distro", "localllm")
+$script:ResumeKeys = @()
 
 for ($i = 0; $i -lt $steps.Count; $i++) {
     $s = $steps[$i]
 
     if ($script:RebootRequired -and $NeedsRunningWsl -contains $s.Key) {
         $s.Status = "Skipped"
-        $s.Detail = "needs the restart WSL asked for - run it after rebooting"
-        Write-SetupLog "$($s.Key): Skipped (reboot pending)"
+        $s.Detail = "runs by itself after the restart"
+        $script:ResumeKeys += $s.Key
+        Write-SetupLog "$($s.Key): Skipped (reboot pending, resumes after restart)"
         continue
     }
 
@@ -565,10 +691,47 @@ if ($didWm -and $didConfigs) {
 # Raycast is a Store app that wants an account, so it is useless until someone
 # has actually opened it once. Installing it and saying nothing left it sitting
 # there configured by nobody.
-$raycastUp = $false
-if ($didRaycast) {
-    $raycastUp = Start-StartMenuApp -Name "Raycast"
-    Write-SetupLog "raycast launch: $raycastUp"
+$didDesktop = @($steps | Where-Object { $_.Key -eq "desktop" -and $_.Status -eq "Done" }).Count -gt 0
+$didDistro  = @($steps | Where-Object { $_.Key -eq "distro"  -and $_.Status -eq "Done" }).Count -gt 0
+
+# Apps that do nothing useful until someone signs in or flips a setting. They
+# are opened here, at the end, so the settings get done while the person is
+# still at the machine - and what to do in each is on the summary below.
+# Raycast wants an account; Bitwarden wants a sign-in and its SSH agent
+# switched on (the Windows agent service was already handed over during the
+# desktop step); Brave wants a profile and asks to be the default browser.
+$appsToOpen = @()
+if ($didRaycast) { $appsToOpen += "Raycast" }
+if ($didDesktop) { $appsToOpen += @("Bitwarden", "Brave") }
+if ($saved) { $appsToOpen += @($saved.OpenApps) }
+$appsToOpen = @($appsToOpen | Select-Object -Unique)
+
+# Not while a restart is pending: it would close them again. They are carried
+# into the resume state instead and opened after the restart.
+$openedApps = @()
+if (-not $script:RebootRequired) {
+    foreach ($app in $appsToOpen) {
+        if (Start-StartMenuApp -Name $app) { $openedApps += $app }
+        Write-SetupLog "open $app : $($openedApps -contains $app)"
+    }
+}
+$raycastUp = $openedApps -contains "Raycast"
+
+# Debloat settings that Windows only reads at sign-in. Win11Debloat says which:
+# "Warning: 'Disable window snapping' requires a reboot to take full effect".
+$script:RestartRecommended = @()
+$debloatLog = Join-Path $RunDir "debloat.log"
+if (Test-Path -LiteralPath $debloatLog) {
+    $script:RestartRecommended = @(Get-Content -LiteralPath $debloatLog |
+        Where-Object { $_ -match "'(.+)' requires a reboot to take full effect" } |
+        ForEach-Object { $Matches[1] } | Select-Object -Unique)
+}
+
+# --- carry on after the restart ----------------------------------------------
+if ($script:RebootRequired -and $script:ResumeKeys.Count) {
+    $resumeCmd = Save-SetupResume -Modules $script:ResumeKeys -SetupScript (Join-Path $RepoRoot "scripts\setup.ps1") `
+        -DistroAgents $script:DistroAgents -OpenApps $appsToOpen -LinuxPassword $script:LinuxPassword
+    Write-SetupLog "resume registered: $($script:ResumeKeys -join ',') via RunOnce: $resumeCmd"
 }
 
 # --- summary -----------------------------------------------------------------
@@ -602,21 +765,38 @@ if (Test-Path -LiteralPath $marker) {
     }
 }
 
-$resume = Join-Path $RepoRoot "scripts\setup.ps1"
-# Write-TuiLine pads but cannot truncate (it would cut ANSI codes mid-sequence),
-# so a full path under the profile pushes the box border off screen.
-if ($env:USERPROFILE -and $resume.StartsWith($env:USERPROFILE, [StringComparison]::OrdinalIgnoreCase)) {
-    $resume = "~" + $resume.Substring($env:USERPROFILE.Length)
-}
-
 if ($script:RebootRequired) {
+    # Said plainly and first: what needs the restart, why, and that nothing has
+    # to be remembered across it.
     $footer += ""
     $footer += "{0}RESTART WINDOWS to finish.{1}" -f ($T.Yellow + $T.Bold), $T.Reset
-    $footer += "  {0}WSL's Windows features are enabled but inactive until then; anything" -f $T.Dim
-    $footer += "  that needs a running distro was skipped rather than failed.{0}" -f $T.Reset
-    $footer += "  after rebooting:"
-    $footer += "    {0}wsl --install -d AlmaLinux-9{1}" -f $T.Cyan, $T.Reset
-    $footer += "    {0}{1} -Modules localllm{2}" -f $T.Cyan, $resume, $T.Reset
+    $footer += "  {0}WSL was just enabled. Its Windows features only start after a restart,{1}" -f $T.Fg, $T.Reset
+    $footer += "  {0}so nothing that needs a running Linux could run yet.{1}" -f $T.Fg, $T.Reset
+    if ($script:ResumeKeys.Count) {
+        $footer += "  {0}After you sign in again, this setup carries on by itself:{1} {2}" -f $T.Green, $T.Reset, ($script:ResumeKeys -join ", ")
+        $footer += "  {0}(a PowerShell window opens for it - nothing to type){1}" -f $T.Dim, $T.Reset
+    }
+} elseif ($script:RestartRecommended.Count) {
+    $footer += ""
+    $footer += "{0}Restart recommended{1} - nothing is waiting on it, but these only take" -f ($T.Yellow + $T.Bold), $T.Reset
+    $footer += "  full effect after one:"
+    foreach ($r in ($script:RestartRecommended | Select-Object -First 4)) {
+        $footer += "    {0}{1}{2}" -f $T.Dim, $r, $T.Reset
+    }
+}
+
+# A terminal started from this setup inherits the PATH this process refreshed
+# after every step. The one the setup was launched from does not - PATH is read
+# once per process - which is why everything winget installed looked missing
+# there. So open a new one rather than telling people to.
+$newTerminal = $false
+$pathChanged = @($steps | Where-Object { $_.Key -in @("core", "cli", "langs", "dotnet", "agents") -and $_.Status -eq "Done" }).Count -gt 0
+if ($pathChanged -and -not $script:RebootRequired) {
+    $term = Get-Command alacritty -ErrorAction SilentlyContinue
+    try {
+        if ($term) { Start-Process -FilePath $term.Source -WorkingDirectory $env:USERPROFILE; $newTerminal = $true }
+    } catch { }
+    Write-SetupLog "new terminal: $newTerminal"
 }
 
 $footer += ""
@@ -624,24 +804,28 @@ $footer += "{0}Next:{1}" -f $T.Bright, $T.Reset
 if ($desktopUp) {
     $footer += "  {0}the desktop is running{1} - {2}SUPER + /{1} for the keymap, {2}SUPER + SPACE{1} for the menu" -f $T.Green, $T.Reset, $T.Cyan
 } elseif ($didWm) {
-    $footer += "  {0}./scripts/start-desktop.ps1{1}   then {0}SUPER + /{1} for the keymap" -f $T.Cyan, $T.Reset
+    $footer += "  {0}the desktop did not start{1} - what went wrong is in desktop-start.log" -f $T.Red, $T.Reset
 }
-if ($didRaycast) {
-    if ($raycastUp) { $footer += "  {0}Raycast is open{1} - sign in, then add {2}~/.config/omacheese/raycast{1} as a script directory" -f $T.Green, $T.Reset, $T.Cyan }
-    else            { $footer += "  {0}open Raycast once{1} to sign in and add {0}~/.config/omacheese/raycast{1}" -f $T.Cyan, $T.Reset }
+foreach ($app in $openedApps) {
+    switch ($app) {
+        "Raycast"   { $footer += "  {0}Raycast is open{1}    sign in, then add {2}~/.config/omacheese/raycast{1} as a script directory" -f $T.Green, $T.Reset, $T.Cyan }
+        "Bitwarden" { $footer += "  {0}Bitwarden is open{1}  sign in, then Settings > turn on the SSH agent" -f $T.Green, $T.Reset }
+        "Brave"     { $footer += "  {0}Brave is open{1}      set up your profile; it will offer to be the default browser" -f $T.Green, $T.Reset }
+    }
 }
-if ($didWsl -and -not $script:RebootRequired) {
-    # --cd takes a Windows path. Saying "wsl -d AlmaLinux-9, then bash
-    # scripts/install-almalinux.sh" put you in your Linux home, where the repo
-    # is not - it is on the Windows side, under /mnt.
-    $footer += "  {0}set up the distro:{1}" -f $T.Cyan, $T.Reset
-    $footer += "    {0}wsl -d AlmaLinux-9 --cd `"{1}`"{2}" -f $T.Cyan, $RepoRoot, $T.Reset
-    $footer += "      {0}-- bash scripts/install-almalinux.sh{1}" -f $T.Cyan, $T.Reset
+foreach ($app in @($appsToOpen | Where-Object { $openedApps -notcontains $_ })) {
+    if (-not $script:RebootRequired) {
+        $footer += "  {0}{1} did not open{2} - find it in the Start menu" -f $T.Yellow, $app, $T.Reset
+    }
 }
-# PATH is read once per process. Everything winget just installed is missing
-# from the shell this was launched from, which is why a fresh machine looked
-# like it needed a full restart to run anything.
-$footer += "  {0}open a NEW terminal{1}            this one still has the old PATH" -f $T.Cyan, $T.Reset
+if ($didDistro) {
+    $footer += "  {0}WSL is ready{1}       {2}wsl{1} opens AlmaLinux as {3} in zsh" -f $T.Green, $T.Reset, $T.Cyan, (ConvertTo-LinuxUserName -Name $env:USERNAME)
+}
+if ($newTerminal) {
+    $footer += "  {0}a new terminal is open{1} with the updated PATH - this one still has the old one" -f $T.Green, $T.Reset
+} elseif ($pathChanged -and -not $script:RebootRequired) {
+    $footer += "  {0}open a NEW terminal{1} - this one still has the old PATH" -f $T.Cyan, $T.Reset
+}
 
 # What the verify step found, printed here instead of "run ./scripts/doctor.ps1"
 # - it has just been run, in full, so the answer is already on disk.
@@ -677,5 +861,21 @@ if (Test-Path -LiteralPath $verifyLog) {
 
 Write-TuiBoard -Steps $steps -Title "Done" -FooterLines $footer
 Write-Host ""
+
+# Offer the restart instead of leaving it as homework. Default No: a stray Enter
+# must not reboot a machine with unsaved work on it, and -Yes never restarts on
+# its own for the same reason. The countdown is long enough to save a file.
+if (($script:RebootRequired -or $script:RestartRecommended.Count) -and -not $Yes) {
+    $question = "Restart Windows now?"
+    if ($script:RebootRequired -and $script:ResumeKeys.Count) {
+        $question = "Restart Windows now? Setup continues by itself after you sign in."
+    }
+    if (Confirm-Tui $question -DefaultNo) {
+        & shutdown.exe /r /t 30 /c "Omacheese setup: restarting to finish. Save your work - cancel with: shutdown /a"
+        Write-Host ("  {0}Restarting in 30 seconds. Save your work.{1}" -f ($T.Yellow + $T.Bold), $T.Reset)
+    } elseif ($script:RebootRequired) {
+        Write-Host ("  {0}Restart whenever you are ready - setup picks up on the next sign-in.{1}" -f $T.Dim, $T.Reset)
+    }
+}
 
 if ($failed.Count) { exit 1 }

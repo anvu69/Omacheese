@@ -83,7 +83,7 @@ function Get-SetupModules {
 
     $mods.Add((New-Mod -Key "desktop" -Description "Brave, Everything, Bitwarden, electerm, DBeaver, PowerToys" `
         -Available $wingetOk -Note "needs winget" -Est "5-10 min" `
-        -Action { param($ctx) & $ctx.InstallWindows -Groups @("desktop") }))
+        -Action { param($ctx) & $ctx.InstallDesktop }))
 
     $mods.Add((New-Mod -Key "agents" -Description "Claude Code, Codex, uv + the agent launcher" `
         -Available $wingetOk -Note "needs winget" -Est "2-4 min" `
@@ -131,6 +131,15 @@ function Get-SetupModules {
         -Available ($wslAvailable -and $Machine.VirtEnabled) -Note $wslNote `
         -NeedsElevation $true -Est "5-15 min" `
         -Action { param($ctx) & $ctx.InstallWsl }))
+
+    # Everything that used to be a list of commands at the end of the summary:
+    # the distro itself, a real user (install-wsl.ps1 installs with --no-launch,
+    # so there was none and every shell ran as root), zsh and the dev tools, the
+    # configs, /etc/wsl.conf and the distro restart it needs.
+    $mods.Add((New-Mod -Key "distro" -Description "AlmaLinux: your user, zsh, dev tools, configs (inside WSL)" `
+        -Available ($wslAvailable -and $Machine.VirtEnabled) -Note $wslNote `
+        -Est "10-20 min" `
+        -Action { param($ctx) & $ctx.InstallDistro }))
 
     # --- local LLM -----------------------------------------------------------
     # This is the part that must never be assumed. It is offered only when the
@@ -186,12 +195,12 @@ function Get-SetupProfiles {
         [pscustomobject]@{
             Key = "full"; Title = "Full"
             Description = "Desktop + coding agents + WSL2 AlmaLinux."
-            Modules = @("core", "langs", "dotnet", "psmodules", "cli", "wm", "desktop", "agents", "configs", "debloat", "wsl", "verify")
+            Modules = @("core", "langs", "dotnet", "psmodules", "cli", "wm", "desktop", "agents", "configs", "debloat", "wsl", "distro", "verify")
         }
         [pscustomobject]@{
             Key = "everything"; Title = "Everything"
             Description = "Full + local LLM, where the hardware allows it."
-            Modules = @("core", "langs", "dotnet", "psmodules", "cli", "wm", "desktop", "agents", "configs", "debloat", "wsl", "localllm", "verify")
+            Modules = @("core", "langs", "dotnet", "psmodules", "cli", "wm", "desktop", "agents", "configs", "debloat", "wsl", "distro", "localllm", "verify")
         }
         [pscustomobject]@{
             Key = "custom"; Title = "Custom"

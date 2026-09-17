@@ -96,10 +96,13 @@ wsl.exe --set-default-version 2 2>&1 | Out-String | Write-Host
 
 if ($needReboot) {
     Warn ""
-    Warn "Windows features were just enabled - a REBOOT is required before any"
-    Warn "distro can start. After rebooting, run:"
-    Warn "    wsl --install -d $Distro"
-    Warn "    bash scripts/install-almalinux.sh   (inside the distro)"
+    Warn "Windows features were just enabled - a RESTART is required before any"
+    Warn "distro can start."
+    if ($env:OMACHEESE_SETUP_RUN) {
+        Warn "Setup registers itself to carry on after the restart - nothing to type."
+    } else {
+        Warn "After restarting: ./scripts/install-distro.ps1 (setup.ps1 does this by itself)"
+    }
     # 3010 is the Windows installer convention for "succeeded, reboot required".
     # setup.ps1 reads it and skips the steps that would only fail until then -
     # the local-LLM module in particular, which needs a running distro and used
@@ -135,14 +138,11 @@ if ($installed -contains $Distro) {
 Write-Host ""
 Good "WSL is ready."
 Write-Host ""
-# --cd takes a Windows path and lands the shell there. Without it these lines
-# told you to open the distro and run `bash scripts/install-almalinux.sh` from
-# your Linux home directory, where the repo is not: the clone lives on the
-# Windows side, reachable under /mnt.
-Write-Host "  Next, set up the distro (installed with --no-launch, so no user was"
-Write-Host "  created and you are root until you make one):" -ForegroundColor Cyan
-Write-Host "    wsl -d $Distro --cd `"$RepoRoot`" -- bash scripts/install-almalinux.sh"
-Write-Host ""
-Write-Host "  Then the per-distro config (metadata on /mnt, no Windows PATH leak):" -ForegroundColor Cyan
-Write-Host "    wsl -d $Distro --cd `"$RepoRoot`" -- sudo cp configs/wsl/wsl.conf /etc/wsl.conf"
-Write-Host "    wsl --shutdown"
+# The distro itself - a user, zsh, the tools, /etc/wsl.conf - is
+# install-distro.ps1. setup.ps1 runs it as its next step; run on its own, this
+# script runs it too, rather than printing the commands it would take.
+if (-not $env:OMACHEESE_SETUP_RUN) {
+    & (Get-Process -Id $PID).Path -NoProfile -ExecutionPolicy Bypass -File (Join-Path $RepoRoot "scripts\install-distro.ps1") -Distro $Distro
+    exit $LASTEXITCODE
+}
+exit 0
