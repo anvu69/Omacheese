@@ -23,3 +23,6 @@ temp/
 # AI stack secrets
 configs/ai/.env
 configs/ai/workspace/
+
+# Local mise pin - a language version for this checkout, not for the repo
+mise.toml
