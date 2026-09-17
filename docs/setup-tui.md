@@ -97,7 +97,7 @@ Phím: `↑↓` hoặc `j/k`, `space` toggle, `a` chọn hết, `n` bỏ hết, 
 |---|---|
 | `minimal` | core, cli, configs, verify |
 | `desktop` | + wm, desktop, debloat |
-| `full` | + agents, wsl |
+| `full` | + agents, wsl, distro |
 | `everything` | + localllm (nếu phần cứng cho phép) |
 
 `-DryRun` in kế hoạch rồi dừng, không đổi gì.
@@ -111,7 +111,7 @@ Phím: `↑↓` hoặc `j/k`, `space` toggle, `a` chọn hết, `n` bỏ hết, 
 | Module | Yêu cầu |
 |---|---|
 | core, cli, wm, desktop, agents | winget |
-| wsl | Windows 10 2004+ và **virtualisation bật trong BIOS** |
+| wsl, distro | Windows 10 2004+ và **virtualisation bật trong BIOS** |
 | localllm | xem bảng tier dưới |
 
 VRAM đọc từ `nvidia-smi`, **không** từ `Win32_VideoController.AdapterRAM` —
@@ -354,7 +354,19 @@ distro đang chạy, và báo *failure* — trong khi sự thật chỉ là "ch�
 `install-wsl.ps1` giờ trả về **3010** (quy ước installer của Windows: thành công,
 cần reboot). `setup.ps1` đọc mã đó, đánh dấu bước wsl là Done kèm
 `RESTART REQUIRED`, và **Skip** những bước cần distro đang chạy thay vì cho chúng
-đâm đầu vào tường. Phần tổng kết in lệnh chạy tiếp sau khi reboot.
+đâm đầu vào tường.
+
+Rồi setup **tự chạy tiếp sau restart**, không phải gõ gì: các bước bị skip được ghi
+vào `%LOCALAPPDATA%\Omacheese\resume.json`, một entry `RunOnce` gọi
+`setup.ps1 -Resume` ở lần đăng nhập sau (mở một cửa sổ PowerShell, `-NoExit` để còn
+đọc tổng kết). Mật khẩu Linux hỏi trước restart được giữ bằng DPAPI (chỉ user này
+trên máy này giải mã được), file bị xoá ngay khi đọc, RunOnce thì Windows tự xoá
+khi chạy — cả hai chỉ kích hoạt một lần. Cuối phiên, setup nói rõ cái gì cần
+restart, vì sao, bước nào sẽ tự chạy tiếp, và hỏi `Restart Windows now?` (mặc định
+**No**: một phím Enter lạc không được phép khởi động lại máy đang có việc dở).
+
+Debloat cũng báo những setting chỉ có hiệu lực sau restart ("requires a reboot to
+take full effect") — setup gom lại thành mục *Restart recommended* và cũng hỏi.
 
 ### Cài xong mà phải restart cả máy mới thấy gì chạy
 
@@ -367,9 +379,31 @@ Shortcut trong Startup lo mọi lần đăng nhập sau; `setup.ps1` giờ lo ph
 một lần khi module `raycast` được chọn (Store app cần đăng nhập thì mới dùng
 được, cài xong mà không mở thì nó nằm đó không ai cấu hình).
 
+Cuối phiên setup cũng mở sẵn những app cần bạn đăng nhập/bật setting, và phần
+tổng kết ghi việc cần làm trong từng app: **Bitwarden** (đăng nhập, bật SSH agent —
+dịch vụ OpenSSH Authentication Agent của Windows đã được tắt trong bước `desktop`),
+**Brave** (profile, trình duyệt mặc định), **Raycast** (tài khoản, thư mục script).
+Nếu có restart đang chờ thì chưa mở — chúng được mang sang lần chạy resume.
+
 PATH thì không sửa được từ bên ngoài: một tiến trình đọc PATH đúng một lần lúc
-khởi động. Terminal đang chạy setup vẫn giữ PATH cũ, nên phần tổng kết nói thẳng
-là hãy mở terminal mới — không phải reboot.
+khởi động. Terminal đang chạy setup vẫn giữ PATH cũ — nên setup **mở một cửa sổ
+Alacritty mới**, kế thừa PATH đã cập nhật, thay vì bảo bạn tự mở.
+
+### WSL: không còn danh sách lệnh để gõ
+
+Bước `distro` (`scripts/install-distro.ps1`) làm toàn bộ những gì trước đây nằm ở
+cuối tổng kết: cài AlmaLinux-9, tạo user Linux trùng tên Windows (trước đây distro
+cài `--no-launch` nên **không có user nào**, mọi shell chạy bằng root), đặt mật
+khẩu, ghi `/etc/wsl.conf` với user đó làm mặc định, `wsl --terminate` để nạp, chạy
+`install-almalinux.sh` (zsh làm shell, dev tools, config), cài agent trong WSL nếu
+module `agents` cũng được chọn, và cài npiperelay bên Windows.
+
+Mật khẩu được hỏi **trước bảng plan** (lúc duy nhất có console), chỉ khi account
+chưa có mật khẩu; đi vào bước qua biến môi trường của một lần `Start-Process`,
+tới `chpasswd` qua stdin — không bao giờ nằm trên command line hay ổ đĩa. Trong lúc
+cài, user có sudo không mật khẩu **tạm thời** (`/etc/sudoers.d/90-omacheese-setup`),
+gỡ trong `finally` dù bước thành công hay thất bại. Dưới `-Yes` không hỏi gì: account
+được tạo chưa có mật khẩu, doctor báo, và lần chạy tương tác sau sẽ hỏi.
 
 ### Alacritty mất theme sau khi mở agent lần đầu
 

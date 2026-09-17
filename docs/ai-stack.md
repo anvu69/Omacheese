@@ -205,7 +205,7 @@ docker compose -f docker-compose.vllm.yml logs -f vllm
 
 | Triệu chứng | Nguyên nhân |
 |---|---|
-| `docker: permission denied` | chưa vào group docker → `wsl --shutdown` |
+| `docker: permission denied` | shell đang mở từ trước khi vào group docker → mở shell mới (WSL 2.7: mọi process `wsl` mới đã có group, không cần `wsl --shutdown`) |
 | container không thấy GPU | thiếu nvidia-container-toolkit, hoặc chưa `nvidia-ctk runtime configure` |
 | `CUDA out of memory` khi khởi động | giảm `MAX_LEN`, rồi `GPU_UTIL` |
 | model tải rất chậm | cache đang nằm trên `/mnt/*` thay vì `~` |

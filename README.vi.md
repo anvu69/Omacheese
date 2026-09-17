@@ -200,12 +200,14 @@ CI chạy đúng hai kiểm tra đó trên mọi lần push.
 bật `systemd` và tắt `appendWindowsPath`, thủ phạm quen thuộc khiến
 tab-completion trong WSL chậm và binary Windows che mất binary Linux.
 
-```bash
-sudo cp ~/.config/wsl/wsl.conf /etc/wsl.conf
-```
+Phần còn lại do bước `distro` của setup làm: cài AlmaLinux-9, tạo user Linux trùng
+tên tài khoản Windows (hỏi mật khẩu cùng lúc với các câu hỏi khác, trước khi chạy
+gì), ghi `/etc/wsl.conf` với user đó làm mặc định, khởi động lại distro, rồi cài
+zsh, dev tools, config và npiperelay. Máy vừa bật WSL thì Windows phải restart
+trước — setup nói rõ, đề nghị restart, và tự chạy tiếp sau khi bạn đăng nhập lại.
 
 ```powershell
-wsl --shutdown
+./scripts/install-distro.ps1     # riêng bước này
 ```
 
 ## Tài liệu

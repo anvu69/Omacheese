@@ -197,12 +197,16 @@ CI runs the same two checks on every push.
 turns on `systemd` and turns off `appendWindowsPath`, which is the usual reason
 tab-completion inside WSL is slow and Windows binaries shadow Linux ones.
 
-```bash
-sudo cp ~/.config/wsl/wsl.conf /etc/wsl.conf
-```
+The setup's `distro` step does the rest: it installs AlmaLinux-9, creates a Linux
+user named after your Windows account (asking for its password with the other
+questions, before anything runs), writes `/etc/wsl.conf` with that user as the
+default, restarts the distro, and installs zsh, the dev tools, the configs and
+npiperelay. On a machine where WSL was only just enabled, Windows has to restart
+first - the setup says so, offers to restart, and carries on by itself after you
+sign in again.
 
 ```powershell
-wsl --shutdown
+./scripts/install-distro.ps1     # the same step, on its own
 ```
 
 ## Docs
