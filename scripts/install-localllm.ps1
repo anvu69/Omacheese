@@ -82,12 +82,44 @@ if ($Tier -eq "ollama") {
     elseif ($budget -ge 5)  { $model = "qwen3:4b" }
     else                    { $model = "qwen3:1.7b" }
 
+    # Pull the model too. "Ollama installed, now type this" is not a local LLM,
+    # and the confirmation screen already priced the download in - the same
+    # thing the vLLM half of this script got wrong.
+    $env:PATH = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
+                [Environment]::GetEnvironmentVariable("Path", "User")
+    $ollama = Get-Command ollama -ErrorAction SilentlyContinue
+    if (-not $ollama) {
+        Warn "ollama is not on PATH yet - open a new terminal, then: ollama pull $model"
+        exit 0
+    }
+
+    $have = @(& $ollama.Source list 2>$null | Select-String -SimpleMatch $model)
+    if ($have.Count) {
+        Good "$model already pulled"
+    } else {
+        Info "pulling $model (sized for this machine - several GB)"
+        & $ollama.Source pull $model
+        if ($LASTEXITCODE -ne 0) {
+            Bad "ollama pull $model failed (exit $LASTEXITCODE)"
+            exit 1
+        }
+    }
+
+    # Ollama runs as a background service, so the endpoint is the check.
+    $ready = $false
+    try {
+        # 127.0.0.1, not localhost: localhost tries ::1 first and the wait is
+        # not free if nothing listens there.
+        $ready = (Invoke-WebRequest -Uri "http://127.0.0.1:11434/v1/models" `
+                  -UseBasicParsing -TimeoutSec 10).StatusCode -eq 200
+    } catch { }
+
     Write-Host ""
-    Good "Ready. Pull a model that fits this machine:"
-    Write-Host "    ollama pull $model" -ForegroundColor Cyan
-    Write-Host "    ollama run $model" -ForegroundColor Cyan
+    if ($ready) { Good "ollama is serving $model at http://127.0.0.1:11434/v1" }
+    else        { Warn "ollama is installed but not answering on :11434 - start it from the Start menu" }
     Write-Host ""
-    Write-Host "  OpenAI-compatible endpoint: http://localhost:11434/v1" -ForegroundColor DarkGray
+    Write-Host "  chat      ollama run $model" -ForegroundColor Cyan
+    Write-Host "  endpoint  http://127.0.0.1:11434/v1   (OpenAI-compatible)" -ForegroundColor DarkGray
     exit 0
 }
 
@@ -137,6 +169,21 @@ if ($code -ne 0) {
     Warn "install-docker-wsl.sh exited $code - check the output above."
 }
 
+# --- the compose files the closing instructions need -------------------------
+# bootstrap-almalinux.sh copies these into ~/.config/ai, and nothing in
+# setup.ps1 runs it - it is documented as a manual step for the WSL side. So
+# this script installed Docker, wrote a .env, printed
+#   cd ~/.config/ai && docker compose -f docker-compose.vllm.yml up -d
+# and left that directory holding one .env and no compose file. Measured:
+#   compose file "/root/.config/ai/docker-compose.vllm.yml" is invalid:
+#   open ...: no such file or directory
+Info "installing the compose files into ~/.config/ai"
+& wsl.exe -d $Distro -- bash -lc "mkdir -p ~/.config/ai && cp -f '$repoLinux/configs/ai/'docker-compose.*.yml ~/.config/ai/"
+if ($LASTEXITCODE -ne 0) {
+    Bad "could not copy the compose files from $repoLinux/configs/ai"
+    exit 1
+}
+
 # --- write a .env sized for this GPU ----------------------------------------
 # This is the part that makes the repo portable: the compose file has generic
 # defaults, and the model choice comes from the detected VRAM.
@@ -168,12 +215,43 @@ if ($hint) {
     Warn "No model recommendation for this GPU - edit ~/.config/ai/.env by hand."
 }
 
+# --- start it ----------------------------------------------------------------
+# "Stack ready" used to mean "here are three commands to type". The module's
+# own confirmation screen promises a ~10 GB image and several GB of weights and
+# says 10-30 minutes, so pulling them is this step's job, not the user's.
 Write-Host ""
-Good "vLLM stack ready."
+Info "starting vLLM - the first run pulls the image and the weights (several GB)"
+& wsl.exe -d $Distro -- bash -lc "cd ~/.config/ai && docker compose -f docker-compose.vllm.yml up -d"
+if ($LASTEXITCODE -ne 0) {
+    Bad "docker compose up failed - see the output above."
+    exit 1
+}
+
+# The container is up long before the API is: vLLM pulls the weights and loads
+# them onto the GPU first, and only then binds the port. Ask the endpoint
+# instead of claiming success because a container started.
+$deadline = (Get-Date).AddMinutes(30)
+$ready = $false
+while ((Get-Date) -lt $deadline) {
+    try {
+        # 127.0.0.1, not localhost: localhost tries ::1 first, and WSL forwards
+        # this port on IPv4 only, so the v6 attempt hangs to the timeout rather
+        # than being refused. Measured: ::1 still waiting at 20s, v4 at 85ms.
+        $resp = Invoke-WebRequest -Uri "http://127.0.0.1:8000/v1/models" -UseBasicParsing -TimeoutSec 10
+        if ($resp.StatusCode -eq 200) { $ready = $true; break }
+    } catch { }
+    Start-Sleep -Seconds 15
+}
+
 Write-Host ""
-Write-Host "  wsl -d $Distro" -ForegroundColor Cyan
-Write-Host "  cd ~/.config/ai && docker compose -f docker-compose.vllm.yml up -d" -ForegroundColor Cyan
-Write-Host "  curl http://localhost:8000/v1/models" -ForegroundColor Cyan
+if ($ready) {
+    $served = if ($hint) { $hint.Model } else { "the model in ~/.config/ai/.env" }
+    Good "vLLM is serving $served at http://127.0.0.1:8000/v1"
+} else {
+    Warn "vLLM did not answer within 30 min - it is most likely still pulling weights."
+    Write-Host "    wsl -d $Distro -- docker logs -f vllm" -ForegroundColor Cyan
+}
 Write-Host ""
-Write-Host "  First start downloads the weights - expect several GB." -ForegroundColor DarkGray
+Write-Host "  endpoint  http://127.0.0.1:8000/v1   (OpenAI-compatible, model name: local)" -ForegroundColor Cyan
+Write-Host "  model     edit ~/.config/ai/.env, then: docker compose -f docker-compose.vllm.yml up -d" -ForegroundColor DarkGray
 Write-Host "  vLLM serves models; it does not train them. See docs/ai-stack.md." -ForegroundColor DarkGray

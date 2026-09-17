@@ -37,6 +37,16 @@ services:
     environment:
       HF_TOKEN: ${HF_TOKEN:-}
       HUGGING_FACE_HUB_TOKEN: ${HF_TOKEN:-}
+
+      # Without this vLLM does not start under WSL at all. It disables pinned
+      # host memory whenever it detects WSL, and its V1 engine allocates a
+      # UvaBuffer unconditionally, so startup ends in
+      #   RuntimeError: UVA is not available
+      # and the container restart-loops. Pinned memory works on WSL2 kernels
+      # from 4.19.121; this is the opt-in. `wsl --version` prints the kernel -
+      # ours is 6.18.33.2. On bare Linux the WSL branch is never taken, so
+      # setting it changes nothing there.
+      VLLM_WSL2_ENABLE_PIN_MEMORY: "1"
       # Keep the weights cache on the Linux filesystem. Putting it under
       # /mnt/d turns every load into a 9p round trip and is dramatically slower.
       HF_HOME: /root/.cache/huggingface
@@ -46,7 +56,9 @@ services:
 
     ports:
       # Bound to localhost only. With networkingMode=mirrored in .wslconfig
-      # this is reachable from Windows at http://localhost:8000 as well.
+      # this is reachable from Windows as well. Use http://127.0.0.1:8000 there:
+      # "localhost" resolves to ::1 first and WSL forwards IPv4 only, so a v6
+      # client hangs instead of being refused.
       - "127.0.0.1:8000:8000"
 
     ipc: host          # vLLM needs a large /dev/shm for tensor parallelism

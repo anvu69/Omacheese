@@ -672,6 +672,24 @@ if (-not (Test-WslPresent)) {
         else                              { Warn "no docker in $distro (bash ./scripts/install-docker-wsl.sh)" }
         if ($parts[2] -ne "-") { Ok "nvidia-container-toolkit installed" } else { Warn "nvidia-container-toolkit missing - GPU containers will not work" }
         if ($parts[3] -eq "dxg") { Ok "/dev/dxg present (GPU passthrough)" } else { Warn "/dev/dxg missing - no GPU in WSL" }
+
+        # Only ask about the model server on a machine where the local-LLM
+        # module actually ran - docker in the distro is that evidence. A
+        # running container proves nothing on its own: vLLM binds port 8000
+        # only once the weights are loaded onto the GPU.
+        if ($parts[1] -ne "-" -and $parts[1] -notlike "/mnt/*") {
+            $served = $false
+            try {
+                # 127.0.0.1, not localhost: localhost resolves to ::1 first and
+                # WSL forwards the port on IPv4 only, so the v6 attempt is not
+                # refused - it hangs until the timeout. Measured here: ::1 still
+                # waiting at 20s, 127.0.0.1 answering in 85ms.
+                $served = (Invoke-WebRequest -Uri "http://127.0.0.1:8000/v1/models" `
+                           -UseBasicParsing -TimeoutSec 10).StatusCode -eq 200
+            } catch { }
+            if ($served) { Ok "vLLM answering at http://127.0.0.1:8000/v1" }
+            else { Warn "nothing answers on :8000 (wsl -d $distro -- docker logs vllm)" }
+        }
     } else {
         Warn "could not probe $distro (not installed, or a different name)"
     }
