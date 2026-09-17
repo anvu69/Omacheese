@@ -30,6 +30,21 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# The elevated relaunch gets its own window, and an error under
+# ErrorActionPreference=Stop ends the script - so that window disappears with
+# the message still on it. From the outside the whole step reads as "it opens a
+# PowerShell window and fails", which is exactly how the argument-splatting bug
+# below presented, and why it took a transcript to find.
+trap {
+    if ($Pause) {
+        Write-Host ""
+        Write-Host $_.Exception.Message -ForegroundColor Red
+        Write-Host ""
+        Read-Host "Enter to close" | Out-Null
+    }
+    break
+}
+
 # --- host and elevation ------------------------------------------------------
 # Win11Debloat is a Windows PowerShell 5.1 script and says so: it calls
 # Get-AppxPackage and Get-ComputerRestorePoint, and under pwsh 7 the Appx module
@@ -146,13 +161,40 @@ if (-not (Test-Path -LiteralPath $entry)) {
     throw "Win11Debloat.ps1 not found after extracting $Ref. Check the tag name."
 }
 
-# --- Build the argument list -------------------------------------------------
-$argList = @("-Silent", "-Config", $ProfilePath)
-if ($RemoveApps)     { $argList += @("-RemoveApps", "-Apps", $AppsToRemove) }
-if ($NoRestorePoint) { $argList = $argList | Where-Object { $_ -ne "-CreateRestorePoint" } }
+# --- Build the arguments -----------------------------------------------------
+# A HASHTABLE, splatted. An array splat passes its elements POSITIONALLY - it
+# does not re-read the ones starting with a dash as parameter names - and
+# Win11Debloat's first three string parameters are LogPath, User and Config, so
+#   & $entry @("-Silent", "-Config", $path)
+# bound LogPath="-Silent", User="-Config", Config=$path and died inside
+# Win11Debloat with "User -Config was not found". -DryRun never showed it
+# because it returns before the call.
+$w11 = @{ Silent = $true; Config = $ProfilePath }
+if ($RemoveApps) {
+    $w11.RemoveApps = $true
+    $w11.Apps       = $AppsToRemove
+}
 
+# CreateRestorePoint comes from the profile, not from this command line, so the
+# old `Where-Object { $_ -ne "-CreateRestorePoint" }` filtered a string that was
+# never in the list: -NoRestorePoint did nothing at all. Take the setting out of
+# a copy of the profile instead, which is where it actually lives.
+if ($NoRestorePoint) {
+    $cfg = Get-Content -LiteralPath $ProfilePath -Raw | ConvertFrom-Json
+    $cfg.Settings = @($cfg.Settings | Where-Object { $_.Name -ne "CreateRestorePoint" })
+    $ProfilePath  = Join-Path $env:TEMP "debloat-norestore.json"
+    $cfg | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $ProfilePath -Encoding UTF8
+    $w11.Config   = $ProfilePath
+    Write-Host "  restore point: skipped (profile copied to $ProfilePath)" -ForegroundColor Yellow
+}
+
+# Printed from the same hashtable the call uses, so the preview cannot drift
+# from what runs.
+$preview = ($w11.GetEnumerator() | Sort-Object Name | ForEach-Object {
+    if ($_.Value -is [bool]) { "-$($_.Key)" } else { "-$($_.Key) $($_.Value)" }
+}) -join " "
 Write-Host "`nWould run:" -ForegroundColor Magenta
-Write-Host "  $entry $($argList -join ' ')" -ForegroundColor DarkGray
+Write-Host "  $entry $preview" -ForegroundColor DarkGray
 
 if ($DryRun) {
     Write-Host "`nSettings in the profile:" -ForegroundColor Magenta
@@ -168,7 +210,7 @@ if ($DryRun) {
 }
 
 Write-Host ""
-& $entry @argList
+& $entry @w11
 
 # --- Tweaks Win11Debloat does not cover --------------------------------------
 if (-not $SkipTweaks) {
