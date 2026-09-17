@@ -48,8 +48,19 @@ if ($IsInteractiveHost -and (Get-Module -ListAvailable -Name PSReadLine)) {
     }
 }
 
-foreach ($m in @("Terminal-Icons", "posh-git", "CompletionPredictor")) {
+foreach ($m in @("Terminal-Icons", "posh-git")) {
     if (Get-Module -ListAvailable -Name $m) { Import-Module $m }
+}
+
+# CompletionPredictor feeds PSReadLine's prediction list and does nothing
+# without an interactive line editor - and imported from a profile in a session
+# whose stdio is redirected, it keeps the process alive after the work is done.
+# Measured: `pwsh -Command 'Write-Host HI'` with stdin and stdout redirected
+# printed HI and then never exited (killed at 200s); Terminal-Icons, posh-git,
+# PSFzf and PSReadLine all exit in under 0.6s. Behind this guard the same
+# command takes 0.3s, and an interactive console still gets the predictor.
+if ($IsInteractiveHost -and (Get-Module -ListAvailable -Name CompletionPredictor)) {
+    Import-Module CompletionPredictor
 }
 
 # --- PSFzf ------------------------------------------------------------------
