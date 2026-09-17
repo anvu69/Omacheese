@@ -41,7 +41,7 @@ services:
       --model ${MODEL:-Qwen/Qwen3-8B}
       --served-model-name ${SERVED_NAME:-local}
       --quantization ${QUANT:-fp8}
-      --max-model-len ${MAX_LEN:-16384}
+      --max-model-len ${MAX_LEN:-12288}
       --gpu-memory-utilization ${GPU_UTIL:-0.80}
       --host 0.0.0.0
       --port 8000

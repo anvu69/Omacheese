@@ -209,7 +209,17 @@ function Get-MachineProfile {
         }
         if     ($gpu.VramGb -ge 40) { $modelHint = @{ Model = "Qwen/Qwen3-32B";  Quant = "fp8";  MaxLen = 32768 } }
         elseif ($gpu.VramGb -ge 22) { $modelHint = @{ Model = "Qwen/Qwen3-14B";  Quant = "fp8";  MaxLen = 32768 } }
-        elseif ($gpu.VramGb -ge 14) { $modelHint = @{ Model = "Qwen/Qwen3-8B";   Quant = "fp8";  MaxLen = 16384 } }
+        # 12288, not 16384: on a 16 GB card that also drives the desktop, 16k
+        # was the length that did not fit. Measured, Qwen3-8B fp8 at
+        # gpu-memory-utilization 0.80 - weights 9.06 GiB, activation 0.65 GiB,
+        # CUDA graphs 0.23 GiB, leaving 2.73 GiB of KV cache against the
+        # 2.25 GiB a single 16k request needs. It started, but a startup where
+        # the desktop happened to hold a little more VRAM did not:
+        #   ValueError: To serve at least one request with the model's max seq
+        #   len (16384), (2.25 GiB KV cache is needed, which is larger than the
+        #   available KV cache memory (1.75 GiB) ... estimated maximum model
+        #   length is 12768
+        elseif ($gpu.VramGb -ge 14) { $modelHint = @{ Model = "Qwen/Qwen3-8B";   Quant = "fp8";  MaxLen = 12288 } }
         elseif ($gpu.VramGb -ge 10) { $modelHint = @{ Model = "Qwen/Qwen3-8B";   Quant = "awq";  MaxLen = 8192  } }
         elseif ($gpu.VramGb -ge 8)  { $modelHint = @{ Model = "Qwen/Qwen3-4B";   Quant = "fp8";  MaxLen = 8192  } }
         if ($modelHint -and -not $fp8Capable -and $modelHint.Quant -eq "fp8") {

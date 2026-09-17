@@ -142,7 +142,7 @@ VRAM là ràng buộc cứng. Weight chỉ là một phần — còn KV cache ch
 ```bash
 MODEL=Qwen/Qwen3-8B
 QUANT=fp8
-MAX_LEN=16384
+MAX_LEN=12288
 GPU_UTIL=0.80
 ```
 
