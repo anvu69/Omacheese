@@ -235,17 +235,25 @@ if (-not $SkipTweaks) {
         Write-Host "  ! could not set taskbar auto-hide: $($_.Exception.Message)" -ForegroundColor Yellow
     }
 
-    # komorebi cannot manage what Explorer paints on the desktop, and the
-    # search highlight repaints the taskbar on a timer.
-    $sr2 = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Feeds"
-    if (-not (Test-Path $sr2)) { New-Item -Path $sr2 -Force | Out-Null }
-    Set-ItemProperty -Path $sr2 -Name "ShellFeedsTaskbarViewMode" -Value 2 -Type DWord
-    Write-Host "  + news and interests off" -ForegroundColor Green
+    # News and interests used to live in ...\CurrentVersion\Feeds. Windows 11
+    # 24H2 removed the feature and left the key behind, locked: writing
+    # ShellFeedsTaskbarViewMode there fails with "Attempted to perform an
+    # unauthorized operation" even elevated, and under ErrorActionPreference=Stop
+    # that ended the whole step - after every Win11Debloat setting had already
+    # been applied, so the run reported FAIL having done its job. Widgets, which
+    # replaced it, are handled by DisableWidgets in the profile.
 
-    $dsh = "HKCU:\Software\Microsoft\Windows\CurrentVersion\SearchSettings"
-    if (-not (Test-Path $dsh)) { New-Item -Path $dsh -Force | Out-Null }
-    Set-ItemProperty -Path $dsh -Name "IsDynamicSearchBoxEnabled" -Value 0 -Type DWord
-    Write-Host "  + search highlights off" -ForegroundColor Green
+    # The search highlight repaints the taskbar on a timer, which komorebi has
+    # no say over. Guarded like the one above: a tweak that cannot be applied is
+    # worth a line of output, not a failed install.
+    try {
+        $dsh = "HKCU:\Software\Microsoft\Windows\CurrentVersion\SearchSettings"
+        if (-not (Test-Path $dsh)) { New-Item -Path $dsh -Force | Out-Null }
+        Set-ItemProperty -Path $dsh -Name "IsDynamicSearchBoxEnabled" -Value 0 -Type DWord
+        Write-Host "  + search highlights off" -ForegroundColor Green
+    } catch {
+        Write-Host "  ! could not turn off search highlights: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
 
     Write-Host "`n  Restart Explorer for these to take effect:" -ForegroundColor Yellow
     Write-Host "    Stop-Process -Name explorer -Force" -ForegroundColor Cyan
